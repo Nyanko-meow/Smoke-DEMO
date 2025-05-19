@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smoking Cessation Platform</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: #4CAF50;
+            color: #fff;
+            padding: 20px 0;
+            text-align: center;
+        }
+
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .card {
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .endpoint {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <h1>Smoking Cessation Platform</h1>
+            <p>Supporting your journey to a smoke-free life</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="content">
+            <h2>API Server</h2>
+            <p>The API server is running successfully. Below are the available endpoints:</p>
+
+            <div class="card">
+                <h3>Authentication</h3>
+                <p>Endpoints for user registration and authentication.</p>
+                <div class="endpoint">/api/auth</div>
+            </div>
+
+            <div class="card">
+                <h3>User Management</h3>
+                <p>Endpoints for managing user profiles and information.</p>
+                <div class="endpoint">/api/users</div>
+            </div>
+
+            <div class="card">
+                <h3>Subscription Management</h3>
+                <p>Endpoints for viewing and managing membership subscriptions.</p>
+                <div class="endpoint">/api/subscriptions</div>
+            </div>
+
+            <div class="card">
+                <h3>Payment Processing</h3>
+                <p>Endpoints for processing payments and subscription fees.</p>
+                <div class="endpoint">/api/payments</div>
+            </div>
+
+            <p>For full API documentation, please refer to the developer documentation.</p>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 Smoking Cessation Platform. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+
+</html>

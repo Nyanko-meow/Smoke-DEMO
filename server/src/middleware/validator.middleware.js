@@ -17,12 +17,27 @@ const registerValidation = [
     body('email')
         .isEmail()
         .withMessage('Vui lòng cung cấp địa chỉ email hợp lệ')
+        .custom(email => {
+            // Validate gmail addresses
+            if (email.toLowerCase().endsWith('@gmail.com')) {
+                return true;
+            }
+            throw new Error('Email phải là tài khoản Gmail');
+        })
         .normalizeEmail(),
     body('password')
-        .isLength({ min: 6 })
-        .withMessage('Mật khẩu phải có ít nhất 6 ký tự')
+        .isLength({ min: 8 })
+        .withMessage('Mật khẩu phải có ít nhất 8 ký tự')
         .matches(/\d/)
-        .withMessage('Mật khẩu phải chứa ít nhất một số'),
+        .withMessage('Mật khẩu phải chứa ít nhất một số')
+        .matches(/[!@#$%^&*(),.?":{}|<>]/)
+        .withMessage('Mật khẩu phải chứa ít nhất một ký tự đặc biệt'),
+    body('phoneNumber')
+        .optional()
+        .isLength({ min: 10 })
+        .withMessage('Số điện thoại phải có ít nhất 10 chữ số')
+        .matches(/^\d+$/)
+        .withMessage('Số điện thoại chỉ được chứa các chữ số'),
     body('firstName')
         .notEmpty()
         .withMessage('Tên không được bỏ trống')
@@ -33,7 +48,7 @@ const registerValidation = [
         .trim(),
     body('role')
         .optional()
-        .isIn(['member', 'coach', 'admin'])
+        .isIn(['guest', 'member', 'coach', 'admin'])
         .withMessage('Vai trò không hợp lệ'),
     validateRequest
 ];
@@ -41,12 +56,29 @@ const registerValidation = [
 // Validation rules for user login
 const loginValidation = [
     body('email')
+        .optional()
         .isEmail()
         .withMessage('Vui lòng cung cấp địa chỉ email hợp lệ')
         .normalizeEmail(),
+    body('phoneNumber')
+        .optional()
+        .isLength({ min: 10 })
+        .withMessage('Số điện thoại phải có ít nhất 10 chữ số')
+        .matches(/^\d+$/)
+        .withMessage('Số điện thoại chỉ được chứa các chữ số'),
     body('password')
         .notEmpty()
         .withMessage('Vui lòng nhập mật khẩu'),
+    (req, res, next) => {
+        // Check if at least one identifier is provided
+        if (!req.body.email && !req.body.phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                errors: [{ msg: 'Vui lòng cung cấp email hoặc số điện thoại' }]
+            });
+        }
+        next();
+    },
     validateRequest
 ];
 

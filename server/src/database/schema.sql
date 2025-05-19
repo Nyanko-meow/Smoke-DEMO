@@ -1,20 +1,52 @@
 -- Users Table
+-- Xóa nếu đã tồn tại
+DROP DATABASE IF EXISTS SMOKEKING;
+CREATE DATABASE SMOKEKING
+GO
+USE [SMOKEKING]
 CREATE TABLE Users (
     UserID INT IDENTITY(1,1) PRIMARY KEY,
     Email NVARCHAR(255) UNIQUE NOT NULL,
     Password NVARCHAR(255) NOT NULL,
     FirstName NVARCHAR(100) NOT NULL,
     LastName NVARCHAR(100) NOT NULL,
-    Role NVARCHAR(20) NOT NULL CHECK (Role IN ('member', 'coach', 'admin')),
+    Role NVARCHAR(20) NOT NULL CHECK (Role IN ('guest', 'member', 'coach', 'admin')),
     Avatar NVARCHAR(255),
     PhoneNumber NVARCHAR(20),
     Address NVARCHAR(255),
+    IsActive BIT DEFAULT 0,
+    ActivationToken NVARCHAR(255),
+    ActivationExpires DATETIME,
+    EmailVerified BIT DEFAULT 0,
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE(),
     LastLoginAt DATETIME,
     RefreshToken NVARCHAR(255),
     RefreshTokenExpiry DATETIME
 );
+-- Chèn dữ liệu mẫu
+INSERT INTO Users (
+    Email, Password, FirstName, LastName, Role, Avatar, PhoneNumber, Address,
+    IsActive, ActivationToken, ActivationExpires, EmailVerified, CreatedAt, UpdatedAt, LastLoginAt,
+    RefreshToken, RefreshTokenExpiry
+)
+VALUES 
+-- Guest user
+('guest@example.com', 'hashed_password1', 'Guest', 'User', 'guest', NULL, '0123456789', '123 Guest St',
+ 0, 'token_guest', DATEADD(DAY, 1, GETDATE()), 0, GETDATE(), GETDATE(), NULL, NULL, NULL),
+
+-- Member user
+('member@example.com', 'hashed_password2', 'Member', 'User', 'member', 'avatar2.jpg', '0987654321', '456 Member Rd',
+ 1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_member', DATEADD(DAY, 7, GETDATE())),
+
+-- Coach user
+('coach@example.com', 'hashed_password3', 'Coach', 'Smith', 'coach', 'coach.jpg', '0111222333', '789 Coach Blvd',
+ 1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_coach', DATEADD(DAY, 7, GETDATE())),
+
+-- Admin user
+('admin@example.com', 'hashed_password4', 'Admin', 'Root', 'admin', 'admin.png', '0999888777', '321 Admin Ave',
+ 1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_admin', DATEADD(DAY, 30, GETDATE()));
+
 
 -- Login History Table
 CREATE TABLE LoginHistory (

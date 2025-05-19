@@ -6,6 +6,23 @@ const bcrypt = require('bcryptjs');
 const { createUser } = require('../database/db.utils');
 const { profileUpdateValidation } = require('../middleware/validator.middleware');
 
+// Get current user's role
+router.get('/role', protect, async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            role: req.user.Role,
+            isActivated: req.user.IsActive === 1
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy thông tin vai trò người dùng'
+        });
+    }
+});
+
 // Get user profile
 router.get('/profile', protect, async (req, res) => {
     try {
@@ -275,6 +292,97 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error adding user'
+        });
+    }
+});
+
+/**
+ * @route GET /api/users/status
+ * @desc Get user's role and membership status
+ * @access Private
+ */
+router.get('/status', protect, async (req, res) => {
+    try {
+        // Get user details with role
+        const userResult = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT 
+                    UserID, 
+                    Email, 
+                    FirstName, 
+                    LastName, 
+                    Role, 
+                    IsActive,
+                    LastLoginAt
+                FROM Users
+                WHERE UserID = @UserID
+            `);
+
+        if (userResult.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const user = userResult.recordset[0];
+
+        // Get active membership if exists
+        const membershipResult = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT 
+                    um.MembershipID,
+                    um.PlanID,
+                    um.StartDate,
+                    um.EndDate,
+                    um.Status as MembershipStatus,
+                    mp.Name as PlanName,
+                    mp.Price as PlanPrice,
+                    mp.Duration as PlanDuration,
+                    DATEDIFF(day, GETDATE(), um.EndDate) as DaysRemaining
+                FROM UserMemberships um
+                JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                WHERE um.UserID = @UserID
+                AND um.Status = 'active'
+                AND um.EndDate > GETDATE()
+            `);
+
+        const membership = membershipResult.recordset[0] || null;
+
+        // Return combined user status information
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    id: user.UserID,
+                    email: user.Email,
+                    firstName: user.FirstName,
+                    lastName: user.LastName,
+                    role: user.Role,
+                    isActive: user.IsActive === 1,
+                    lastLogin: user.LastLoginAt
+                },
+                membership: membership ? {
+                    id: membership.MembershipID,
+                    planId: membership.PlanID,
+                    planName: membership.PlanName,
+                    startDate: membership.StartDate,
+                    endDate: membership.EndDate,
+                    daysRemaining: membership.DaysRemaining,
+                    status: membership.MembershipStatus
+                } : null,
+                accountType: user.Role,
+                isSubscribed: membership !== null
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching user status',
+            error: error.message
         });
     }
 });
