@@ -4,13 +4,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmokeKing - Cai Thuốc Lá Hiệu Quả</title>
+    <title>Gói Dịch Vụ - SmokeKing</title>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-price {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-duration {
+            color: #6c757d;
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-features {
+            padding-left: 20px;
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-features li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 
 <body>
@@ -26,11 +57,11 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item active">
-                        <a class="nav-link" href="/">Trang chủ <span class="sr-only">(current)</span></a>
-                    </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/plans.html">Gói dịch vụ</a>
+                        <a class="nav-link" href="/">Trang chủ</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/plans.html">Gói dịch vụ <span class="sr-only">(current)</span></a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/blog.html">Blog</a>
@@ -64,73 +95,52 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero-section">
-        <div class="container text-center">
-            <h1 class="display-4">Bắt đầu hành trình cai thuốc lá</h1>
-            <p class="lead">SmokeKing giúp bạn cai thuốc lá hiệu quả với phương pháp khoa học và cộng đồng hỗ trợ</p>
-            <div class="mt-5">
-                <a href="/register.html" class="btn btn-light btn-lg mr-3">Đăng ký miễn phí</a>
-                <a href="/plans.html" class="btn btn-outline-light btn-lg">Xem gói dịch vụ</a>
-            </div>
+    <section class="bg-primary text-white text-center py-5">
+        <div class="container">
+            <h1 class="display-4">Gói Dịch Vụ</h1>
+            <p class="lead">Chọn gói phù hợp để bắt đầu hành trình cai thuốc lá của bạn</p>
         </div>
     </section>
 
-    <!-- Features Section -->
+    <!-- Plans Section -->
     <section class="py-5">
         <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col-md-12">
-                    <h2>Tại sao chọn SmokeKing?</h2>
-                    <p class="lead text-muted">Chúng tôi kết hợp khoa học, công nghệ và cộng đồng để giúp bạn cai thuốc
-                        lá thành công</p>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-chart-line text-primary fa-3x mb-3"></i>
-                            <h4 class="card-title">Theo dõi tiến trình</h4>
-                            <p class="card-text">Ghi nhận quá trình cai thuốc, xem thống kê chi tiết và theo dõi tiến bộ
-                                hàng ngày.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-users text-primary fa-3x mb-3"></i>
-                            <h4 class="card-title">Cộng đồng hỗ trợ</h4>
-                            <p class="card-text">Kết nối với những người cùng mục tiêu cai thuốc lá, chia sẻ kinh nghiệm
-                                và động viên nhau.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-user-md text-primary fa-3x mb-3"></i>
-                            <h4 class="card-title">Tư vấn chuyên gia</h4>
-                            <p class="card-text">Nhận hỗ trợ từ đội ngũ chuyên gia về cai thuốc lá qua tư vấn trực tiếp
-                                và kế hoạch cá nhân hóa.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+            <div id="alert-container" class="mb-4"></div>
 
-    <!-- CTA Section -->
-    <section class="bg-primary text-white py-5">
-        <div class="container text-center">
-            <h2>Sẵn sàng bắt đầu?</h2>
-            <p class="lead">Đăng ký ngay hôm nay và nhận gói dịch vụ miễn phí cho người mới bắt đầu</p>
-            <a href="/plans.html" class="btn btn-light btn-lg mt-3">Xem các gói dịch vụ</a>
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Lựa chọn gói dịch vụ phù hợp</h5>
+                            <p class="card-text">
+                                SmoreKing cung cấp nhiều gói dịch vụ khác nhau để đáp ứng nhu cầu của bạn trong hành
+                                trình cai thuốc lá.
+                                Từ gói miễn phí cho người mới bắt đầu đến các gói cao cấp với đầy đủ tính năng và hỗ trợ
+                                từ chuyên gia.
+                            </p>
+                            <p class="card-text">
+                                <i class="fas fa-check-circle text-success"></i> Thanh toán an toàn, bảo mật<br>
+                                <i class="fas fa-check-circle text-success"></i> Hỗ trợ 24/7<br>
+                                <i class="fas fa-check-circle text-success"></i> Có thể nâng cấp gói bất kỳ lúc nào
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="plans-container">
+                <!-- Plans will be loaded here -->
+                <div class="col-12 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4">
+    <footer class="bg-dark text-white py-4 mt-5">
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
@@ -168,6 +178,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <!-- Custom JS -->
     <script src="js/common.js"></script>
+    <script src="js/plans.js"></script>
 </body>
 
 </html>

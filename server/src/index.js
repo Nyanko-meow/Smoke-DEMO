@@ -54,6 +54,8 @@ app.get('/api', (req, res) => {
             users: '/api/users',
             subscriptions: '/api/subscriptions',
             payments: '/api/payments',
+            smokingStatus: '/api/smoking-status',
+            userSurvey: '/api/user-survey'
             // Add other endpoints as needed
         }
     });
@@ -72,6 +74,8 @@ app.use('/api/survey', require('./routes/survey.routes'));
 app.use('/api/blog', require('./routes/blog.routes'));
 app.use('/api/community', require('./routes/community.routes'));
 app.use('/api/subscriptions', require('./routes/subscription.routes'));
+app.use('/api/smoking-status', require('./routes/smokingStatus.routes'));
+app.use('/api/user-survey', require('./routes/userSurvey.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

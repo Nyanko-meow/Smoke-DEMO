@@ -6,18 +6,59 @@ const { pool } = require('../config/database');
 // Create quit plan
 router.post('/', protect, async (req, res) => {
     try {
-        const { startDate, targetDate, reason } = req.body;
+        const { startDate, targetDate, reason, motivationLevel, detailedPlan } = req.body;
+
+        // Validate motivation level
+        if (motivationLevel && (motivationLevel < 1 || motivationLevel > 10)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Motivation level must be between 1 and 10'
+            });
+        }
+
+        // Validate dates
+        const start = new Date(startDate);
+        const target = new Date(targetDate);
+        const now = new Date();
+
+        if (start < now) {
+            return res.status(400).json({
+                success: false,
+                message: 'Start date cannot be in the past'
+            });
+        }
+
+        if (target <= start) {
+            return res.status(400).json({
+                success: false,
+                message: 'Target date must be after start date'
+            });
+        }
 
         const result = await pool.request()
             .input('UserID', req.user.UserID)
             .input('StartDate', startDate)
             .input('TargetDate', targetDate)
             .input('Reason', reason)
+            .input('MotivationLevel', motivationLevel || 5) // Default to 5 if not provided
+            .input('DetailedPlan', detailedPlan || null)
             .query(`
-        INSERT INTO QuitPlans (UserID, StartDate, TargetDate, Reason, Status)
+        INSERT INTO QuitPlans (UserID, StartDate, TargetDate, Reason, MotivationLevel, Status)
         OUTPUT INSERTED.*
-        VALUES (@UserID, @StartDate, @TargetDate, @Reason, 'active')
+        VALUES (@UserID, @StartDate, @TargetDate, @Reason, @MotivationLevel, 'active')
       `);
+
+        // If detailed plan is provided, store it in a separate table or as JSON
+        if (detailedPlan) {
+            await pool.request()
+                .input('PlanID', result.recordset[0].PlanID)
+                .input('DetailedPlan', JSON.stringify(detailedPlan))
+                .query(`
+            UPDATE QuitPlans
+            SET DetailedPlan = @DetailedPlan
+            WHERE PlanID = @PlanID
+          `);
+        }
 
         res.status(201).json({
             success: true,

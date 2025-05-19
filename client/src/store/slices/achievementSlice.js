@@ -1,18 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import api from '../../utils/api';
 
 export const getAchievements = createAsyncThunk(
     'achievements/getAchievements',
     async (_, { getState }) => {
-        const { auth: { token } } = getState();
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        const response = await axios.get(`${API_URL}/achievements`, config);
+        // No need to manually set headers, the api utility handles this
+        const response = await api.get('/achievements');
         return response.data;
     }
 );

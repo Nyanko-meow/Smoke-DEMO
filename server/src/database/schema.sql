@@ -108,6 +108,7 @@ CREATE TABLE QuitPlans (
     TargetDate DATETIME NOT NULL,
     Reason NVARCHAR(MAX),
     MotivationLevel INT CHECK (MotivationLevel BETWEEN 1 AND 10),
+    DetailedPlan NVARCHAR(MAX),
     Status NVARCHAR(20) CHECK (Status IN ('active', 'completed', 'cancelled')),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
