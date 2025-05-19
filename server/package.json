@@ -1,36 +1,25 @@
 {
-    "name": "smoking-cessation-platform-server",
+    "name": "smokeking-server",
     "version": "1.0.0",
-    "description": "Backend server for Smoking Cessation Support Platform",
-    "main": "src/index.js",
+    "description": "Backend for SmokingKing cessation app",
+    "main": "src/server.js",
     "scripts": {
-        "start": "node src/index.js",
-        "dev": "nodemon src/index.js",
-        "start-new": "cross-env PORT=4001 node src/index.js",
-        "test": "jest",
-        "test:subscription": "node src/utils/subscription-test.js",
-        "test:payment": "node src/utils/payment-test.js",
-        "setup:db": "node src/utils/setup-db.js"
+        "start": "node src/server.js",
+        "dev": "nodemon src/server.js",
+        "setup-db": "node src/database/insertPlans.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
     },
+    "author": "",
+    "license": "ISC",
     "dependencies": {
-        "axios": "^1.6.2",
         "bcryptjs": "^2.4.3",
-        "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
-        "crypto": "^1.0.1",
-        "dotenv": "^16.5.0",
+        "dotenv": "^16.3.1",
         "express": "^4.18.2",
-        "express-validator": "^7.0.1",
-        "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
-        "morgan": "^1.10.0",
-        "mssql": "^10.0.4",
-        "multer": "^1.4.5-lts.1",
-        "nodemailer": "^6.10.1",
-        "winston": "^3.11.0"
+        "mssql": "^10.0.1"
     },
     "devDependencies": {
-        "jest": "^29.7.0",
-        "nodemon": "^3.0.2"
+        "nodemon": "^3.0.1"
     }
 }
