@@ -125,7 +125,4 @@ try {
     });
 } catch (error) {
     console.error('Error starting server:', error);
-}
-
-// Import server file to run the application
-require('./server'); 
+} 

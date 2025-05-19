@@ -2,10 +2,10 @@
     "name": "smokeking-server",
     "version": "1.0.0",
     "description": "Backend for SmokingKing cessation app",
-    "main": "src/server.js",
+    "main": "src/index.js",
     "scripts": {
-        "start": "node src/server.js",
-        "dev": "nodemon src/server.js",
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
         "setup-db": "node src/database/insertPlans.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },

@@ -1,385 +1,254 @@
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Typography, Button, Card, Row, Col, Statistic, Divider, Avatar } from 'antd';
 import {
-    Container,
-    Typography,
-    Button,
-    Grid,
-    Card,
-    CardContent,
-    Box,
-    CardMedia,
-    Paper,
-    Divider,
-    Avatar
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
-import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
-import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
-import PsychologyIcon from '@mui/icons-material/Psychology';
-import SpaIcon from '@mui/icons-material/Spa';
+    ClockCircleOutlined,
+    HeartOutlined,
+    DollarOutlined,
+    TrophyOutlined,
+    RocketOutlined,
+    SmileOutlined,
+    UserOutlined,
+    TeamOutlined
+} from '@ant-design/icons';
 
-const HeroBox = styled(Box)(({ theme }) => ({
-    backgroundColor: theme.palette.primary.main,
-    color: 'white',
-    padding: theme.spacing(8, 0),
-    marginBottom: theme.spacing(6)
-}));
-
-const FeatureCard = styled(Card)(({ theme }) => ({
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    '&:hover': {
-        transform: 'translateY(-4px)',
-        boxShadow: theme.shadows[4]
-    },
-    border: 'none',
-    boxShadow: 'none'
-}));
-
-const StatsCard = styled(Paper)(({ theme, bgcolor }) => ({
-    padding: theme.spacing(3),
-    textAlign: 'center',
-    height: '100%',
-    color: 'white',
-    backgroundColor: bgcolor || theme.palette.primary.main,
-    borderRadius: theme.spacing(2)
-}));
-
-const TestimonialCard = styled(Paper)(({ theme }) => ({
-    padding: theme.spacing(3),
-    marginBottom: theme.spacing(3),
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    borderRadius: theme.spacing(2),
-    boxShadow: theme.shadows[2]
-}));
-
-const DownloadSection = styled(Box)(({ theme }) => ({
-    backgroundColor: '#6eedaf',
-    borderRadius: theme.spacing(2),
-    padding: theme.spacing(4),
-    margin: theme.spacing(8, 0),
-    color: theme.palette.getContrastText('#6eedaf')
-}));
+const { Title, Text, Paragraph } = Typography;
 
 const Home = () => {
-    // Mock data
-    const features = [
-        {
-            icon: <AccessTimeIcon sx={{ fontSize: 80, color: 'primary.main' }} />,
-            title: 'Keep track of your progress',
-            description: 'With your dashboard, track your progress daily from the day you decide to quit smoking. Indicators such as money saved, cigarettes not smoked, life expectancy gained and many others will motivate you to continue your smoking cessation!'
-        },
-        {
-            icon: <DirectionsRunIcon sx={{ fontSize: 80, color: 'primary.main' }} />,
-            title: 'Get ready to stop smoking with our program',
-            description: 'Our quit smoking application accompanies you in your journey, from the moment you think about quitting to the moment you are completely free of cigarettes.'
-        },
-        {
-            icon: <PsychologyIcon sx={{ fontSize: 80, color: 'primary.main' }} />,
-            title: 'A tool to deal with cravings',
-            description: 'Our application offers you strategies to cope with your cravings. This feature will help you better understand your dependence and free yourself from it!'
-        },
-        {
-            icon: <SpaIcon sx={{ fontSize: 80, color: 'primary.main' }} />,
-            title: 'Breathe, you can do it!',
-            description: 'With our breathing exercises, you learn to regain control of your emotions when you stop smoking.'
-        }
-    ];
-
-    const stats = [
-        { bgcolor: '#FFC107', title: '4.5 ★', subtitle: 'out of 5 stars for rating' },
-        { bgcolor: '#9C27B0', title: '3.1 million', subtitle: 'users' },
-        { bgcolor: '#FF5722', title: '$453 million', subtitle: 'saved in 2023' },
-        { bgcolor: '#2196F3', title: '32,225', subtitle: 'years of life saved in 2023' }
-    ];
-
-    const testimonials = [
-        {
-            quote: "I like to see how my body just improves every day and when I reach some body goals I am happy and satisfied. This app helped me so much because it makes me see how far I've come.",
-            name: 'Sarah K.',
-            avatar: '/img/avatar1.jpg' // Placeholder, you'll need to add actual images later
-        },
-        {
-            quote: "What I like most is that the app is motivating. I like the fact that we receive reports on our health. I can already see a huge difference in my energy levels.",
-            name: 'Michael T.',
-            avatar: '/img/avatar2.jpg'
-        }
-    ];
-
     return (
-        <>
+        <div className="home-container">
             {/* Hero Section */}
-            <HeroBox>
-                <Container maxWidth="lg">
-                    <Grid container spacing={4} alignItems="center">
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
-                                Quit smoking easily now!
-                            </Typography>
-                            <Typography variant="h5" paragraph>
-                                Join more than 3 million people who have already quit smoking with our platform!
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                color="secondary"
-                                size="large"
-                                component={RouterLink}
-                                to="/register"
-                                sx={{ mt: 2, textTransform: 'none', py: 1, px: 4 }}
-                            >
-                                Get Started
-                            </Button>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Box
-                                component="img"
-                                src="https://placehold.co/600x400/6eedaf/white?text=App+Dashboard"
-                                alt="App Dashboard"
-                                sx={{
-                                    width: '100%',
-                                    height: 'auto',
-                                    borderRadius: 2,
-                                    boxShadow: 3
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                </Container>
-            </HeroBox>
-
-            {/* Video Section */}
-            <Container maxWidth="lg" sx={{ my: 8, textAlign: 'center' }}>
-                <Typography variant="h4" component="h2" gutterBottom fontWeight="bold">
-                    Quitting smoking has never been easier!
-                </Typography>
-                <Box
-                    component="video"
-                    controls
-                    poster="https://placehold.co/800x450/6eedaf/white?text=Video+Thumbnail"
-                    sx={{
-                        width: '100%',
-                        maxWidth: 800,
-                        borderRadius: 2,
-                        mt: 4,
-                        boxShadow: 1
-                    }}
-                >
-                    <source src="#" type="video/mp4" />
-                    Your browser does not support the video tag.
-                </Box>
-            </Container>
-
-            {/* Features Section */}
-            <Container maxWidth="lg" sx={{ my: 8 }}>
-                <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" textAlign="center">
-                    Decades of research at your service
-                </Typography>
-                <Typography variant="h6" color="text.secondary" textAlign="center" paragraph>
-                    Quit smoking with our mobile app and get all the help you need for every situation.
-                </Typography>
-
-                <Grid container spacing={4} sx={{ mt: 4 }}>
-                    {features.map((feature, index) => (
-                        <Grid item xs={12} sm={6} md={3} key={index}>
-                            <FeatureCard>
-                                <CardContent sx={{ textAlign: 'center', flexGrow: 1 }}>
-                                    <Box sx={{ mb: 2 }}>{feature.icon}</Box>
-                                    <Typography variant="h6" component="h3" gutterBottom fontWeight="bold">
-                                        {feature.title}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {feature.description}
-                                    </Typography>
-                                </CardContent>
-                            </FeatureCard>
-                        </Grid>
-                    ))}
-                </Grid>
-
-                <Box sx={{ textAlign: 'center', mt: 4 }}>
-                    <Button
-                        component={RouterLink}
-                        to="/features"
-                        sx={{
-                            textTransform: 'none',
-                            '&:after': {
-                                content: '"→"',
-                                ml: 1
-                            }
-                        }}
-                    >
-                        Discover all
-                    </Button>
-                </Box>
-            </Container>
+            <div className="hero-section">
+                <div className="container mx-auto px-4 py-16 md:py-24">
+                    <Row gutter={[48, 32]} align="middle" justify="space-between">
+                        <Col xs={24} md={12}>
+                            <Title level={1} className="hero-title">
+                                Bắt đầu hành trình cai thuốc lá của bạn
+                            </Title>
+                            <Paragraph className="hero-subtitle">
+                                SmokeKing giúp bạn cai thuốc lá hiệu quả với phương pháp khoa học và cộng đồng hỗ trợ. Hãy tham gia cùng hàng nghìn người đã thành công trên hành trình này.
+                            </Paragraph>
+                            <div className="hero-buttons">
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    className="register-btn"
+                                >
+                                    <Link to="/register">Đăng ký miễn phí</Link>
+                                </Button>
+                                <Button
+                                    ghost
+                                    size="large"
+                                    className="plans-btn"
+                                >
+                                    <Link to="/plans">Xem gói dịch vụ</Link>
+                                </Button>
+                            </div>
+                        </Col>
+                        <Col xs={24} md={12}>
+                            <div className="hero-image-container">
+                                <img
+                                    src="https://placehold.co/600x400/6eedaf/white?text=Healthy+Life"
+                                    alt="Healthy Life"
+                                    className="hero-image"
+                                />
+                            </div>
+                        </Col>
+                    </Row>
+                </div>
+            </div>
 
             {/* Stats Section */}
-            <Container maxWidth="lg" sx={{ my: 8 }}>
-                <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" textAlign="center">
-                    Join millions that changed their lives with us
-                </Typography>
-
-                <Grid container spacing={3} sx={{ mt: 4 }}>
-                    {stats.map((stat, index) => (
-                        <Grid item xs={12} sm={6} md={3} key={index}>
-                            <StatsCard bgcolor={stat.bgcolor}>
-                                <Typography variant="h3" component="p" fontWeight="bold">
-                                    {stat.title}
-                                </Typography>
-                                <Typography variant="subtitle1">
-                                    {stat.subtitle}
-                                </Typography>
-                            </StatsCard>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Container>
-
-            {/* Testimonials Section */}
-            <Container maxWidth="lg" sx={{ my: 8 }}>
-                <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" textAlign="center">
-                    A quit smoking application designed for you and with you!
-                </Typography>
-
-                <Grid container spacing={4} sx={{ mt: 4 }}>
-                    {testimonials.map((testimonial, index) => (
-                        <Grid item xs={12} md={6} key={index}>
-                            <TestimonialCard>
-                                <Box sx={{ mb: 2, textAlign: 'center' }}>
-                                    <FormatQuoteIcon color="primary" />
-                                    <Typography variant="body1" paragraph>
-                                        {testimonial.quote}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Avatar sx={{ mr: 2 }} alt={testimonial.name} src={testimonial.avatar} />
-                                    <Typography variant="subtitle1" fontWeight="bold">
-                                        {testimonial.name}
-                                    </Typography>
-                                </Box>
-                            </TestimonialCard>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Container>
-
-            {/* Blog Preview Section */}
-            <Container maxWidth="lg" sx={{ my: 8 }}>
-                <Typography variant="h4" component="h2" gutterBottom fontWeight="bold" textAlign="center">
-                    All you need to know is here!
-                </Typography>
-                <Typography variant="h6" color="text.secondary" textAlign="center" paragraph>
-                    Discover the latest articles from our blog, and find information to help you in your journey.
-                </Typography>
-
-                <Grid container spacing={4} sx={{ mt: 4 }}>
-                    {[1, 2, 3].map((item) => (
-                        <Grid item xs={12} sm={6} md={4} key={item}>
-                            <Card sx={{ height: '100%' }}>
-                                <CardMedia
-                                    component="img"
-                                    height="200"
-                                    image={`https://placehold.co/400x200/6eedaf/white?text=Blog+${item}`}
-                                    alt={`Blog post ${item}`}
+            <div className="stats-section">
+                <div className="container mx-auto px-4">
+                    <Title level={2} className="section-title">
+                        Thống kê từ cộng đồng SmokeKing
+                    </Title>
+                    <Row gutter={[32, 32]} className="stats-row">
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="stat-card">
+                                <Statistic
+                                    title={<span className="stat-title">Người dùng</span>}
+                                    value={15243}
+                                    prefix={<TeamOutlined className="stat-icon team-icon" />}
                                 />
-                                <CardContent>
-                                    <Box sx={{ mb: 1 }}>
-                                        <Typography
-                                            variant="caption"
-                                            sx={{
-                                                bgcolor: 'primary.light',
-                                                color: 'white',
-                                                px: 1,
-                                                py: 0.5,
-                                                borderRadius: 1
-                                            }}
-                                        >
-                                            Testimonials
-                                        </Typography>
-                                    </Box>
-                                    <Typography variant="h6" component="h3" gutterBottom>
-                                        Stop smoking more easily — Personal stories
-                                    </Typography>
-                                    <Button
-                                        component={RouterLink}
-                                        to="/blog/1"
-                                        sx={{
-                                            textTransform: 'none',
-                                            p: 0,
-                                            '&:after': {
-                                                content: '"→"',
-                                                ml: 1
-                                            }
-                                        }}
-                                    >
-                                        Read more
-                                    </Button>
-                                </CardContent>
                             </Card>
-                        </Grid>
-                    ))}
-                </Grid>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="stat-card">
+                                <Statistic
+                                    title={<span className="stat-title">Số điếu không hút</span>}
+                                    value={1438921}
+                                    prefix={<SmileOutlined className="stat-icon smile-icon" />}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="stat-card">
+                                <Statistic
+                                    title={<span className="stat-title">Tiền tiết kiệm (VND)</span>}
+                                    value={28778420000}
+                                    precision={0}
+                                    prefix={<DollarOutlined className="stat-icon dollar-icon" />}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="stat-card">
+                                <Statistic
+                                    title={<span className="stat-title">Sức khỏe cải thiện</span>}
+                                    value={92}
+                                    suffix="%"
+                                    prefix={<HeartOutlined className="stat-icon heart-icon" />}
+                                />
+                            </Card>
+                        </Col>
+                    </Row>
+                </div>
+            </div>
 
-                <Box sx={{ textAlign: 'center', mt: 4 }}>
+            {/* Features Section */}
+            <div className="features-section">
+                <div className="container mx-auto px-4">
+                    <Title level={2} className="section-title">
+                        Tại sao chọn SmokeKing?
+                    </Title>
+                    <Paragraph className="section-subtitle">
+                        Chúng tôi kết hợp khoa học, công nghệ và cộng đồng để giúp bạn cai thuốc lá thành công
+                    </Paragraph>
+
+                    <Row gutter={[32, 32]} className="features-row">
+                        <Col xs={24} sm={12} lg={8}>
+                            <Card className="feature-card">
+                                <div className="feature-icon-container">
+                                    <ClockCircleOutlined className="feature-icon" />
+                                </div>
+                                <Title level={4} className="feature-title">Theo dõi tiến trình</Title>
+                                <Paragraph className="feature-description">
+                                    Ghi nhận quá trình cai thuốc, xem thống kê chi tiết và theo dõi tiến bộ hàng ngày với ứng dụng trực quan.
+                                </Paragraph>
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} lg={8}>
+                            <Card className="feature-card">
+                                <div className="feature-icon-container">
+                                    <TeamOutlined className="feature-icon" />
+                                </div>
+                                <Title level={4} className="feature-title">Cộng đồng hỗ trợ</Title>
+                                <Paragraph className="feature-description">
+                                    Kết nối với những người cùng mục tiêu cai thuốc lá, chia sẻ kinh nghiệm và động viên nhau trên hành trình.
+                                </Paragraph>
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} lg={8}>
+                            <Card className="feature-card">
+                                <div className="feature-icon-container">
+                                    <UserOutlined className="feature-icon" />
+                                </div>
+                                <Title level={4} className="feature-title">Tư vấn chuyên gia</Title>
+                                <Paragraph className="feature-description">
+                                    Nhận hỗ trợ từ đội ngũ chuyên gia về cai thuốc lá qua tư vấn trực tiếp và kế hoạch cá nhân hóa.
+                                </Paragraph>
+                            </Card>
+                        </Col>
+                    </Row>
+                </div>
+            </div>
+
+            {/* Testimonials */}
+            <div className="testimonials-section">
+                <div className="container mx-auto px-4">
+                    <Title level={2} className="section-title">
+                        Khách hàng nói gì về chúng tôi
+                    </Title>
+
+                    <Row gutter={[32, 32]} className="testimonials-row">
+                        <Col xs={24} md={12}>
+                            <Card className="testimonial-card">
+                                <div className="testimonial-content">
+                                    <Avatar size={80} src="https://placehold.co/200/blue/white?text=N" className="testimonial-avatar" />
+                                    <div className="testimonial-text">
+                                        <Title level={4} className="testimonial-name">Nguyễn Văn A</Title>
+                                        <Text type="secondary" className="testimonial-info">Đã cai thuốc 8 tháng</Text>
+                                        <Paragraph className="testimonial-quote">
+                                            "Tôi đã thử nhiều phương pháp cai thuốc nhưng đều thất bại. Với SmokeKing, tôi đã cai thuốc thành công và cảm thấy khỏe mạnh hơn rất nhiều. Cảm ơn đội ngũ SmokeKing!"
+                                        </Paragraph>
+                                    </div>
+                                </div>
+                            </Card>
+                        </Col>
+                        <Col xs={24} md={12}>
+                            <Card className="testimonial-card">
+                                <div className="testimonial-content">
+                                    <Avatar size={80} src="https://placehold.co/200/pink/white?text=T" className="testimonial-avatar" />
+                                    <div className="testimonial-text">
+                                        <Title level={4} className="testimonial-name">Trần Thị B</Title>
+                                        <Text type="secondary" className="testimonial-info">Đã cai thuốc 1 năm</Text>
+                                        <Paragraph className="testimonial-quote">
+                                            "Cộng đồng hỗ trợ trên SmokeKing thực sự giúp tôi vượt qua những giai đoạn khó khăn nhất. Giờ đây tôi đã có thể hít thở tự do và tiết kiệm được rất nhiều tiền."
+                                        </Paragraph>
+                                    </div>
+                                </div>
+                            </Card>
+                        </Col>
+                    </Row>
+                </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="cta-section">
+                <div className="container mx-auto px-4 text-center">
+                    <Title level={2} className="cta-title">
+                        Sẵn sàng bắt đầu?
+                    </Title>
+                    <Paragraph className="cta-subtitle">
+                        Đăng ký ngay hôm nay và nhận gói dịch vụ miễn phí cho người mới bắt đầu
+                    </Paragraph>
                     <Button
-                        variant="outlined"
-                        component={RouterLink}
-                        to="/blog"
-                        sx={{ borderRadius: 8, textTransform: 'none', px: 4 }}
+                        type="primary"
+                        size="large"
+                        className="cta-button"
                     >
-                        Read more articles
+                        <Link to="/register">Bắt đầu ngay</Link>
                     </Button>
-                </Box>
-            </Container>
+                </div>
+            </div>
 
-            {/* Download Section */}
-            <Container maxWidth="lg">
-                <DownloadSection>
-                    <Grid container spacing={4} alignItems="center">
-                        <Grid item xs={12} md={6}>
-                            <Typography variant="h4" component="h2" gutterBottom fontWeight="bold">
-                                Your pocket partner to stop smoking!
-                            </Typography>
-                            <Typography variant="body1" paragraph>
-                                With more than 3 million users and a rating of 4.5/5, our application is the tool you need to stop smoking!
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                component={RouterLink}
-                                to="/register"
-                                sx={{ mt: 2, borderRadius: 8, textTransform: 'none', px: 4 }}
-                            >
-                                Download
-                            </Button>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                            <Box
-                                component="img"
-                                src="https://placehold.co/600x400/white/6eedaf?text=App+Screenshots"
-                                alt="App Screenshots"
-                                sx={{
-                                    width: '100%',
-                                    height: 'auto',
-                                    borderRadius: 2
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                </DownloadSection>
-            </Container>
-        </>
+            {/* Footer */}
+            <footer className="footer-section">
+                <div className="container mx-auto px-4">
+                    <Row gutter={[32, 32]} className="footer-content">
+                        <Col xs={24} sm={12} md={8}>
+                            <Title level={4} className="footer-title">SmokeKing</Title>
+                            <Paragraph className="footer-text">
+                                Hỗ trợ bạn trong hành trình cai thuốc lá và sống khỏe mạnh hơn.
+                            </Paragraph>
+                        </Col>
+                        <Col xs={24} sm={12} md={8}>
+                            <Title level={4} className="footer-title">Liên kết</Title>
+                            <ul className="footer-links">
+                                <li><Link to="/" className="footer-link">Trang chủ</Link></li>
+                                <li><Link to="/plans" className="footer-link">Gói dịch vụ</Link></li>
+                                <li><Link to="/blog" className="footer-link">Blog</Link></li>
+                                <li><Link to="/community" className="footer-link">Cộng đồng</Link></li>
+                            </ul>
+                        </Col>
+                        <Col xs={24} sm={12} md={8}>
+                            <Title level={4} className="footer-title">Liên hệ</Title>
+                            <ul className="footer-contact">
+                                <li className="footer-contact-item"><span className="footer-contact-icon">📍</span> 123 Đường Cai Thuốc, TP.HCM</li>
+                                <li className="footer-contact-item"><span className="footer-contact-icon">📞</span> (028) 1234 5678</li>
+                                <li className="footer-contact-item"><span className="footer-contact-icon">📧</span> info@smokeking.vn</li>
+                            </ul>
+                        </Col>
+                    </Row>
+                    <Divider className="footer-divider" />
+                    <div className="footer-copyright">
+                        <Text className="copyright-text">© 2024 SmokeKing. Đã đăng ký bản quyền.</Text>
+                    </div>
+                </div>
+            </footer>
+        </div>
     );
 };
 

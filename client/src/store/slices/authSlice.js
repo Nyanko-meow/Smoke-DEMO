@@ -1,21 +1,36 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../../utils/api';
 
-const API_URL = 'http://localhost:5000/api';
+// Get stored authentication data from localStorage
+const storedToken = localStorage.getItem('token');
+const storedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+const storedExpiration = localStorage.getItem('tokenExpiration');
 
-// Get token from localStorage
-const token = localStorage.getItem('token');
+// Check if the token is still valid
+const isTokenValid = () => {
+    if (!storedExpiration) return false;
+    return new Date().getTime() < parseInt(storedExpiration);
+};
+
+// Set token expiration (30 minutes from now)
+const setTokenExpiration = () => {
+    const expirationTime = new Date().getTime() + 30 * 60 * 1000; // 30 minutes in milliseconds
+    localStorage.setItem('tokenExpiration', expirationTime.toString());
+    return expirationTime;
+};
 
 // Create async thunks
 export const login = createAsyncThunk(
     'auth/login',
     async (userData, { rejectWithValue }) => {
         try {
-            const response = await axios.post(`${API_URL}/auth/login`, userData);
+            const response = await api.post('/auth/login', userData);
 
-            // Store token in localStorage
+            // Store authentication data in localStorage
             if (response.data.token) {
                 localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                setTokenExpiration();
             }
 
             return response.data;
@@ -33,11 +48,13 @@ export const register = createAsyncThunk(
     'auth/register',
     async (userData, { rejectWithValue }) => {
         try {
-            const response = await axios.post(`${API_URL}/auth/register`, userData);
+            const response = await api.post('/auth/register', userData);
 
-            // Store token in localStorage
+            // Store authentication data in localStorage
             if (response.data.token) {
                 localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                setTokenExpiration();
             }
 
             return response.data;
@@ -54,30 +71,36 @@ export const register = createAsyncThunk(
 export const logout = createAsyncThunk(
     'auth/logout',
     async () => {
+        // Clear all auth data from localStorage
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('tokenExpiration');
         return null;
     }
 );
 
 export const getCurrentUser = createAsyncThunk(
     'auth/getCurrentUser',
-    async (_, { getState, rejectWithValue }) => {
+    async (_, { dispatch, rejectWithValue }) => {
         try {
-            const { auth: { token } } = getState();
-
-            if (!token) {
-                return rejectWithValue('No token found');
+            // Check if token is expired
+            if (!isTokenValid()) {
+                // Automatically logout if token is expired
+                dispatch(logout());
+                return rejectWithValue('Session expired');
             }
 
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            };
+            const response = await api.get('/auth/me');
 
-            const response = await axios.get(`${API_URL}/auth/me`, config);
+            // Update user in localStorage
+            localStorage.setItem('user', JSON.stringify(response.data));
+
+            // Refresh token expiration on successful API call
+            setTokenExpiration();
+
             return response.data;
         } catch (error) {
+            // The API interceptor will handle 401 errors and logout automatically
             return rejectWithValue(
                 error.response && error.response.data.message
                     ? error.response.data.message
@@ -87,11 +110,31 @@ export const getCurrentUser = createAsyncThunk(
     }
 );
 
+// Refresh session to extend expiration
+export const refreshSession = createAsyncThunk(
+    'auth/refreshSession',
+    async (_, { getState }) => {
+        const { auth: { token, isAuthenticated } } = getState();
+
+        if (token && isAuthenticated) {
+            // Extend session by 30 minutes
+            setTokenExpiration();
+
+            // Optional: refresh the token with the server if needed
+            // await api.post('/auth/refresh-token');
+
+            return { refreshed: true };
+        }
+        return { refreshed: false };
+    }
+);
+
 // Initial state
 const initialState = {
-    user: null,
-    token: token || null,
-    isAuthenticated: !!token,
+    user: isTokenValid() ? storedUser : null,
+    token: isTokenValid() ? storedToken : null,
+    tokenExpiration: isTokenValid() ? parseInt(storedExpiration) : null,
+    isAuthenticated: isTokenValid(),
     loading: false,
     error: null
 };
@@ -103,6 +146,23 @@ const authSlice = createSlice({
     reducers: {
         clearError: (state) => {
             state.error = null;
+        },
+        checkSessionExpiration: (state) => {
+            if (state.tokenExpiration && state.isAuthenticated) {
+                const isExpired = new Date().getTime() > state.tokenExpiration;
+                if (isExpired) {
+                    // Token has expired, update state
+                    state.user = null;
+                    state.token = null;
+                    state.tokenExpiration = null;
+                    state.isAuthenticated = false;
+
+                    // Clear localStorage
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('tokenExpiration');
+                }
+            }
         }
     },
     extraReducers: (builder) => {
@@ -116,6 +176,7 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.user = action.payload.user;
                 state.token = action.payload.token;
+                state.tokenExpiration = parseInt(localStorage.getItem('tokenExpiration'));
                 state.isAuthenticated = true;
             })
             .addCase(login.rejected, (state, action) => {
@@ -132,6 +193,7 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.user = action.payload.user;
                 state.token = action.payload.token;
+                state.tokenExpiration = parseInt(localStorage.getItem('tokenExpiration'));
                 state.isAuthenticated = true;
             })
             .addCase(register.rejected, (state, action) => {
@@ -143,6 +205,7 @@ const authSlice = createSlice({
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;
                 state.token = null;
+                state.tokenExpiration = null;
                 state.isAuthenticated = false;
             })
 
@@ -154,16 +217,25 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.user = action.payload;
                 state.isAuthenticated = true;
+                state.tokenExpiration = parseInt(localStorage.getItem('tokenExpiration'));
             })
             .addCase(getCurrentUser.rejected, (state, action) => {
                 state.loading = false;
-                state.user = null;
-                state.token = null;
-                state.isAuthenticated = false;
+                if (action.payload === 'Session expired') {
+                    state.user = null;
+                    state.token = null;
+                    state.tokenExpiration = null;
+                    state.isAuthenticated = false;
+                }
                 state.error = action.payload;
+            })
+
+            // Refresh session
+            .addCase(refreshSession.fulfilled, (state) => {
+                state.tokenExpiration = parseInt(localStorage.getItem('tokenExpiration'));
             });
     }
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, checkSessionExpiration } = authSlice.actions;
 export default authSlice.reducer; 
