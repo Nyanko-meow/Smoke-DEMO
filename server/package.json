@@ -1,5 +1,5 @@
 {
-    "name": "smoking-cessation-platform-server",
+    "name": "server",
     "version": "1.0.0",
     "description": "Backend server for Smoking Cessation Support Platform",
     "main": "src/index.js",
