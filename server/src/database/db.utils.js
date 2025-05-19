@@ -70,40 +70,93 @@ const executeTransaction = async (callback) => {
 /**
  * Create a new user
  * @param {Object} userData - User data including email, password, firstName, lastName, role, etc.
+ * @param {string} activationToken - Token to activate account (optional)
  * @returns {Promise<Object>} - Created user object
  */
-const createUser = async (userData) => {
+const createUser = async (userData, activationToken = null) => {
     try {
-        const { email, password, firstName, lastName, role = 'member', phoneNumber, address, avatar } = userData;
+        const {
+            email,
+            password,
+            firstName,
+            lastName,
+            role = 'guest',
+            phoneNumber,
+            address,
+            avatar,
+            requireActivation = true
+        } = userData;
 
-        // Check if user exists
-        const userExists = await executeQuery(
-            'SELECT * FROM Users WHERE Email = @Email',
-            { Email: email }
-        );
+        // Validate that either email or phone number is provided
+        if (!email && !phoneNumber) {
+            throw new Error('Email hoặc số điện thoại là bắt buộc');
+        }
 
-        if (userExists.recordset.length > 0) {
-            throw new Error('User already exists');
+        // Check if user exists by email if provided
+        if (email) {
+            const userExistsByEmail = await executeQuery(
+                'SELECT * FROM Users WHERE Email = @Email',
+                { Email: email }
+            );
+
+            if (userExistsByEmail.recordset.length > 0) {
+                throw new Error('Email đã được sử dụng');
+            }
+        }
+
+        // Check if user exists by phone number if provided
+        if (phoneNumber) {
+            const userExistsByPhone = await executeQuery(
+                'SELECT * FROM Users WHERE PhoneNumber = @PhoneNumber',
+                { PhoneNumber: phoneNumber }
+            );
+
+            if (userExistsByPhone.recordset.length > 0) {
+                throw new Error('Số điện thoại đã được sử dụng');
+            }
         }
 
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // Set activation token expiry if provided
+        let activationExpires = null;
+        if (activationToken && requireActivation) {
+            const expiryDate = new Date();
+            expiryDate.setHours(expiryDate.getHours() + 24); // 24 hours from now
+            activationExpires = expiryDate;
+        }
+
         // Create user
         const result = await executeQuery(
-            `INSERT INTO Users (Email, Password, FirstName, LastName, Role, PhoneNumber, Address, Avatar)
-             OUTPUT INSERTED.UserID, INSERTED.Email, INSERTED.FirstName, INSERTED.LastName, INSERTED.Role, INSERTED.CreatedAt
-             VALUES (@Email, @Password, @FirstName, @LastName, @Role, @PhoneNumber, @Address, @Avatar)`,
+            `INSERT INTO Users (
+                Email, Password, FirstName, LastName, Role, 
+                PhoneNumber, Address, Avatar, IsActive, 
+                ActivationToken, ActivationExpires, EmailVerified
+            )
+            OUTPUT 
+                INSERTED.UserID, INSERTED.Email, INSERTED.FirstName, 
+                INSERTED.LastName, INSERTED.Role, INSERTED.CreatedAt,
+                INSERTED.IsActive, INSERTED.EmailVerified, INSERTED.PhoneNumber
+            VALUES (
+                @Email, @Password, @FirstName, @LastName, @Role, 
+                @PhoneNumber, @Address, @Avatar, @IsActive, 
+                @ActivationToken, @ActivationExpires, @EmailVerified
+            )`,
             {
-                Email: email,
+                Email: email || null,
                 Password: hashedPassword,
                 FirstName: firstName,
                 LastName: lastName,
                 Role: role,
                 PhoneNumber: phoneNumber || null,
                 Address: address || null,
-                Avatar: avatar || null
+                Avatar: avatar || null,
+                IsActive: requireActivation ? 0 : 1, // If activation not required, set to active
+                ActivationToken: activationToken,
+                ActivationExpires: activationExpires,
+                EmailVerified: requireActivation ? 0 : 1 // If activation not required, set as verified
             }
         );
 
@@ -116,23 +169,41 @@ const createUser = async (userData) => {
 
 /**
  * Login user and record login history
- * @param {string} email - User email
- * @param {string} password - User password
+ * @param {Object} credentials - User credentials
+ * @param {string} credentials.email - User email (optional if phone is provided)
+ * @param {string} credentials.phoneNumber - User phone number (optional if email is provided)
+ * @param {string} credentials.password - User password
  * @param {string} ipAddress - IP address
  * @param {string} userAgent - User agent
  * @returns {Promise<Object>} - User object with token info
  */
-const loginUser = async (email, password, ipAddress, userAgent) => {
+const loginUser = async (credentials, ipAddress, userAgent) => {
     try {
+        const { email, phoneNumber, password } = credentials;
+
+        // Check if at least email or phone is provided
+        if (!email && !phoneNumber) {
+            throw new Error('EMAIL_OR_PHONE_REQUIRED');
+        }
+
+        // Build the query based on provided credentials
+        let query = 'SELECT * FROM Users WHERE ';
+        let params = {};
+
+        if (email) {
+            query += 'Email = @Email';
+            params.Email = email;
+        } else {
+            query += 'PhoneNumber = @PhoneNumber';
+            params.PhoneNumber = phoneNumber;
+        }
+
         // Check if user exists
-        const userResult = await executeQuery(
-            'SELECT * FROM Users WHERE Email = @Email',
-            { Email: email }
-        );
+        const userResult = await executeQuery(query, params);
 
         if (userResult.recordset.length === 0) {
             // Record failed login attempt
-            await recordLoginAttempt(email, ipAddress, false);
+            await recordLoginAttempt(email || phoneNumber, ipAddress, false);
             throw new Error('INVALID_CREDENTIALS');
         }
 
@@ -142,12 +213,12 @@ const loginUser = async (email, password, ipAddress, userAgent) => {
         const isMatch = await bcrypt.compare(password, user.Password);
         if (!isMatch) {
             // Record failed login attempt
-            await recordLoginAttempt(email, ipAddress, false);
+            await recordLoginAttempt(email || phoneNumber, ipAddress, false);
             throw new Error('INVALID_CREDENTIALS');
         }
 
         // Record successful login attempt
-        await recordLoginAttempt(email, ipAddress, true);
+        await recordLoginAttempt(email || phoneNumber, ipAddress, true);
 
         // Record login history
         await executeQuery(
@@ -294,6 +365,167 @@ const verifyRefreshToken = async (refreshToken) => {
     }
 };
 
+/**
+ * Activate user account by token
+ * @param {string} token - Activation token
+ * @returns {Promise<Object>} - Activated user object
+ */
+const activateUserAccount = async (token) => {
+    try {
+        // Check if token is valid and not expired
+        const result = await executeQuery(
+            `SELECT * 
+             FROM Users 
+             WHERE ActivationToken = @Token 
+               AND (ActivationExpires IS NULL OR ActivationExpires > GETDATE())`,
+            { Token: token }
+        );
+
+        if (result.recordset.length === 0) {
+            throw new Error('Invalid or expired activation token');
+        }
+
+        const user = result.recordset[0];
+
+        if (user.IsActive) {
+            return user; // Account already activated
+        }
+
+        // Activate user account
+        await executeQuery(
+            `UPDATE Users
+             SET IsActive = 1,
+                 EmailVerified = 1,
+                 ActivationToken = NULL,
+                 ActivationExpires = NULL,
+                 UpdatedAt = GETDATE()
+             WHERE UserID = @UserID`,
+            { UserID: user.UserID }
+        );
+
+        // Get updated user
+        const updatedResult = await executeQuery(
+            `SELECT * FROM Users WHERE UserID = @UserID`,
+            { UserID: user.UserID }
+        );
+
+        return updatedResult.recordset[0];
+    } catch (error) {
+        console.error('Error activating user account:', error);
+        throw error;
+    }
+};
+
+/**
+ * Update user role
+ * @param {number} userId - User ID
+ * @param {string} role - New role
+ * @returns {Promise<Object>} - Updated user object
+ */
+const updateUserRole = async (userId, role) => {
+    try {
+        // Validate role
+        if (!['guest', 'member', 'coach', 'admin'].includes(role)) {
+            throw new Error('Invalid role specified');
+        }
+
+        // Update user role
+        const result = await executeQuery(
+            `UPDATE Users
+             SET Role = @Role,
+                 UpdatedAt = GETDATE()
+             OUTPUT INSERTED.UserID, INSERTED.Email, INSERTED.Role, INSERTED.UpdatedAt
+             WHERE UserID = @UserID`,
+            {
+                UserID: userId,
+                Role: role
+            }
+        );
+
+        if (result.recordset.length === 0) {
+            throw new Error('User not found');
+        }
+
+        return result.recordset[0];
+    } catch (error) {
+        console.error('Error updating user role:', error);
+        throw error;
+    }
+};
+
+/**
+ * Resend activation token
+ * @param {string} email - User email
+ * @param {string} token - New activation token
+ * @returns {Promise<Object>} - User object
+ */
+const regenerateActivationToken = async (email, token) => {
+    try {
+        // Check if user exists
+        const result = await executeQuery(
+            `SELECT * FROM Users WHERE Email = @Email`,
+            { Email: email }
+        );
+
+        if (result.recordset.length === 0) {
+            throw new Error('User not found');
+        }
+
+        const user = result.recordset[0];
+
+        // If user is already active, no need to regenerate token
+        if (user.IsActive) {
+            throw new Error('Account already activated');
+        }
+
+        // Set token expiry (24 hours from now)
+        const expiryDate = new Date();
+        expiryDate.setHours(expiryDate.getHours() + 24);
+
+        // Update activation token
+        await executeQuery(
+            `UPDATE Users
+             SET ActivationToken = @Token,
+                 ActivationExpires = @Expires,
+                 UpdatedAt = GETDATE()
+             WHERE UserID = @UserID`,
+            {
+                UserID: user.UserID,
+                Token: token,
+                Expires: expiryDate
+            }
+        );
+
+        return user;
+    } catch (error) {
+        console.error('Error regenerating activation token:', error);
+        throw error;
+    }
+};
+
+/**
+ * Check if user is activated
+ * @param {number} userId - User ID
+ * @returns {Promise<boolean>} - True if user is activated
+ */
+const isUserActivated = async (userId) => {
+    try {
+        const result = await executeQuery(
+            `SELECT IsActive FROM Users WHERE UserID = @UserID`,
+            { UserID: userId }
+        );
+
+        if (result.recordset.length === 0) {
+            throw new Error('User not found');
+        }
+
+        return result.recordset[0].IsActive === true;
+    } catch (error) {
+        console.error('Error checking user activation status:', error);
+        return false;
+    }
+};
+
 module.exports = {
     executeQuery,
     executeStoredProcedure,
@@ -303,5 +535,9 @@ module.exports = {
     recordLoginAttempt,
     checkFailedLoginAttempts,
     generateRefreshToken,
-    verifyRefreshToken
+    verifyRefreshToken,
+    activateUserAccount,
+    updateUserRole,
+    regenerateActivationToken,
+    isUserActivated
 }; 
