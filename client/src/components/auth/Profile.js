@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
     Container,
     Paper,
@@ -16,15 +17,30 @@ import {
     CircularProgress,
     Alert,
     Card,
-    CardContent
+    CardContent,
+    Chip,
+    Tabs,
+    Tab
 } from '@mui/material';
-import { AccountCircle, Email, Phone, LocationOn, Edit } from '@mui/icons-material';
-import { getCurrentUser } from '../../store/slices/authSlice';
+import {
+    AccountCircle,
+    Email,
+    Phone,
+    LocationOn,
+    Edit,
+    SmokingRooms,
+    MonitorHeart,
+    Assignment,
+    EmojiEvents
+} from '@mui/icons-material';
+import { getCurrentUser, logout } from '../../store/slices/authSlice';
 
 const Profile = () => {
     const dispatch = useDispatch();
-    const { user, loading, error } = useSelector(state => state.auth);
+    const navigate = useNavigate();
+    const { user, loading, error, isAuthenticated } = useSelector(state => state.auth);
     const [editMode, setEditMode] = useState(false);
+    const [activeTab, setActiveTab] = useState(0);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -32,11 +48,49 @@ const Profile = () => {
         phoneNumber: '',
         address: ''
     });
+    const [localError, setLocalError] = useState(null);
+    const [fetchAttempted, setFetchAttempted] = useState(false);
 
     useEffect(() => {
-        // Fetch the latest user data
-        dispatch(getCurrentUser());
-    }, [dispatch]);
+        const fetchUserData = async () => {
+            if (fetchAttempted || loading) return;
+
+            try {
+                setFetchAttempted(true);
+                const resultAction = await dispatch(getCurrentUser());
+
+                if (getCurrentUser.rejected.match(resultAction)) {
+                    // Handle specific error for inactive accounts
+                    if (resultAction.payload && resultAction.payload.includes('Tài khoản chưa được kích hoạt')) {
+                        console.log('Account not activated, redirecting to login');
+                        dispatch(logout());
+                        navigate('/login?activation=required');
+                        return;
+                    }
+
+                    setLocalError(resultAction.payload || 'Failed to load profile data');
+                }
+            } catch (err) {
+                console.error('Error fetching profile:', err);
+                setLocalError('An unexpected error occurred. Please try reloading the page.');
+            }
+        };
+
+        // Only fetch if authenticated and no previous fetch attempted
+        if (isAuthenticated && !fetchAttempted && !user) {
+            fetchUserData();
+        }
+
+        // Handle case where we have auth token but user is not loaded
+        if (isAuthenticated && !user && !loading && !fetchAttempted) {
+            fetchUserData();
+        }
+
+        // Handle case where authentication is lost
+        if (!isAuthenticated && !loading) {
+            navigate('/login');
+        }
+    }, [dispatch, isAuthenticated, loading, fetchAttempted, user, navigate]);
 
     // Update form data when user data changes
     useEffect(() => {
@@ -62,26 +116,49 @@ const Profile = () => {
         });
     };
 
+    const handleTabChange = (event, newValue) => {
+        setActiveTab(newValue);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         // Here you would dispatch an action to update the profile
-        // This would be implemented in your userSlice or authSlice
         console.log('Update profile with:', formData);
         setEditMode(false);
     };
+
+    // Force redirect if there's an activation error
+    useEffect(() => {
+        if (error && error.includes('Tài khoản chưa được kích hoạt')) {
+            dispatch(logout());
+            navigate('/login?activation=required');
+        }
+    }, [error, dispatch, navigate]);
 
     if (loading) {
         return (
             <Container maxWidth="md" sx={{ mt: 4, textAlign: 'center' }}>
                 <CircularProgress />
+                <Typography variant="body1" sx={{ mt: 2 }}>
+                    Loading your profile...
+                </Typography>
             </Container>
         );
     }
 
-    if (error) {
+    if (error || localError) {
         return (
             <Container maxWidth="md" sx={{ mt: 4 }}>
-                <Alert severity="error">{error}</Alert>
+                <Alert severity="error">{error || localError}</Alert>
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => navigate('/login')}
+                    >
+                        Return to Login
+                    </Button>
+                </Box>
             </Container>
         );
     }
@@ -90,6 +167,15 @@ const Profile = () => {
         return (
             <Container maxWidth="md" sx={{ mt: 4 }}>
                 <Alert severity="warning">Please log in to view your profile</Alert>
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => navigate('/login')}
+                    >
+                        Go to Login
+                    </Button>
+                </Box>
             </Container>
         );
     }
@@ -121,9 +207,18 @@ const Profile = () => {
                                 {user.firstName} {user.lastName}
                             </Typography>
 
-                            <Typography variant="body2" color="textSecondary">
+                            <Typography variant="body2" color="textSecondary" gutterBottom>
                                 Role: {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
                             </Typography>
+
+                            {user.membershipStatus && (
+                                <Chip
+                                    label={user.planName || 'Premium Member'}
+                                    color="primary"
+                                    size="small"
+                                    sx={{ mb: 2 }}
+                                />
+                            )}
 
                             <Button
                                 variant="contained"
@@ -220,61 +315,231 @@ const Profile = () => {
                         ) : (
                             // Display Info
                             <>
-                                <Typography variant="h6" gutterBottom>
-                                    Personal Information
-                                </Typography>
+                                <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 2 }}>
+                                    <Tab icon={<AccountCircle />} label="PERSONAL" />
+                                    <Tab icon={<SmokingRooms />} label="SMOKING" />
+                                    <Tab icon={<MonitorHeart />} label="HEALTH" />
+                                    <Tab icon={<EmojiEvents />} label="PROGRESS" />
+                                </Tabs>
 
-                                <List>
-                                    <ListItem sx={{ py: 1 }}>
-                                        <Email sx={{ mr: 2, color: 'primary.main' }} />
-                                        <ListItemText
-                                            primary="Email"
-                                            secondary={user.email || 'Not provided'}
-                                        />
-                                    </ListItem>
+                                {activeTab === 0 && (
+                                    <>
+                                        <Typography variant="h6" gutterBottom>
+                                            Personal Information
+                                        </Typography>
 
-                                    <Divider component="li" />
-
-                                    <ListItem sx={{ py: 1 }}>
-                                        <Phone sx={{ mr: 2, color: 'primary.main' }} />
-                                        <ListItemText
-                                            primary="Phone Number"
-                                            secondary={user.phoneNumber || 'Not provided'}
-                                        />
-                                    </ListItem>
-
-                                    <Divider component="li" />
-
-                                    <ListItem sx={{ py: 1 }}>
-                                        <LocationOn sx={{ mr: 2, color: 'primary.main' }} />
-                                        <ListItemText
-                                            primary="Address"
-                                            secondary={user.address || 'Not provided'}
-                                        />
-                                    </ListItem>
-
-                                    <Divider component="li" />
-
-                                    {/* Add more user information as needed */}
-                                    {user.membershipStatus && (
-                                        <>
+                                        <List>
                                             <ListItem sx={{ py: 1 }}>
+                                                <Email sx={{ mr: 2, color: 'primary.main' }} />
                                                 <ListItemText
-                                                    primary="Membership"
-                                                    secondary={user.planName || 'Free Plan'}
+                                                    primary="Email"
+                                                    secondary={user.email || 'Not provided'}
                                                 />
                                             </ListItem>
-                                            <Divider component="li" />
-                                        </>
-                                    )}
 
-                                    <ListItem sx={{ py: 1 }}>
-                                        <ListItemText
-                                            primary="Account Created"
-                                            secondary={user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
-                                        />
-                                    </ListItem>
-                                </List>
+                                            <Divider component="li" />
+
+                                            <ListItem sx={{ py: 1 }}>
+                                                <Phone sx={{ mr: 2, color: 'primary.main' }} />
+                                                <ListItemText
+                                                    primary="Phone Number"
+                                                    secondary={user.phoneNumber || 'Not provided'}
+                                                />
+                                            </ListItem>
+
+                                            <Divider component="li" />
+
+                                            <ListItem sx={{ py: 1 }}>
+                                                <LocationOn sx={{ mr: 2, color: 'primary.main' }} />
+                                                <ListItemText
+                                                    primary="Address"
+                                                    secondary={user.address || 'Not provided'}
+                                                />
+                                            </ListItem>
+
+                                            <Divider component="li" />
+
+                                            {user.membershipStatus && (
+                                                <>
+                                                    <ListItem sx={{ py: 1 }}>
+                                                        <ListItemText
+                                                            primary="Membership"
+                                                            secondary={user.planName || 'Premium Plan'}
+                                                        />
+                                                    </ListItem>
+                                                    <Divider component="li" />
+                                                </>
+                                            )}
+
+                                            <ListItem sx={{ py: 1 }}>
+                                                <ListItemText
+                                                    primary="Account Created"
+                                                    secondary={user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                                                />
+                                            </ListItem>
+                                        </List>
+                                    </>
+                                )}
+
+                                {activeTab === 1 && (
+                                    <>
+                                        <Typography variant="h6" gutterBottom>
+                                            Smoking Information
+                                        </Typography>
+
+                                        {user.smokingStatus ? (
+                                            <List>
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Cigarettes Per Day"
+                                                        secondary={user.smokingStatus.CigarettesPerDay || 'Not specified'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Cigarette Price"
+                                                        secondary={user.smokingStatus.CigarettePrice ? `$${user.smokingStatus.CigarettePrice}` : 'Not specified'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Smoking Frequency"
+                                                        secondary={user.smokingStatus.SmokingFrequency || 'Not specified'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Last Updated"
+                                                        secondary={user.smokingStatus.LastUpdated ? new Date(user.smokingStatus.LastUpdated).toLocaleDateString() : 'Not specified'}
+                                                    />
+                                                </ListItem>
+                                            </List>
+                                        ) : (
+                                            <Alert severity="info">
+                                                No smoking information provided yet. Please update your smoking status.
+                                            </Alert>
+                                        )}
+                                    </>
+                                )}
+
+                                {activeTab === 2 && (
+                                    <>
+                                        <Typography variant="h6" gutterBottom>
+                                            Health Metrics
+                                        </Typography>
+
+                                        {user.healthMetrics ? (
+                                            <List>
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Blood Pressure"
+                                                        secondary={user.healthMetrics.BloodPressure || 'Not recorded'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Heart Rate"
+                                                        secondary={user.healthMetrics.HeartRate ? `${user.healthMetrics.HeartRate} bpm` : 'Not recorded'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Oxygen Level"
+                                                        secondary={user.healthMetrics.OxygenLevel ? `${user.healthMetrics.OxygenLevel}%` : 'Not recorded'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Notes"
+                                                        secondary={user.healthMetrics.Notes || 'No notes'}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Last Updated"
+                                                        secondary={user.healthMetrics.Date ? new Date(user.healthMetrics.Date).toLocaleDateString() : 'Not recorded'}
+                                                    />
+                                                </ListItem>
+                                            </List>
+                                        ) : (
+                                            <Alert severity="info">
+                                                No health metrics recorded yet. Track your health to see progress.
+                                            </Alert>
+                                        )}
+                                    </>
+                                )}
+
+                                {activeTab === 3 && (
+                                    <>
+                                        <Typography variant="h6" gutterBottom>
+                                            Progress & Goals
+                                        </Typography>
+
+                                        {user.activePlan ? (
+                                            <List>
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Quit Plan"
+                                                        secondary={`${user.activePlan.Status} since ${new Date(user.activePlan.StartDate).toLocaleDateString()}`}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Target Date"
+                                                        secondary={new Date(user.activePlan.TargetDate).toLocaleDateString()}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Motivation Level"
+                                                        secondary={`${user.activePlan.MotivationLevel}/10`}
+                                                    />
+                                                </ListItem>
+                                                <Divider component="li" />
+
+                                                <ListItem sx={{ py: 1 }}>
+                                                    <ListItemText
+                                                        primary="Reason"
+                                                        secondary={user.activePlan.Reason || 'Not specified'}
+                                                    />
+                                                </ListItem>
+                                            </List>
+                                        ) : (
+                                            <Alert severity="info">
+                                                No active quit plan. Create a plan to track your progress.
+                                            </Alert>
+                                        )}
+
+                                        {user.achievementCount > 0 && (
+                                            <Box sx={{ mt: 3 }}>
+                                                <Typography variant="subtitle1" gutterBottom>
+                                                    Achievements: {user.achievementCount}
+                                                </Typography>
+                                                <Button variant="outlined" size="small">
+                                                    View All Achievements
+                                                </Button>
+                                            </Box>
+                                        )}
+                                    </>
+                                )}
                             </>
                         )}
                     </Paper>

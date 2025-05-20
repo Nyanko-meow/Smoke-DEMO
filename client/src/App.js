@@ -23,31 +23,37 @@ function App() {
 
     // Check session on component mount
     useEffect(() => {
+        // Check session immediately on mount
         dispatch(checkSessionExpiration());
 
-        // Set up interval to check and refresh session
+        // Set up interval to check and refresh session - but not too frequently
         const sessionInterval = setInterval(() => {
             dispatch(checkSessionExpiration());
             // Refresh session to extend token validity if user is active
             dispatch(refreshSession());
-        }, 60000); // Check every minute
+        }, 60000); // Check every minute - increased to reduce server load
 
-        // Track user activity
+        // User activity tracking with debounce to avoid too many dispatches
+        let activityTimeout;
         const handleUserActivity = () => {
-            dispatch(refreshSession());
+            clearTimeout(activityTimeout);
+            activityTimeout = setTimeout(() => {
+                dispatch(refreshSession());
+            }, 3000); // Debounce for 3 seconds to reduce API calls
         };
 
-        // Add event listeners for user activity
+        // Add event listeners for user activity - fewer listeners
         window.addEventListener('click', handleUserActivity);
-        window.addEventListener('keypress', handleUserActivity);
-        window.addEventListener('scroll', handleUserActivity);
+        // No need for every possible event - just key movements and clicks
+        window.addEventListener('keydown', handleUserActivity);
+        // Don't track scroll or mousemove - they're too frequent
 
         // Cleanup interval and event listeners on unmount
         return () => {
             clearInterval(sessionInterval);
+            clearTimeout(activityTimeout);
             window.removeEventListener('click', handleUserActivity);
-            window.removeEventListener('keypress', handleUserActivity);
-            window.removeEventListener('scroll', handleUserActivity);
+            window.removeEventListener('keydown', handleUserActivity);
         };
     }, [dispatch]);
 
