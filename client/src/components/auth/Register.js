@@ -40,19 +40,33 @@ const Register = () => {
         // Remove confirmPassword as it's not needed for the API
         const { confirmPassword, ...registerData } = values;
 
-        try {
-            const result = await dispatch(register(registerData));
+        // Add role - default to guest
+        registerData.role = 'guest';
 
-            if (result.meta.requestStatus === 'rejected') {
+        console.log('Submitting registration form:', {
+            ...registerData,
+            password: '[HIDDEN]'
+        });
+
+        try {
+            const resultAction = await dispatch(register(registerData));
+            console.log('Registration result:', resultAction);
+
+            if (register.fulfilled.match(resultAction)) {
+                console.log('Registration successful, navigating to home');
+                navigate('/');
+            } else if (register.rejected.match(resultAction)) {
                 // Format API errors based on response
-                if (typeof result.payload === 'string') {
-                    setApiError(result.payload);
-                } else if (typeof result.payload === 'object') {
+                console.error('Registration failed with error:', resultAction.payload);
+
+                if (typeof resultAction.payload === 'string') {
+                    setApiError(resultAction.payload);
+                } else if (typeof resultAction.payload === 'object') {
                     // Handle structured validation errors from API
                     let fieldErrors = {};
                     let hasFieldErrors = false;
 
-                    Object.entries(result.payload).forEach(([field, message]) => {
+                    Object.entries(resultAction.payload).forEach(([field, message]) => {
                         fieldErrors[field] = message;
                         hasFieldErrors = true;
                     });
@@ -65,13 +79,12 @@ const Register = () => {
                             }))
                         );
                     } else {
-                        setApiError(JSON.stringify(result.payload));
+                        setApiError(JSON.stringify(resultAction.payload));
                     }
                 }
-            } else if (result.meta.requestStatus === 'fulfilled') {
-                navigate('/');
             }
         } catch (err) {
+            console.error('Registration error:', err);
             setApiError('Registration failed. Please try again later.');
         }
     };

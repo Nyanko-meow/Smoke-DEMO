@@ -26,27 +26,129 @@ router.get('/role', protect, async (req, res) => {
 // Get user profile
 router.get('/profile', protect, async (req, res) => {
     try {
-        const result = await pool.request()
+        // Get basic user info and membership
+        const userQuery = await pool.request()
             .input('UserID', req.user.UserID)
             .query(`
         SELECT u.UserID, u.Email, u.FirstName, u.LastName, u.Role, u.PhoneNumber, u.Address, u.Avatar,
-               m.MembershipID, m.Status as MembershipStatus,
-               mp.Name as PlanName, mp.Description as PlanDescription
+               u.IsActive, u.EmailVerified, u.CreatedAt, u.LastLoginAt,
+               m.MembershipID, m.PlanID, m.StartDate, m.EndDate, m.Status as MembershipStatus,
+               mp.Name as PlanName, mp.Description as PlanDescription, mp.Price as PlanPrice, mp.Duration as PlanDuration,
+               DATEDIFF(day, GETDATE(), m.EndDate) as DaysRemaining
         FROM Users u
-        LEFT JOIN UserMemberships m ON u.UserID = m.UserID
+        LEFT JOIN UserMemberships m ON u.UserID = m.UserID AND m.Status = 'active' AND m.EndDate > GETDATE()
         LEFT JOIN MembershipPlans mp ON m.PlanID = mp.PlanID
         WHERE u.UserID = @UserID
       `);
 
+        const user = userQuery.recordset[0];
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy thông tin người dùng'
+            });
+        }
+
+        // Get smoking status
+        const smokingStatusQuery = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query('SELECT * FROM SmokingStatus WHERE UserID = @UserID');
+
+        const smokingStatus = smokingStatusQuery.recordset[0] || null;
+
+        // Get active quit plan
+        const quitPlanQuery = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT * FROM QuitPlans 
+                WHERE UserID = @UserID 
+                AND Status = 'active'
+                ORDER BY CreatedAt DESC
+            `);
+
+        const activePlan = quitPlanQuery.recordset[0] || null;
+
+        // Get recent progress tracking
+        const progressQuery = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 5 * FROM ProgressTracking
+                WHERE UserID = @UserID
+                ORDER BY Date DESC
+            `);
+
+        const recentProgress = progressQuery.recordset || [];
+
+        // Get achievement count
+        const achievementsQuery = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT COUNT(*) as AchievementCount
+                FROM UserAchievements
+                WHERE UserID = @UserID
+            `);
+
+        const achievementCount = achievementsQuery.recordset[0]?.AchievementCount || 0;
+
+        // Get latest health metrics
+        const healthMetricsQuery = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 * FROM HealthMetrics
+                WHERE UserID = @UserID
+                ORDER BY Date DESC
+            `);
+
+        const latestHealthMetrics = healthMetricsQuery.recordset[0] || null;
+
+        // Format the response
+        const userData = {
+            userInfo: {
+                id: user.UserID,
+                email: user.Email,
+                firstName: user.FirstName,
+                lastName: user.LastName,
+                fullName: `${user.FirstName} ${user.LastName}`,
+                role: user.Role,
+                avatar: user.Avatar,
+                phoneNumber: user.PhoneNumber,
+                address: user.Address,
+                isActive: user.IsActive === 1,
+                emailVerified: user.EmailVerified === 1,
+                createdAt: user.CreatedAt,
+                lastLoginAt: user.LastLoginAt
+            },
+            membership: user.MembershipID ? {
+                id: user.MembershipID,
+                planId: user.PlanID,
+                planName: user.PlanName,
+                planDescription: user.PlanDescription,
+                planPrice: user.PlanPrice,
+                planDuration: user.PlanDuration,
+                startDate: user.StartDate,
+                endDate: user.EndDate,
+                daysRemaining: user.DaysRemaining,
+                status: user.MembershipStatus
+            } : null,
+            smokingStatus: smokingStatus,
+            activePlan: activePlan,
+            recentProgress: recentProgress,
+            achievementCount: achievementCount,
+            healthMetrics: latestHealthMetrics,
+            isSubscribed: user.MembershipID !== null
+        };
+
         res.json({
             success: true,
-            data: result.recordset[0]
+            data: userData
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi khi lấy thông tin người dùng'
+            message: 'Lỗi khi lấy thông tin người dùng',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
@@ -383,6 +485,32 @@ router.get('/status', protect, async (req, res) => {
             success: false,
             message: 'Error fetching user status',
             error: error.message
+        });
+    }
+});
+
+// Get user's health metrics
+router.get('/health-metrics', protect, async (req, res) => {
+    try {
+        const result = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+        SELECT *
+        FROM HealthMetrics
+        WHERE UserID = @UserID
+        ORDER BY Date DESC
+      `);
+
+        res.json({
+            success: true,
+            data: result.recordset
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy thông tin sức khỏe',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });

@@ -32,19 +32,19 @@ INSERT INTO Users (
 )
 VALUES 
 -- Guest user
-('guest@example.com', 'hashed_password1', 'Guest', 'User', 'guest', NULL, '0123456789', '123 Guest St',
+('guest@example.com', 'H12345678@', 'Guest', 'User', 'guest', NULL, '0123456789', '123 Guest St',
  0, 'token_guest', DATEADD(DAY, 1, GETDATE()), 0, GETDATE(), GETDATE(), NULL, NULL, NULL),
 
 -- Member user
-('member@example.com', 'hashed_password2', 'Member', 'User', 'member', 'avatar2.jpg', '0987654321', '456 Member Rd',
+('member@example.com', 'H12345678@', 'Member', 'User', 'member', 'avatar2.jpg', '0987654321', '456 Member Rd',
  1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_member', DATEADD(DAY, 7, GETDATE())),
 
 -- Coach user
-('coach@example.com', 'hashed_password3', 'Coach', 'Smith', 'coach', 'coach.jpg', '0111222333', '789 Coach Blvd',
+('coach@example.com', 'H12345678@', 'Coach', 'Smith', 'coach', 'coach.jpg', '0111222333', '789 Coach Blvd',
  1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_coach', DATEADD(DAY, 7, GETDATE())),
 
 -- Admin user
-('admin@example.com', 'hashed_password4', 'Admin', 'Root', 'admin', 'admin.png', '0999888777', '321 Admin Ave',
+('admin@example.com', 'H12345678@', 'Admin', 'Root', 'admin', 'admin.png', '0999888777', '321 Admin Ave',
  1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_admin', DATEADD(DAY, 30, GETDATE()));
 
 
