@@ -8,6 +8,8 @@ import notificationReducer from './slices/notificationSlice';
 import surveyReducer from './slices/surveySlice';
 import blogReducer from './slices/blogSlice';
 import communityReducer from './slices/communitySlice';
+import membershipReducer from './slices/membershipSlice';
+import smokingStatusReducer from './slices/smokingStatusSlice';
 
 const store = configureStore({
     reducer: {
@@ -19,7 +21,9 @@ const store = configureStore({
         notification: notificationReducer,
         survey: surveyReducer,
         blog: blogReducer,
-        community: communityReducer
+        community: communityReducer,
+        membership: membershipReducer,
+        smokingStatus: smokingStatusReducer
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

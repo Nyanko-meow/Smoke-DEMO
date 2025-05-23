@@ -2,16 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Layout, Menu, Button, Avatar, Dropdown, Space } from 'antd';
-import {
-    UserOutlined,
-    LogoutOutlined,
-    SettingOutlined,
-    DashboardOutlined,
-    HomeOutlined,
-    BookOutlined,
-    TeamOutlined,
-    MenuOutlined
-} from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, SettingOutlined, DashboardOutlined, HomeOutlined, BookOutlined, TeamOutlined, MenuOutlined, FormOutlined } from '@ant-design/icons';
 import { logout } from '../../store/slices/authSlice';
 
 const { Header } = Layout;
@@ -76,6 +67,16 @@ const Navbar = () => {
             key: 'community',
             icon: <TeamOutlined />,
             label: <Link to="/community">Community</Link>,
+        },
+        {
+            key: 'plans',
+            icon: <SettingOutlined />,
+            label: <Link to="/membership">Gói Dịch Vụ</Link>,
+        },
+        {
+            key: 'survey',
+            icon: <FormOutlined />,
+            label: <Link to="/smoking-survey">Khảo Sát</Link>,
         },
     ];
 

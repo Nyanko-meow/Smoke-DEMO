@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Fetch plans from API
     try {
         const response = await fetch('/api/memberships/plans');
-        const plans = await response.json();
+        const plansData = await response.json();
+
+        // Handle both data formats - in case API returns data directly or wrapped in a data property
+        const plans = plansData.data || plansData;
 
         // Display plans
         displayPlans(plans, token, role);
@@ -26,7 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'x-auth-token': token
                 }
             });
-            const data = await response.json();
+            const responseData = await response.json();
+            const data = responseData.data || responseData;
 
             if (data.hasMembership) {
                 showCurrentMembership(data.membership);
@@ -183,14 +187,15 @@ function showPaymentModal(planId) {
                 })
             });
 
-            const data = await response.json();
+            const responseData = await response.json();
+            const data = responseData.data || responseData;
 
             if (response.ok) {
                 // Close modal
                 $('#paymentModal').modal('hide');
 
                 // Show success message
-                showAlert(`Đăng ký gói ${data.plan} thành công!`, 'success');
+                showAlert(`Đăng ký gói ${data.plan || 'dịch vụ'} thành công!`, 'success');
 
                 // Update user role to member
                 localStorage.setItem('userRole', 'member');
@@ -200,7 +205,7 @@ function showPaymentModal(planId) {
                     window.location.reload();
                 }, 2000);
             } else {
-                showAlert(data.error || 'Thanh toán thất bại', 'danger');
+                showAlert(data.message || data.error || 'Thanh toán thất bại', 'danger');
             }
         } catch (error) {
             console.error('Error during payment:', error);

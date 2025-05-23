@@ -6,7 +6,7 @@ import Navbar from './components/layout/Navbar';
 import Home from './components/Home';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
-import Profile from './components/auth/Profile';
+import UserProfile from './components/user/UserProfile';
 import BlogList from './components/blog/BlogList';
 import BlogDetail from './components/blog/BlogDetail';
 import BlogEditor from './components/blog/BlogEditor';
@@ -14,6 +14,8 @@ import CommunityList from './components/community/CommunityList';
 import CommunityDetail from './components/community/CommunityDetail';
 import CommunityPost from './components/community/CommunityPost';
 import PrivateRoute from './components/routing/PrivateRoute';
+import MembershipPage from './pages/MembershipPage';
+import SmokingSurveyPage from './pages/SmokingSurveyPage';
 import { checkSessionExpiration, refreshSession } from './store/slices/authSlice';
 
 const { Content } = Layout;
@@ -69,7 +71,7 @@ function App() {
                         path="/profile"
                         element={
                             <PrivateRoute>
-                                <Profile />
+                                <UserProfile />
                             </PrivateRoute>
                         }
                     />
@@ -98,6 +100,22 @@ function App() {
                         element={
                             <PrivateRoute>
                                 <CommunityPost />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/membership"
+                        element={
+                            <PrivateRoute>
+                                <MembershipPage />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/smoking-survey"
+                        element={
+                            <PrivateRoute>
+                                <SmokingSurveyPage />
                             </PrivateRoute>
                         }
                     />

@@ -176,6 +176,7 @@ export const getCurrentUser = createAsyncThunk(
                         phoneNumber: userData.userInfo.phoneNumber,
                         address: userData.userInfo.address,
                         isActive: userData.userInfo.isActive,
+                        createdAt: userData.userInfo.createdAt,
                         // Add additional fields that may be needed in UI
                         membershipStatus: userData.membership?.status || null,
                         planName: userData.membership?.planName || null,
@@ -210,8 +211,9 @@ export const getCurrentUser = createAsyncThunk(
                             role: basicUser.Role,
                             avatar: basicUser.Avatar,
                             phoneNumber: basicUser.PhoneNumber,
-                            address: basicUser.Address,
-                            isActive: basicUser.IsActive
+                            address: basicUser.Address || null,
+                            isActive: basicUser.IsActive === 1,
+                            createdAt: basicUser.CreatedAt || null
                         };
 
                         // If account is not active, handle that explicitly
@@ -345,6 +347,36 @@ const authSlice = createSlice({
 
                 // Check for successful login with token
                 if (action.payload && action.payload.success && action.payload.token) {
+                    // Log the user data to verify address and createdAt are present
+                    console.log('User data from login response:', {
+                        user: action.payload.user,
+                        hasAddress: action.payload.user && 'address' in action.payload.user,
+                        addressValue: action.payload.user?.address,
+                        hasCreatedAt: action.payload.user && 'createdAt' in action.payload.user,
+                        createdAtValue: action.payload.user?.createdAt
+                    });
+
+                    // Ensure user object has address and createdAt
+                    if (action.payload.user) {
+                        // Make sure address is properly set (null if not provided)
+                        action.payload.user.address = action.payload.user.address || null;
+
+                        // Ensure createdAt is a valid date string
+                        if (action.payload.user.createdAt) {
+                            try {
+                                // Validate date format by parsing and re-stringifying
+                                action.payload.user.createdAt = new Date(action.payload.user.createdAt).toISOString();
+                            } catch (e) {
+                                console.error('Error formatting createdAt date:', e);
+                                // If invalid, use current date as fallback
+                                action.payload.user.createdAt = new Date().toISOString();
+                            }
+                        }
+
+                        // Update localStorage with the processed user object
+                        localStorage.setItem('user', JSON.stringify(action.payload.user));
+                    }
+
                     state.loading = false;
                     state.user = action.payload.user;
                     state.token = action.payload.token;
@@ -404,6 +436,19 @@ const authSlice = createSlice({
                 state.loading = true;
             })
             .addCase(getCurrentUser.fulfilled, (state, action) => {
+                console.log('getCurrentUser.fulfilled with payload:', action.payload);
+
+                // Debug address handling specifically
+                if (action.payload) {
+                    console.log('User address in getCurrentUser.fulfilled:', {
+                        address: action.payload.address,
+                        addressType: typeof action.payload.address,
+                        isNull: action.payload.address === null,
+                        isUndefined: action.payload.address === undefined,
+                        isEmptyString: action.payload.address === ''
+                    });
+                }
+
                 state.loading = false;
                 state.user = action.payload;
                 state.isAuthenticated = true;

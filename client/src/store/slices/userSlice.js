@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -8,17 +9,52 @@ export const updateProfile = createAsyncThunk(
     'user/updateProfile',
     async (userData, { rejectWithValue }) => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.put(
-                `${API_URL}/users/profile`,
-                userData,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
+            console.log('Updating profile with data:', userData);
+
+            // Ensure address is properly formatted before sending
+            const dataToSend = {
+                ...userData,
+                address: userData.address || null // Ensure null is sent instead of empty string
+            };
+
+            console.log('Sending profile data with address:', {
+                originalAddress: userData.address,
+                formattedAddress: dataToSend.address,
+                addressType: typeof dataToSend.address
+            });
+
+            const response = await axiosInstance.put('/users/profile', dataToSend);
+
+            console.log('Profile update response:', response.data);
+
+            // Also update the user info in localStorage
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    const updatedUser = {
+                        ...user,
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                        phoneNumber: userData.phoneNumber,
+                        address: userData.address || null // Ensure consistent address handling
+                    };
+
+                    console.log('Updating localStorage user with new address:', {
+                        oldAddress: user.address,
+                        newAddress: updatedUser.address
+                    });
+
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                } catch (e) {
+                    console.error('Error updating user in localStorage:', e);
                 }
-            );
+            }
+
             return response.data;
         } catch (error) {
-            return rejectWithValue(error.response.data);
+            console.error('Error updating profile:', error);
+            return rejectWithValue(error.response?.data || { message: 'Failed to update profile' });
         }
     }
 );

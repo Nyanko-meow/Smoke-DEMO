@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(cors());
 
 // API Routes
-app.use('/api/memberships', membershipRoutes);
+app.use('/api/membership', membershipRoutes);
 app.use('/api/smoking-status', smokingStatusRoutes);
 app.use('/api/user-survey', userSurveyRoutes);
 

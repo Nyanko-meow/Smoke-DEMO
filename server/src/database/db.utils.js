@@ -153,10 +153,10 @@ const createUser = async (userData, activationToken = null) => {
                 PhoneNumber: phoneNumber || null,
                 Address: address || null,
                 Avatar: avatar || null,
-                IsActive: requireActivation ? 0 : 1, // If activation not required, set to active
-                ActivationToken: activationToken,
-                ActivationExpires: activationExpires,
-                EmailVerified: requireActivation ? 0 : 1 // If activation not required, set as verified
+                IsActive: 1, // Always set to active (bypassing email verification)
+                ActivationToken: null, // Don't set activation token
+                ActivationExpires: null, // Don't set expiration
+                EmailVerified: 1 // Always set as verified (bypassing email verification)
             }
         );
 

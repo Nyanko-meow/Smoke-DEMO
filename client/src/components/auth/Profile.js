@@ -34,11 +34,15 @@ import {
     EmojiEvents
 } from '@mui/icons-material';
 import { getCurrentUser, logout } from '../../store/slices/authSlice';
+import { getCurrentMembership } from '../../store/slices/membershipSlice';
+import { updateProfile } from '../../store/slices/userSlice';
+import { notification } from 'antd';
 
 const Profile = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { user, loading, error, isAuthenticated } = useSelector(state => state.auth);
+    const { currentMembership } = useSelector(state => state.membership);
     const [editMode, setEditMode] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [formData, setFormData] = useState({
@@ -50,6 +54,7 @@ const Profile = () => {
     });
     const [localError, setLocalError] = useState(null);
     const [fetchAttempted, setFetchAttempted] = useState(false);
+    const [lastMembershipStatus, setLastMembershipStatus] = useState(null);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -92,6 +97,26 @@ const Profile = () => {
         }
     }, [dispatch, isAuthenticated, loading, fetchAttempted, user, navigate]);
 
+    // Monitor membership status changes to refresh user data
+    useEffect(() => {
+        if (currentMembership && lastMembershipStatus !== currentMembership.Status) {
+            // If membership status changed from pending to active, refresh the user data to get updated role
+            if (lastMembershipStatus === 'pending' && currentMembership.Status === 'active') {
+                console.log('Membership activated, refreshing user data to update role');
+                setFetchAttempted(false); // Allow re-fetching
+                dispatch(getCurrentUser());
+            }
+            setLastMembershipStatus(currentMembership.Status);
+        }
+    }, [currentMembership, lastMembershipStatus, dispatch]);
+
+    // Load membership data if not already loaded
+    useEffect(() => {
+        if (isAuthenticated && user && !currentMembership) {
+            dispatch(getCurrentMembership());
+        }
+    }, [isAuthenticated, user, currentMembership, dispatch]);
+
     // Update form data when user data changes
     useEffect(() => {
         if (user) {
@@ -122,9 +147,52 @@ const Profile = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Here you would dispatch an action to update the profile
-        console.log('Update profile with:', formData);
-        setEditMode(false);
+
+        // Validate required fields
+        if (!formData.firstName || !formData.lastName) {
+            setLocalError('First name and last name are required');
+            return;
+        }
+
+        // Clear any previous error
+        setLocalError(null);
+
+        console.log('Submitting profile update:', formData);
+
+        dispatch(updateProfile(formData))
+            .unwrap()
+            .then(response => {
+                // Show success message
+                notification.success({
+                    message: 'Profile Updated',
+                    description: 'Your profile information has been updated successfully!'
+                });
+
+                // Exit edit mode
+                setEditMode(false);
+
+                // Refresh user data
+                dispatch(getCurrentUser());
+            })
+            .catch(err => {
+                console.error('Error updating profile:', err);
+                let errorMsg = 'Failed to update profile. Please try again.';
+
+                if (err && typeof err === 'object') {
+                    if (err.message) {
+                        errorMsg = err.message;
+                    }
+                } else if (typeof err === 'string') {
+                    errorMsg = err;
+                }
+
+                setLocalError(errorMsg);
+
+                notification.error({
+                    message: 'Update Failed',
+                    description: errorMsg
+                });
+            });
     };
 
     // Force redirect if there's an activation error

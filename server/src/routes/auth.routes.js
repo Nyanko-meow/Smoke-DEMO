@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
-const { protect } = require('../middleware/auth.middleware');
+const { auth } = require('../middleware/auth.middleware');
 const {
     createUser,
     loginUser,
@@ -47,11 +47,13 @@ router.post('/register', registerValidation, async (req, res) => {
 
         console.log('Registering new user:', email || phoneNumber);
 
+        // DISABLED: Email verification
         // Generate activation token if email verification required
         let activationToken = null;
-        if (requireActivation && email) {
-            activationToken = generateActivationToken();
-        }
+        // We're bypassing email verification
+        // if (requireActivation && email) {
+        //     activationToken = generateActivationToken();
+        // }
 
         // Create user
         const user = await createUser({
@@ -62,31 +64,32 @@ router.post('/register', registerValidation, async (req, res) => {
             role,
             phoneNumber,
             address,
-            requireActivation: requireActivation && email // Only require activation for email registration
+            requireActivation: false // Disabled email verification requirement
         }, activationToken);
 
         console.log('User created successfully:', user);
 
+        // DISABLED: Email verification
         // Send activation email if required and email is provided
-        if (requireActivation && email && activationToken) {
-            // Send activation email
-            await sendActivationEmail(user, activationToken);
-            console.log('Activation email requested for:', email);
-
-            // Return success without token for now since account needs activation
-            return res.status(201).json({
-                success: true,
-                message: 'Đăng ký thành công. Vui lòng kiểm tra email để kích hoạt tài khoản.',
-                requireActivation: true,
-                user: {
-                    id: user.UserID,
-                    email: user.Email,
-                    phoneNumber: user.PhoneNumber,
-                    firstName: user.FirstName,
-                    lastName: user.LastName
-                }
-            });
-        }
+        // if (requireActivation && email && activationToken) {
+        //     // Send activation email
+        //     await sendActivationEmail(user, activationToken);
+        //     console.log('Activation email requested for:', email);
+        // 
+        //     // Return success without token for now since account needs activation
+        //     return res.status(201).json({
+        //         success: true,
+        //         message: 'Đăng ký thành công. Vui lòng kiểm tra email để kích hoạt tài khoản.',
+        //         requireActivation: true,
+        //         user: {
+        //             id: user.UserID,
+        //             email: user.Email,
+        //             phoneNumber: user.PhoneNumber,
+        //             firstName: user.FirstName,
+        //             lastName: user.LastName
+        //         }
+        //     });
+        // }
 
         // If activation is not required or registration is by phone, proceed with auto login
         // Get IP address and user agent
@@ -223,6 +226,38 @@ router.post('/login', loginValidation, async (req, res) => {
         // Attempt to login user
         const user = await loginUser({ email, phoneNumber, password }, ipAddress, userAgent);
 
+        // Get complete user data including address
+        const userResult = await pool.request()
+            .input('UserID', user.UserID)
+            .query(`
+                SELECT 
+                    UserID, 
+                    Email, 
+                    FirstName, 
+                    LastName, 
+                    Role, 
+                    PhoneNumber, 
+                    Address, 
+                    Avatar,
+                    CreatedAt
+                FROM Users 
+                WHERE UserID = @UserID
+            `);
+
+        const userData = userResult.recordset[0];
+
+        // Ensure CreatedAt is properly formatted as ISO string
+        if (userData.CreatedAt) {
+            userData.CreatedAt = userData.CreatedAt.toISOString();
+        }
+
+        // Log address value for debugging
+        console.log('User address from login:', {
+            userId: userData.UserID,
+            address: userData.Address,
+            addressType: typeof userData.Address
+        });
+
         // Generate access token (short-lived)
         const token = jwt.sign(
             {
@@ -260,12 +295,15 @@ router.post('/login', loginValidation, async (req, res) => {
             token,
             refreshToken,
             user: {
-                id: user.UserID,
-                email: user.Email,
-                phoneNumber: user.PhoneNumber,
-                firstName: user.FirstName,
-                lastName: user.LastName,
-                role: user.Role
+                id: userData.UserID,
+                email: userData.Email,
+                phoneNumber: userData.PhoneNumber,
+                firstName: userData.FirstName,
+                lastName: userData.LastName,
+                role: userData.Role,
+                address: userData.Address || null,
+                avatar: userData.Avatar,
+                createdAt: userData.CreatedAt
             }
         });
     } catch (error) {
@@ -294,15 +332,38 @@ router.post('/login', loginValidation, async (req, res) => {
 });
 
 // Get current user
-router.get('/me', protect, async (req, res) => {
+router.get('/me', auth, async (req, res) => {
     try {
         const result = await pool.request()
             .input('UserID', req.user.UserID)
-            .query('SELECT UserID, Email, FirstName, LastName, Role, PhoneNumber, Address, Avatar FROM Users WHERE UserID = @UserID');
+            .query(`
+                SELECT 
+                    UserID, 
+                    Email, 
+                    FirstName, 
+                    LastName, 
+                    Role, 
+                    PhoneNumber, 
+                    Address, 
+                    Avatar, 
+                    CreatedAt,
+                    IsActive
+                FROM Users 
+                WHERE UserID = @UserID
+            `);
+
+        // Ensure we format the dates properly for the frontend
+        const user = result.recordset[0];
+        if (user) {
+            // Convert CreatedAt to ISO string format if it exists
+            if (user.CreatedAt) {
+                user.CreatedAt = user.CreatedAt.toISOString();
+            }
+        }
 
         res.json({
             success: true,
-            user: result.recordset[0]
+            user: user
         });
     } catch (error) {
         console.error(error);
@@ -315,7 +376,7 @@ router.get('/me', protect, async (req, res) => {
 
 // Change password
 router.put('/change-password', [
-    protect,
+    auth,
     body('currentPassword')
         .notEmpty()
         .withMessage('Vui lòng nhập mật khẩu hiện tại'),
@@ -495,7 +556,7 @@ router.post('/logout', async (req, res) => {
 });
 
 // Get activation status
-router.get('/activation-status', protect, async (req, res) => {
+router.get('/activation-status', auth, async (req, res) => {
     try {
         const status = await isUserActivated(req.user.UserID);
 
@@ -667,7 +728,7 @@ router.post('/resend-activation', [
 });
 
 // Update user role
-router.put('/role', protect, [
+router.put('/role', auth, [
     body('role')
         .isIn(['guest', 'member', 'coach', 'admin'])
         .withMessage('Vai trò không hợp lệ'),
@@ -728,6 +789,61 @@ router.put('/role', protect, [
             success: false,
             message: 'Lỗi khi cập nhật vai trò',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Debug endpoint to check user data
+router.get('/debug-user', auth, async (req, res) => {
+    try {
+        const result = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT 
+                    UserID, 
+                    Email, 
+                    FirstName, 
+                    LastName, 
+                    Role, 
+                    PhoneNumber, 
+                    Address,
+                    Avatar,
+                    CreatedAt,
+                    UpdatedAt,
+                    LastLoginAt,
+                    CASE WHEN Address IS NULL THEN 'NULL' 
+                         WHEN Address = '' THEN 'EMPTY STRING'
+                         ELSE 'HAS VALUE: ' + Address
+                    END as AddressCheck,
+                    CASE WHEN CreatedAt IS NULL THEN 'NULL'
+                         ELSE 'DATE: ' + CONVERT(VARCHAR, CreatedAt, 120)
+                    END as CreatedAtCheck
+                FROM Users 
+                WHERE UserID = @UserID
+            `);
+
+        // Format date fields
+        const user = result.recordset[0];
+        if (user && user.CreatedAt) {
+            user.CreatedAtFormatted = user.CreatedAt.toISOString();
+        }
+        if (user && user.UpdatedAt) {
+            user.UpdatedAtFormatted = user.UpdatedAt.toISOString();
+        }
+        if (user && user.LastLoginAt) {
+            user.LastLoginAtFormatted = user.LastLoginAt.toISOString();
+        }
+
+        res.json({
+            success: true,
+            user,
+            authUser: req.user
+        });
+    } catch (error) {
+        console.error('Error in debug endpoint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving debug data'
         });
     }
 });

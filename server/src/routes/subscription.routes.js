@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth.middleware');
 const { pool } = require('../config/database');
+const sql = require('mssql');
 const { updateUserRole } = require('../database/db.utils');
 
 /**
@@ -142,43 +143,95 @@ router.post('/subscribe', protect, async (req, res) => {
             // Generate a mock transaction ID
             const transactionId = `txn_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
 
-            // Create payment record
-            const paymentResult = await transaction.request()
-                .input('UserID', req.user.UserID)
-                .input('Amount', amount)
-                .input('PaymentMethod', paymentMethod)
-                .input('TransactionID', transactionId)
-                .query(`
-                    INSERT INTO Payments (UserID, Amount, PaymentMethod, Status, TransactionID)
-                    OUTPUT INSERTED.*
-                    VALUES (@UserID, @Amount, @PaymentMethod, 'completed', @TransactionID)
-                `);
-
             // Calculate end date based on plan duration
+            console.log(`Plan Duration: ${plan.Duration} days`);
             const startDate = new Date();
             const endDate = new Date(startDate.getTime() + (plan.Duration * 24 * 60 * 60 * 1000));
 
-            // Create or update membership
+            console.log(`Start Date: ${startDate.toISOString()}`);
+            console.log(`End Date: ${endDate.toISOString()}`);
+
+            // Format dates for SQL Server
+            const startDateFormatted = startDate.toISOString().slice(0, 19).replace('T', ' ');
+            const endDateFormatted = endDate.toISOString().slice(0, 19).replace('T', ' ');
+
+            console.log(`Formatted Start Date: ${startDateFormatted}`);
+            console.log(`Formatted End Date: ${endDateFormatted}`);
+
+            // 1. First create payment record
+            console.log('Creating payment record...');
+            const paymentResult = await transaction.request()
+                .input('UserID', req.user.UserID)
+                .input('PlanID', planId)
+                .input('Amount', amount)
+                .input('PaymentMethod', paymentMethod === 'credit_card' ? 'BankTransfer' : paymentMethod)
+                .input('TransactionID', transactionId)
+                .input('Status', 'confirmed')
+                .input('StartDate', sql.DateTime, startDateFormatted)
+                .input('EndDate', sql.DateTime, endDateFormatted)
+                .input('Note', `Subscription to ${plan.Name} plan`)
+                .query(`
+                    INSERT INTO Payments (UserID, PlanID, Amount, PaymentMethod, Status, TransactionID, PaymentDate, StartDate, EndDate, Note)
+                    OUTPUT INSERTED.*
+                    VALUES (@UserID, @PlanID, @Amount, @PaymentMethod, @Status, @TransactionID, GETDATE(), @StartDate, @EndDate, @Note)
+                `);
+
+            console.log('Payment record created:', paymentResult.recordset[0]);
+
+            // 2. Then, if payment successful, create/update membership
+            if (!paymentResult.recordset || paymentResult.recordset.length === 0) {
+                throw new Error('Payment creation failed');
+            }
+
+            // Use the same dates from the payment record
+            console.log('Creating membership record...');
             const membershipResult = await transaction.request()
                 .input('UserID', req.user.UserID)
                 .input('PlanID', planId)
-                .input('StartDate', startDate)
-                .input('EndDate', endDate)
+                .input('StartDate', sql.DateTime, startDateFormatted)
+                .input('EndDate', sql.DateTime, endDateFormatted)
+                .input('Status', 'active')
                 .query(`
-                    MERGE INTO UserMemberships AS target
-                    USING (SELECT @UserID AS UserID) AS source
-                    ON target.UserID = source.UserID AND target.Status = 'active'
-                    WHEN MATCHED THEN
-                        UPDATE SET
-                            PlanID = @PlanID,
-                            StartDate = @StartDate,
-                            EndDate = @EndDate,
-                            Status = 'active'
-                    WHEN NOT MATCHED THEN
-                        INSERT (UserID, PlanID, StartDate, EndDate, Status)
-                        VALUES (@UserID, @PlanID, @StartDate, @EndDate, 'active')
-                    OUTPUT INSERTED.*;
+                    DECLARE @InsertedMembership TABLE (
+                        MembershipID INT,
+                        UserID INT,
+                        PlanID INT,
+                        StartDate DATETIME,
+                        EndDate DATETIME,
+                        Status NVARCHAR(20),
+                        CreatedAt DATETIME
+                    );
+
+                    -- Debug log input values
+                    PRINT 'User ID: ' + CAST(@UserID AS NVARCHAR);
+                    PRINT 'Plan ID: ' + CAST(@PlanID AS NVARCHAR);
+                    PRINT 'Start Date: ' + CAST(@StartDate AS NVARCHAR);
+                    PRINT 'End Date: ' + CAST(@EndDate AS NVARCHAR);
+                    PRINT 'Status: ' + @Status;
+
+                    -- Set existing active subscriptions to expired
+                    UPDATE UserMemberships
+                    SET Status = 'expired'
+                    WHERE UserID = @UserID AND Status = 'active';
+                    
+                    -- Always insert a new membership record
+                    INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status)
+                    OUTPUT 
+                        INSERTED.MembershipID,
+                        INSERTED.UserID,
+                        INSERTED.PlanID,
+                        INSERTED.StartDate,
+                        INSERTED.EndDate,
+                        INSERTED.Status,
+                        INSERTED.CreatedAt
+                    INTO @InsertedMembership
+                    VALUES (@UserID, @PlanID, @StartDate, @EndDate, @Status);
+
+                    -- Return the newly inserted record
+                    SELECT * FROM @InsertedMembership;
                 `);
+
+            console.log('Membership record created:', membershipResult.recordset[0]);
 
             // Create notification for the user
             await transaction.request()
@@ -193,7 +246,17 @@ router.post('/subscribe', protect, async (req, res) => {
 
             // Update user role to member if they're currently a guest
             if (req.user.Role === 'guest') {
-                await updateUserRole(req.user.UserID, 'member');
+                try {
+                    console.log('Updating user role from guest to member for UserID:', req.user.UserID);
+                    const updatedUser = await updateUserRole(req.user.UserID, 'member');
+                    console.log('Role updated successfully:', updatedUser);
+
+                    // Also update the role in the current request object so it's immediately reflected
+                    req.user.Role = 'member';
+                } catch (roleError) {
+                    console.error('Error updating user role:', roleError);
+                    // Continue with the transaction even if role update fails
+                }
             }
 
             await transaction.commit();

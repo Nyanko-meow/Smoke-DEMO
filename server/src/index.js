@@ -5,8 +5,9 @@ const morgan = require('morgan');
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const { connectDB } = require('./config/database');
+const { connectDB, pool } = require('./config/database');
 const { startScheduler } = require('./utils/subscription-scheduler');
+const { testDatabaseConnection, testSurveyQuestionsTable } = require('./runSchemaUpdate');
 
 // Load environment variables
 dotenv.config();
@@ -23,11 +24,18 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true
+app.use(helmet({
+    crossOriginResourcePolicy: false
 }));
+
+// Configure CORS to allow all origins
+app.use(cors({
+    origin: '*', // Allow all origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -35,6 +43,12 @@ app.use(cookieParser());
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Handle missing placeholder image
+app.get('/images/default-placeholder.jpg', (req, res) => {
+    // Return 204 No Content instead of 404 to prevent console errors
+    res.status(204).send();
+});
 
 // Root route for API health check
 app.get('/', (req, res) => {
@@ -55,10 +69,173 @@ app.get('/api', (req, res) => {
             subscriptions: '/api/subscriptions',
             payments: '/api/payments',
             smokingStatus: '/api/smoking-status',
-            userSurvey: '/api/user-survey'
-            // Add other endpoints as needed
+            userSurvey: '/api/user-survey',
+            surveyQuestions: '/api/survey-questions',
+            surveyQuestionsPublic: '/api/survey-questions/public',
+            surveyTest: '/api/survey-test',
+            questions: '/api/questions' // Direct endpoint for debugging
         }
     });
+});
+
+// Direct endpoint for questions (no nested routes)
+app.get('/api/questions', async (req, res) => {
+    try {
+        console.log('Direct questions endpoint called');
+
+        const result = await pool.request()
+            .query(`
+                SELECT * FROM SurveyQuestions 
+                ORDER BY QuestionID ASC
+            `);
+
+        console.log(`Found ${result.recordset.length} survey questions`);
+
+        // Allow cross-origin for this response
+        res.header('Access-Control-Allow-Origin', '*');
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error getting questions:', error);
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+// Direct endpoint for submitting answers (no nested routes, no auth)
+app.post('/api/submit-answers', async (req, res) => {
+    try {
+        console.log('Direct submit answers endpoint called');
+        const { answers } = req.body;
+
+        if (!answers || !Array.isArray(answers) || answers.length === 0) {
+            return res.status(400).json({ message: 'Please provide survey answers' });
+        }
+
+        console.log('Received answers:', answers);
+
+        // Use a fixed default user ID for public submissions
+        const defaultUserId = 2; // Using a known user ID from your database
+
+        // Process each answer directly without transaction for simplicity
+        for (const answer of answers) {
+            const { questionId, answerText } = answer;
+
+            if (!questionId || answerText === undefined) {
+                continue;
+            }
+
+            console.log(`Processing answer for question ID: ${questionId}, answer: ${answerText}`);
+
+            try {
+                // Check if the user already answered this question
+                const existingAnswer = await pool.request()
+                    .input('userID', defaultUserId)
+                    .input('questionID', questionId)
+                    .query(`
+                        SELECT AnswerID FROM UserSurveyAnswers
+                        WHERE UserID = @userID AND QuestionID = @questionID
+                    `);
+
+                if (existingAnswer.recordset.length > 0) {
+                    // Update existing answer
+                    await pool.request()
+                        .input('userID', defaultUserId)
+                        .input('questionID', questionId)
+                        .input('answerText', answerText)
+                        .query(`
+                            UPDATE UserSurveyAnswers
+                            SET Answer = @answerText,
+                                SubmittedAt = GETDATE()
+                            WHERE UserID = @userID AND QuestionID = @questionID
+                        `);
+                    console.log(`Updated answer for question ID: ${questionId}`);
+                } else {
+                    // Insert new answer
+                    await pool.request()
+                        .input('userID', defaultUserId)
+                        .input('questionID', questionId)
+                        .input('answerText', answerText)
+                        .query(`
+                            INSERT INTO UserSurveyAnswers (UserID, QuestionID, Answer, SubmittedAt)
+                            VALUES (@userID, @questionID, @answerText, GETDATE())
+                        `);
+                    console.log(`Inserted new answer for question ID: ${questionId}`);
+                }
+            } catch (answerError) {
+                console.error(`Error processing answer for question ID ${questionId}:`, answerError);
+                // Continue processing other answers even if one fails
+            }
+        }
+
+        // Allow cross-origin for this response
+        res.header('Access-Control-Allow-Origin', '*');
+        res.status(200).json({ message: 'Answers submitted successfully' });
+    } catch (error) {
+        console.error('Error in direct submit answers endpoint:', error);
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+// Debug endpoint to test database and survey questions
+app.get('/api/survey-test', async (req, res) => {
+    try {
+        console.log('Testing survey API and database connection');
+
+        // Test database connection
+        const dbConnection = await testDatabaseConnection();
+
+        // Test survey questions table
+        const questions = await testSurveyQuestionsTable();
+
+        res.json({
+            success: true,
+            dbConnection,
+            questionsCount: questions ? questions.length : 0,
+            questions: questions || [],
+            message: 'Survey test endpoint'
+        });
+    } catch (error) {
+        console.error('Error in survey test endpoint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error testing survey API',
+            error: error.message
+        });
+    }
+});
+
+// Direct endpoint for membership plans (no auth required)
+app.get('/api/membership/plans', async (req, res) => {
+    try {
+        console.log('Direct membership plans endpoint called');
+
+        const result = await pool.request().query(`
+            SELECT * FROM MembershipPlans
+            ORDER BY Price ASC
+        `);
+
+        console.log(`Found ${result.recordset.length} membership plans`);
+
+        // Allow cross-origin for this response
+        res.header('Access-Control-Allow-Origin', '*');
+        res.json({
+            success: true,
+            data: result.recordset,
+            message: 'Đã lấy được dữ liệu từ SQL thành công'
+        });
+    } catch (error) {
+        console.error('Error getting membership plans:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving membership plans',
+            error: error.message
+        });
+    }
 });
 
 // Routes
@@ -76,6 +253,9 @@ app.use('/api/community', require('./routes/community.routes'));
 app.use('/api/subscriptions', require('./routes/subscription.routes'));
 app.use('/api/smoking-status', require('./routes/smokingStatus.routes'));
 app.use('/api/user-survey', require('./routes/userSurvey.routes'));
+app.use('/api/membership', require('./routes/membershipRoutes'));
+app.use('/api/memberships', require('./routes/membershipRoutes')); // Add alias for client compatibility
+app.use('/api/survey-questions', require('./routes/surveyQuestions.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

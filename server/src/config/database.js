@@ -48,22 +48,47 @@ const connectDB = async () => {
 // Seed subscription plans
 const seedSubscriptionPlans = async () => {
     try {
-        const seedFilePath = path.join(__dirname, '../database/subscription-seeds.sql');
-
-        if (fs.existsSync(seedFilePath)) {
-            const seedQuery = fs.readFileSync(seedFilePath, 'utf8');
-            await pool.request().query(seedQuery);
+        // Seed subscription plans
+        const subscriptionSeedPath = path.join(__dirname, '../database/subscription-seeds.sql');
+        if (fs.existsSync(subscriptionSeedPath)) {
+            const subscriptionSeedQuery = fs.readFileSync(subscriptionSeedPath, 'utf8');
+            await pool.request().query(subscriptionSeedQuery);
             console.log('Subscription seed data processed');
         } else {
             console.log('Subscription seed file not found');
         }
+
+        // Seed membership plans
+        const membershipSeedPath = path.join(__dirname, '../database/membership-seeds.sql');
+        if (fs.existsSync(membershipSeedPath)) {
+            const membershipSeedQuery = fs.readFileSync(membershipSeedPath, 'utf8');
+            await pool.request().query(membershipSeedQuery);
+            console.log('Membership plans seed data processed');
+        } else {
+            console.log('Membership plans seed file not found');
+        }
     } catch (err) {
-        console.error('Error running subscription seeds:', err);
+        console.error('Error running seeds:', err);
     }
 };
 
+// Add this function to check if connection is valid
+const checkConnection = async () => {
+    try {
+        await poolConnect;
+        // Test query
+        await pool.request().query('SELECT 1 as test');
+        return true;
+    } catch (error) {
+        console.error('Database connection check failed:', error);
+        return false;
+    }
+};
+
+// Export the function
 module.exports = {
     pool,
     connectDB,
-    sql
+    sql,
+    checkConnection
 }; 

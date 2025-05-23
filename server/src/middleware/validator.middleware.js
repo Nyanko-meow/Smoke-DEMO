@@ -85,19 +85,24 @@ const loginValidation = [
 // Validation rules for user profile update
 const profileUpdateValidation = [
     body('firstName')
-        .optional()
         .notEmpty()
         .withMessage('Tên không được bỏ trống')
         .trim(),
     body('lastName')
-        .optional()
         .notEmpty()
         .withMessage('Họ không được bỏ trống')
         .trim(),
     body('phoneNumber')
         .optional()
-        .isMobilePhone('any')
-        .withMessage('Số điện thoại không hợp lệ'),
+        .custom(value => {
+            if (!value) return true; // Allow empty values
+            // Simple validation for phone number - just check if it's mostly digits
+            const digits = value.replace(/\D/g, '');
+            if (digits.length < 8) {
+                throw new Error('Số điện thoại phải có ít nhất 8 chữ số');
+            }
+            return true;
+        }),
     body('address')
         .optional()
         .trim(),

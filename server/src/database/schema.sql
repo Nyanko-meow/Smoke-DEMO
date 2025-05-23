@@ -1,9 +1,15 @@
--- Users Table
--- Xóa nếu đã tồn tại
+-- Xóa CSDL nếu đã tồn tại
 DROP DATABASE IF EXISTS SMOKEKING;
-CREATE DATABASE SMOKEKING
 GO
-USE [SMOKEKING]
+
+-- Tạo lại CSDL
+CREATE DATABASE SMOKEKING;
+GO
+
+USE SMOKEKING;
+GO
+
+-- Users Table
 CREATE TABLE Users (
     UserID INT IDENTITY(1,1) PRIMARY KEY,
     Email NVARCHAR(255) UNIQUE NOT NULL,
@@ -24,31 +30,22 @@ CREATE TABLE Users (
     RefreshToken NVARCHAR(255),
     RefreshTokenExpiry DATETIME
 );
--- Chèn dữ liệu mẫu
-INSERT INTO Users (
-    Email, Password, FirstName, LastName, Role, Avatar, PhoneNumber, Address,
+
+-- Insert mẫu người dùng
+INSERT INTO Users (Email, Password, FirstName, LastName, Role, Avatar, PhoneNumber, Address,
     IsActive, ActivationToken, ActivationExpires, EmailVerified, CreatedAt, UpdatedAt, LastLoginAt,
-    RefreshToken, RefreshTokenExpiry
-)
+    RefreshToken, RefreshTokenExpiry)
 VALUES 
--- Guest user
 ('guest@example.com', 'H12345678@', 'Guest', 'User', 'guest', NULL, '0123456789', '123 Guest St',
  0, 'token_guest', DATEADD(DAY, 1, GETDATE()), 0, GETDATE(), GETDATE(), NULL, NULL, NULL),
-
--- Member user
 ('member@example.com', 'H12345678@', 'Member', 'User', 'member', 'avatar2.jpg', '0987654321', '456 Member Rd',
  1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_member', DATEADD(DAY, 7, GETDATE())),
-
--- Coach user
 ('coach@example.com', 'H12345678@', 'Coach', 'Smith', 'coach', 'coach.jpg', '0111222333', '789 Coach Blvd',
  1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_coach', DATEADD(DAY, 7, GETDATE())),
-
--- Admin user
 ('admin@example.com', 'H12345678@', 'Admin', 'Root', 'admin', 'admin.png', '0999888777', '321 Admin Ave',
  1, NULL, NULL, 1, GETDATE(), GETDATE(), GETDATE(), 'refreshtoken_admin', DATEADD(DAY, 30, GETDATE()));
 
-
--- Login History Table
+-- Login History
 CREATE TABLE LoginHistory (
     HistoryID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
@@ -59,7 +56,7 @@ CREATE TABLE LoginHistory (
     Notes NVARCHAR(MAX)
 );
 
--- Login Attempts Table
+-- Login Attempts
 CREATE TABLE LoginAttempts (
     AttemptID INT IDENTITY(1,1) PRIMARY KEY,
     Email NVARCHAR(255),
@@ -68,18 +65,25 @@ CREATE TABLE LoginAttempts (
     Success BIT DEFAULT 0
 );
 
--- Membership Plans Table
+-- Membership Plans
 CREATE TABLE MembershipPlans (
     PlanID INT IDENTITY(1,1) PRIMARY KEY,
     Name NVARCHAR(100) NOT NULL,
     Description NVARCHAR(MAX),
     Price DECIMAL(10,2) NOT NULL,
-    Duration INT NOT NULL, -- in days
+    Duration INT NOT NULL,
     Features NVARCHAR(MAX),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
--- User Memberships Table
+-- Insert các Plan mẫu
+INSERT INTO MembershipPlans (Name, Description, Price, Duration, Features)
+VALUES 
+('Basic Plan', 'A basic plan for quitting support.', 99.00, 30, 'Progress tracking, Basic quitting tips, Community access'),
+('Premium Plan', 'A premium plan with advanced support.', 199.00, 60, 'Progress tracking, Advanced analytics, Premium quitting strategies, Community access, Weekly motivation'),
+('Pro Plan', 'The best plan with full support and coaching.', 299.00, 90, 'Progress tracking, Advanced analytics, Pro quitting strategies, Community access, Daily motivation, Personalized coaching, Health improvement dashboard');
+
+-- User Memberships
 CREATE TABLE UserMemberships (
     MembershipID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
@@ -90,7 +94,7 @@ CREATE TABLE UserMemberships (
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
--- Smoking Status Table
+-- Smoking Status
 CREATE TABLE SmokingStatus (
     StatusID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
@@ -100,7 +104,7 @@ CREATE TABLE SmokingStatus (
     LastUpdated DATETIME DEFAULT GETDATE()
 );
 
--- Quit Plans Table
+-- Quit Plans
 CREATE TABLE QuitPlans (
     PlanID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
@@ -113,7 +117,7 @@ CREATE TABLE QuitPlans (
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
--- Progress Tracking Table
+-- Progress Tracking
 CREATE TABLE ProgressTracking (
     ProgressID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
@@ -125,153 +129,89 @@ CREATE TABLE ProgressTracking (
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
--- Achievements Table
-CREATE TABLE Achievements (
-    AchievementID INT IDENTITY(1,1) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL,
-    Description NVARCHAR(MAX),
-    Type NVARCHAR(50),
-    Criteria NVARCHAR(MAX),
-    BadgeImage NVARCHAR(255)
-);
-
--- User Achievements Table
-CREATE TABLE UserAchievements (
-    UserAchievementID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    AchievementID INT FOREIGN KEY REFERENCES Achievements(AchievementID),
-    EarnedDate DATETIME DEFAULT GETDATE()
-);
-
--- Notifications Table
-CREATE TABLE Notifications (
-    NotificationID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Title NVARCHAR(255) NOT NULL,
-    Message NVARCHAR(MAX),
-    Type NVARCHAR(50),
-    IsRead BIT DEFAULT 0,
-    CreatedAt DATETIME DEFAULT GETDATE()
-);
-
--- Consultations Table
-CREATE TABLE Consultations (
-    ConsultationID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    CoachID INT FOREIGN KEY REFERENCES Users(UserID),
-    Date DATETIME NOT NULL,
-    Status NVARCHAR(20) CHECK (Status IN ('scheduled', 'completed', 'cancelled')),
-    Notes NVARCHAR(MAX),
-    CreatedAt DATETIME DEFAULT GETDATE()
-);
-
--- Payments Table
+-- Payments
 CREATE TABLE Payments (
     PaymentID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
+    PlanID INT FOREIGN KEY REFERENCES MembershipPlans(PlanID),
     Amount DECIMAL(10,2) NOT NULL,
     PaymentDate DATETIME DEFAULT GETDATE(),
-    PaymentMethod NVARCHAR(50),
-    Status NVARCHAR(20) CHECK (Status IN ('pending', 'completed', 'failed')),
-    TransactionID NVARCHAR(255)
+    PaymentMethod NVARCHAR(50) CHECK (PaymentMethod IN ('BankTransfer', 'Cash')),
+    Status NVARCHAR(20) CHECK (Status IN ('pending', 'confirmed', 'rejected')),
+    TransactionID NVARCHAR(255),
+    StartDate DATETIME,
+    EndDate DATETIME,
+    Note NVARCHAR(MAX)
 );
 
--- Feedback Table
-CREATE TABLE Feedback (
-    FeedbackID INT IDENTITY(1,1) PRIMARY KEY,
+-- Payment Confirmations
+CREATE TABLE PaymentConfirmations (
+    ConfirmationID INT IDENTITY(1,1) PRIMARY KEY,
+    PaymentID INT FOREIGN KEY REFERENCES Payments(PaymentID),
+    ConfirmationDate DATETIME DEFAULT GETDATE(),
+    ConfirmedByUserID INT FOREIGN KEY REFERENCES Users(UserID),
+    ConfirmationCode NVARCHAR(255),
+    Notes NVARCHAR(MAX)
+);
+
+-- Survey Questions Table
+CREATE TABLE SurveyQuestions (
+    QuestionID INT IDENTITY(1,1) PRIMARY KEY,
+    QuestionText NVARCHAR(MAX) NOT NULL
+);
+
+-- User Survey Answers
+CREATE TABLE UserSurveyAnswers (
+    AnswerID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Rating INT CHECK (Rating BETWEEN 1 AND 5),
-    Comment NVARCHAR(MAX),
-    CreatedAt DATETIME DEFAULT GETDATE()
+    QuestionID INT FOREIGN KEY REFERENCES SurveyQuestions(QuestionID),
+    Answer NVARCHAR(MAX),
+    SubmittedAt DATETIME DEFAULT GETDATE()
 );
 
--- User Survey Table
-CREATE TABLE UserSurvey (
-    SurveyID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    SmokingDuration NVARCHAR(50),
-    CigarettesPerDay INT,
-    SmokingTime NVARCHAR(MAX),
-    QuitReason NVARCHAR(MAX),
-    PreviousAttempts NVARCHAR(MAX),
-    SupportNeeds NVARCHAR(MAX),
-    MonthlyBudget DECIMAL(10,2),
-    PreferredPlatform NVARCHAR(50),
-    ImportantMetrics NVARCHAR(MAX),
-    SocialSharing BIT,
-    CreatedAt DATETIME DEFAULT GETDATE()
-);
+-- Insert 10 câu hỏi khảo sát
+INSERT INTO SurveyQuestions (QuestionText)
+VALUES 
+(N'Bạn đã hút thuốc trong bao lâu rồi?'),
+(N'Trung bình mỗi ngày bạn hút bao nhiêu điếu?'),
+(N'Khoảng thời gian và hoàn cảnh nào bạn thường hút nhất?'),
+(N'Lý do chính bạn muốn cai thuốc là gì?'),
+(N'Bạn đã từng cố gắng cai thuốc trước đây không? Kết quả ra sao?'),
+(N'Bạn mong muốn nhận hỗ trợ gì nhất từ một nền tảng (thông báo, cộng đồng, huấn luyện viên…)?'),
+(N'Bạn sẵn sàng chi trả bao nhiêu mỗi tháng để sử dụng dịch vụ hỗ trợ cai thuốc?'),
+(N'Bạn ưu tiên sử dụng nền tảng trên thiết bị di động hay web?'),
+(N'Các chỉ số nào bạn quan tâm nhất khi theo dõi tiến trình (ngày không hút, tiền tiết kiệm, sức khỏe…)?'),
+(N'Bạn có thường chia sẻ tiến trình/câu chuyện của mình lên mạng xã hội không?');
 
--- Blog Posts Table
+-- Blog Posts
 CREATE TABLE BlogPosts (
     PostID INT IDENTITY(1,1) PRIMARY KEY,
     Title NVARCHAR(255) NOT NULL,
-    Content NVARCHAR(MAX),
+    Content NVARCHAR(MAX) NOT NULL,
     AuthorID INT FOREIGN KEY REFERENCES Users(UserID),
-    Status NVARCHAR(20) CHECK (Status IN ('draft', 'published', 'archived')),
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    UpdatedAt DATETIME DEFAULT GETDATE()
+    PublishedAt DATETIME DEFAULT GETDATE(),
+    IsPublished BIT DEFAULT 1
 );
 
--- Comments Table
+-- Comments
 CREATE TABLE Comments (
     CommentID INT IDENTITY(1,1) PRIMARY KEY,
     PostID INT FOREIGN KEY REFERENCES BlogPosts(PostID),
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Content NVARCHAR(MAX),
-    Status NVARCHAR(20) CHECK (Status IN ('pending', 'approved', 'rejected')),
+    CommentText NVARCHAR(MAX) NOT NULL,
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
--- Community Posts Table
-CREATE TABLE CommunityPosts (
-    PostID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Title NVARCHAR(255),
-    Content NVARCHAR(MAX),
-    Type NVARCHAR(50),
-    Status NVARCHAR(20) CHECK (Status IN ('active', 'archived', 'deleted')),
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    UpdatedAt DATETIME DEFAULT GETDATE()
-);
+-- Ví dụ Insert Payment & Membership
+DECLARE @userID INT = 2;
+DECLARE @planID INT = 1;
+DECLARE @amount DECIMAL(10,2) = (SELECT Price FROM MembershipPlans WHERE PlanID = @planID);
+DECLARE @duration INT = (SELECT Duration FROM MembershipPlans WHERE PlanID = @planID);
+DECLARE @startDate DATETIME = GETDATE();
+DECLARE @endDate DATETIME = DATEADD(DAY, @duration, @startDate);
 
--- Community Comments Table
-CREATE TABLE CommunityComments (
-    CommentID INT IDENTITY(1,1) PRIMARY KEY,
-    PostID INT FOREIGN KEY REFERENCES CommunityPosts(PostID),
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Content NVARCHAR(MAX),
-    Status NVARCHAR(20) CHECK (Status IN ('active', 'deleted')),
-    CreatedAt DATETIME DEFAULT GETDATE()
-);
+INSERT INTO Payments (UserID, PlanID, Amount, PaymentMethod, Status, TransactionID, StartDate, EndDate, Note)
+VALUES (@userID, @planID, @amount, 'BankTransfer', 'confirmed', 'TX123456789', @startDate, @endDate, N'Đăng ký qua trang web');
 
--- Health Metrics Table
-CREATE TABLE HealthMetrics (
-    MetricID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Date DATE NOT NULL,
-    BloodPressure NVARCHAR(20),
-    HeartRate INT,
-    OxygenLevel DECIMAL(5,2),
-    Notes NVARCHAR(MAX),
-    CreatedAt DATETIME DEFAULT GETDATE()
-);
-
--- Create indexes for better performance
-CREATE INDEX idx_users_email ON Users(Email);
-CREATE INDEX idx_users_role ON Users(Role);
-CREATE INDEX idx_memberships_user ON UserMemberships(UserID);
-CREATE INDEX idx_memberships_status ON UserMemberships(Status);
-CREATE INDEX idx_quitplans_user ON QuitPlans(UserID);
-CREATE INDEX idx_quitplans_status ON QuitPlans(Status);
-CREATE INDEX idx_progress_user ON ProgressTracking(UserID);
-CREATE INDEX idx_progress_date ON ProgressTracking(Date);
-CREATE INDEX idx_notifications_user ON Notifications(UserID);
-CREATE INDEX idx_notifications_read ON Notifications(IsRead);
-CREATE INDEX idx_consultations_user ON Consultations(UserID);
-CREATE INDEX idx_consultations_coach ON Consultations(CoachID);
-CREATE INDEX idx_payments_user ON Payments(UserID);
-CREATE INDEX idx_payments_status ON Payments(Status);
-CREATE INDEX idx_survey_user ON UserSurvey(UserID);
-CREATE INDEX idx_blog_status ON BlogPosts(Status);
-CREATE INDEX idx_community_status ON CommunityPosts(Status); 
+INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status)
+VALUES (@userID, @planID, @startDate, @endDate, 'active');

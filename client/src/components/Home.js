@@ -41,7 +41,7 @@ const Home = () => {
                                     size="large"
                                     className="plans-btn"
                                 >
-                                    <Link to="/plans">Xem gói dịch vụ</Link>
+                                    <Link to="/membership">Xem gói dịch vụ</Link>
                                 </Button>
                             </div>
                         </Col>
@@ -228,7 +228,7 @@ const Home = () => {
                             <Title level={4} className="footer-title">Liên kết</Title>
                             <ul className="footer-links">
                                 <li><Link to="/" className="footer-link">Trang chủ</Link></li>
-                                <li><Link to="/plans" className="footer-link">Gói dịch vụ</Link></li>
+                                <li><Link to="/membership" className="footer-link">Gói dịch vụ</Link></li>
                                 <li><Link to="/blog" className="footer-link">Blog</Link></li>
                                 <li><Link to="/community" className="footer-link">Cộng đồng</Link></li>
                             </ul>
