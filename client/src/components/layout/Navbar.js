@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Layout, Menu, Button, Avatar, Dropdown, Space } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, DashboardOutlined, HomeOutlined, BookOutlined, TeamOutlined, MenuOutlined, FormOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, SettingOutlined, DashboardOutlined, HomeOutlined, BookOutlined, TeamOutlined, MenuOutlined, FormOutlined, BulbOutlined, TrophyOutlined, CommentOutlined } from '@ant-design/icons';
 import { logout } from '../../store/slices/authSlice';
 
 const { Header } = Layout;
@@ -40,6 +40,11 @@ const Navbar = () => {
             icon: <UserOutlined />,
             label: <Link to="/profile">Profile</Link>,
         },
+        {
+            key: 'comments',
+            icon: <CommentOutlined />,
+            label: <Link to="/user/comments">Quản lý comments</Link>,
+        },
         ...(user?.role === 'admin' ? [{
             key: 'admin',
             icon: <DashboardOutlined />,
@@ -69,14 +74,24 @@ const Navbar = () => {
             label: <Link to="/community">Community</Link>,
         },
         {
+            key: 'achievement',
+            icon: <TrophyOutlined />,
+            label: <Link to="/achievement">Achievements</Link>,
+        },
+        {
             key: 'plans',
             icon: <SettingOutlined />,
-            label: <Link to="/membership">Gói Dịch Vụ</Link>,
+            label: <Link to="/membership">Service Package</Link>,
         },
         {
             key: 'survey',
             icon: <FormOutlined />,
-            label: <Link to="/smoking-survey">Khảo Sát</Link>,
+            label: <Link to="/smoking-survey">Survey</Link>,
+        },
+        {
+            key: 'quit-plan',
+            icon: <BulbOutlined />,
+            label: <Link to="/quit-plan">Quit Plan</Link>,
         },
     ];
 

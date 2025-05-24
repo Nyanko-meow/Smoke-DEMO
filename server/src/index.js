@@ -20,6 +20,112 @@ process.env.JWT_COOKIE_EXPIRE = process.env.JWT_COOKIE_EXPIRE || '30';
 // Connect to database
 connectDB();
 
+// Auto setup function
+async function autoSetup() {
+    try {
+        console.log('🚀 Starting auto setup...');
+
+        // Import setup functions
+        const { setupPlanTemplates } = require('../setup-templates');
+
+        // 1. Setup PlanTemplates
+        await setupPlanTemplates();
+
+        // 2. Setup test user with PaymentConfirmation
+        await setupTestUser();
+
+        console.log('✅ Auto setup completed successfully!');
+    } catch (error) {
+        console.error('❌ Auto setup failed:', error);
+    }
+}
+
+// Setup test user function
+async function setupTestUser() {
+    try {
+        console.log('👤 Setting up test user...');
+
+        const testEmail = 'leghenkiz@gmail.com';
+        const testPassword = 'H12345678@';
+
+        // Check if user exists
+        const userCheck = await pool.request()
+            .input('email', testEmail)
+            .query('SELECT UserID FROM Users WHERE Email = @email');
+
+        let userId;
+        if (userCheck.recordset.length === 0) {
+            // Create user
+            const userResult = await pool.request()
+                .input('email', testEmail)
+                .input('password', testPassword)
+                .input('firstName', 'Test')
+                .input('lastName', 'User')
+                .query(`
+                    INSERT INTO Users (Email, Password, FirstName, LastName, Role, IsActive, EmailVerified, CreatedAt, UpdatedAt)
+                    OUTPUT INSERTED.UserID
+                    VALUES (@email, @password, @firstName, @lastName, 'guest', 1, 1, GETDATE(), GETDATE())
+                `);
+            userId = userResult.recordset[0].UserID;
+            console.log('✅ Created test user:', testEmail);
+        } else {
+            userId = userCheck.recordset[0].UserID;
+            console.log('✅ Test user already exists:', testEmail);
+        }
+
+        // Check if payment confirmation exists
+        const paymentCheck = await pool.request()
+            .input('userId', userId)
+            .query(`
+                SELECT pc.ConfirmationID 
+                FROM PaymentConfirmations pc
+                JOIN Payments p ON pc.PaymentID = p.PaymentID
+                WHERE p.UserID = @userId AND p.Status = 'confirmed'
+            `);
+
+        if (paymentCheck.recordset.length === 0) {
+            // Create payment and confirmation
+            const planId = 1; // Basic Plan
+            const amount = 99.00;
+            const startDate = new Date();
+            const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+            // Insert payment
+            const paymentResult = await pool.request()
+                .input('userId', userId)
+                .input('planId', planId)
+                .input('amount', amount)
+                .input('startDate', startDate)
+                .input('endDate', endDate)
+                .query(`
+                    INSERT INTO Payments (UserID, PlanID, Amount, PaymentMethod, Status, TransactionID, StartDate, EndDate, Note)
+                    OUTPUT INSERTED.PaymentID
+                    VALUES (@userId, @planId, @amount, 'BankTransfer', 'confirmed', 'TEST_TX_' + CAST(@userId AS VARCHAR), @startDate, @endDate, N'Auto setup payment')
+                `);
+
+            const paymentId = paymentResult.recordset[0].PaymentID;
+
+            // Insert payment confirmation
+            await pool.request()
+                .input('paymentId', paymentId)
+                .input('confirmedBy', 3) // Admin user
+                .query(`
+                    INSERT INTO PaymentConfirmations (PaymentID, ConfirmationDate, ConfirmedByUserID, ConfirmationCode, Notes)
+                    VALUES (@paymentId, GETDATE(), @confirmedBy, 'AUTO_CONF_' + CAST(@paymentId AS VARCHAR), N'Auto confirmation for test user')
+                `);
+
+            console.log('✅ Created payment confirmation for test user');
+        } else {
+            console.log('✅ Payment confirmation already exists for test user');
+        }
+
+        return userId;
+    } catch (error) {
+        console.error('❌ Error setting up test user:', error);
+        throw error;
+    }
+}
+
 // Create Express app
 const app = express();
 
@@ -44,11 +150,18 @@ app.use(cookieParser());
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Handle missing placeholder image
-app.get('/images/default-placeholder.jpg', (req, res) => {
-    // Return 204 No Content instead of 404 to prevent console errors
-    res.status(204).send();
-});
+// Add image serving route
+app.use('/api/images', express.static(path.join(__dirname, '../public/images')));
+app.use('/api/static', express.static(path.join(__dirname, '../public')));
+
+// CORS configuration for frontend
+app.use(cors({
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    credentials: true
+}));
+
+// Middleware for parsing JSON
+app.use(express.json());
 
 // Root route for API health check
 app.get('/', (req, res) => {
@@ -238,6 +351,220 @@ app.get('/api/membership/plans', async (req, res) => {
     }
 });
 
+// Direct endpoint for testing login (get token)
+app.post('/api/test-login', async (req, res) => {
+    try {
+        console.log('Test login endpoint called');
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide email and password'
+            });
+        }
+
+        // Find user
+        const userResult = await pool.request()
+            .input('email', email)
+            .query('SELECT UserID, Email, FirstName, LastName, Role, Password FROM Users WHERE Email = @email');
+
+        if (userResult.recordset.length === 0) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const user = userResult.recordset[0];
+
+        // Simple password check (in real app, use bcrypt)
+        if (user.Password !== password) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid password'
+            });
+        }
+
+        // Generate token
+        const jwt = require('jsonwebtoken');
+        const token = jwt.sign(
+            {
+                id: user.UserID,
+                email: user.Email,
+                role: user.Role
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Allow cross-origin for this response
+        res.header('Access-Control-Allow-Origin', '*');
+        res.json({
+            success: true,
+            token: token,
+            user: {
+                id: user.UserID,
+                email: user.Email,
+                firstName: user.FirstName,
+                lastName: user.LastName,
+                role: user.Role
+            },
+            message: 'Login successful - Use this token for Authorization header'
+        });
+    } catch (error) {
+        console.error('Error in test login endpoint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+// Debug endpoint for testing PlanTemplates
+app.get('/api/test-templates', async (req, res) => {
+    try {
+        console.log('Testing PlanTemplates table...');
+
+        // Check if table exists
+        const tableCheck = await pool.request().query(`
+            SELECT COUNT(*) as tableExists 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_NAME = 'PlanTemplates'
+        `);
+
+        console.log('Table exists check:', tableCheck.recordset[0]);
+
+        if (tableCheck.recordset[0].tableExists === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'PlanTemplates table does not exist',
+                solution: 'Run setup-plan-templates.sql script first'
+            });
+        }
+
+        // Get all templates
+        const templates = await pool.request().query(`
+            SELECT 
+                pt.TemplateID,
+                pt.PlanID,
+                pt.PhaseName,
+                pt.PhaseDescription,
+                pt.DurationDays,
+                pt.SortOrder,
+                mp.Name as PlanName
+            FROM PlanTemplates pt
+            JOIN MembershipPlans mp ON pt.PlanID = mp.PlanID
+            ORDER BY pt.PlanID, pt.SortOrder
+        `);
+
+        res.header('Access-Control-Allow-Origin', '*');
+        res.json({
+            success: true,
+            tableExists: true,
+            templatesCount: templates.recordset.length,
+            templates: templates.recordset,
+            message: 'PlanTemplates test completed successfully'
+        });
+    } catch (error) {
+        console.error('Error testing PlanTemplates:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error testing PlanTemplates',
+            error: error.message
+        });
+    }
+});
+
+// Debug endpoint để lấy users có PaymentConfirmations và QuitPlans
+app.get('/api/test-user-data', async (req, res) => {
+    try {
+        console.log('📊 Getting users with PaymentConfirmations and QuitPlans...');
+
+        // 1. Lấy users có PaymentConfirmations
+        const usersWithPayments = await pool.request().query(`
+            SELECT DISTINCT
+                u.UserID,
+                u.Email,
+                u.FirstName + ' ' + u.LastName as FullName,
+                u.Role,
+                p.PaymentID,
+                p.Amount,
+                p.Status as PaymentStatus,
+                pc.ConfirmationID,
+                pc.ConfirmationDate,
+                pc.ConfirmationCode,
+                mp.Name as PlanName,
+                mp.Price,
+                mp.Duration
+            FROM Users u
+            JOIN Payments p ON u.UserID = p.UserID
+            JOIN PaymentConfirmations pc ON p.PaymentID = pc.PaymentID
+            JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
+            WHERE p.Status = 'confirmed'
+            ORDER BY pc.ConfirmationDate DESC
+        `);
+
+        // 2. Lấy QuitPlans cho các users này
+        const quitPlans = await pool.request().query(`
+            SELECT 
+                qp.PlanID as QuitPlanID,
+                qp.UserID,
+                qp.StartDate,
+                qp.TargetDate,
+                qp.Reason,
+                qp.MotivationLevel,
+                qp.DetailedPlan,
+                qp.Status,
+                qp.CreatedAt,
+                u.Email,
+                u.FirstName + ' ' + u.LastName as UserName
+            FROM QuitPlans qp
+            JOIN Users u ON qp.UserID = u.UserID
+            ORDER BY qp.CreatedAt DESC
+        `);
+
+        // 3. Lấy PlanTemplates
+        const templates = await pool.request().query(`
+            SELECT 
+                pt.TemplateID,
+                pt.PlanID,
+                pt.PhaseName,
+                pt.PhaseDescription,
+                pt.DurationDays,
+                pt.SortOrder,
+                mp.Name as PlanName
+            FROM PlanTemplates pt
+            JOIN MembershipPlans mp ON pt.PlanID = mp.PlanID
+            ORDER BY pt.PlanID, pt.SortOrder
+        `);
+
+        res.header('Access-Control-Allow-Origin', '*');
+        res.json({
+            success: true,
+            data: {
+                usersWithPaymentConfirmations: usersWithPayments.recordset,
+                quitPlans: quitPlans.recordset,
+                planTemplates: templates.recordset
+            },
+            summary: {
+                usersWithPayments: usersWithPayments.recordset.length,
+                totalQuitPlans: quitPlans.recordset.length,
+                totalTemplates: templates.recordset.length
+            },
+            message: 'Lấy dữ liệu user, payment confirmations và quit plans thành công'
+        });
+    } catch (error) {
+        console.error('❌ Error getting user data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy dữ liệu user',
+            error: error.message
+        });
+    }
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/user.routes'));
@@ -256,6 +583,7 @@ app.use('/api/user-survey', require('./routes/userSurvey.routes'));
 app.use('/api/membership', require('./routes/membershipRoutes'));
 app.use('/api/memberships', require('./routes/membershipRoutes')); // Add alias for client compatibility
 app.use('/api/survey-questions', require('./routes/surveyQuestions.routes'));
+app.use('/api/quit-plan', require('./routes/quitPlan.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -274,6 +602,15 @@ try {
         console.log(`Server is running on port ${PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log(`JWT Secret is ${process.env.JWT_SECRET ? 'set' : 'not set'}`);
+
+        // Auto setup after server starts (with delay for database connection)
+        setTimeout(async () => {
+            try {
+                await autoSetup();
+            } catch (error) {
+                console.error('Auto setup error:', error);
+            }
+        }, 3000); // Wait 3 seconds for database to be ready
 
         // Start subscription scheduler with a delay to ensure database is fully connected
         if (process.env.ENABLE_SUBSCRIPTION_CHECKER !== 'false') {

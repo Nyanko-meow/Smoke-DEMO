@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
             (SELECT COUNT(*) FROM Comments c WHERE c.PostID = p.PostID AND c.Status = 'approved') as CommentCount
         FROM BlogPosts p
         JOIN Users u ON p.AuthorID = u.UserID
-        WHERE p.Status = 'published'
+        WHERE p.Status IN ('published', 'Pending')
         ORDER BY p.CreatedAt DESC
       `);
 
@@ -47,7 +47,7 @@ router.get('/:postId', async (req, res) => {
             (SELECT COUNT(*) FROM Comments c WHERE c.PostID = p.PostID AND c.Status = 'approved') as CommentCount
         FROM BlogPosts p
         JOIN Users u ON p.AuthorID = u.UserID
-        WHERE p.PostID = @PostID AND p.Status = 'published'
+        WHERE p.PostID = @PostID AND p.Status IN ('published', 'Pending')
       `);
 
         if (result.recordset.length === 0) {
@@ -56,6 +56,11 @@ router.get('/:postId', async (req, res) => {
                 message: 'Blog post not found'
             });
         }
+
+        // Increment view count
+        await pool.request()
+            .input('PostID', postId)
+            .query('UPDATE BlogPosts SET Views = Views + 1 WHERE PostID = @PostID');
 
         res.json({
             success: true,
@@ -70,24 +75,34 @@ router.get('/:postId', async (req, res) => {
     }
 });
 
-// Create blog post (admin/coach only)
-router.post('/', protect, authorize('admin', 'coach'), async (req, res) => {
+// Create blog post (users and coaches can post, auto-approved for now)
+router.post('/', protect, async (req, res) => {
     try {
-        const { title, content } = req.body;
+        const { title, content, metaDescription, thumbnailURL } = req.body;
+
+        if (!title || !content) {
+            return res.status(400).json({
+                success: false,
+                message: 'Title and content are required'
+            });
+        }
 
         const result = await pool.request()
             .input('Title', title)
             .input('Content', content)
+            .input('MetaDescription', metaDescription || '')
+            .input('ThumbnailURL', thumbnailURL || '')
             .input('AuthorID', req.user.UserID)
             .query(`
-        INSERT INTO BlogPosts (Title, Content, AuthorID, Status)
+        INSERT INTO BlogPosts (Title, Content, MetaDescription, ThumbnailURL, AuthorID, Status, PublishedAt)
         OUTPUT INSERTED.*
-        VALUES (@Title, @Content, @AuthorID, 'draft')
+        VALUES (@Title, @Content, @MetaDescription, @ThumbnailURL, @AuthorID, 'published', GETDATE())
       `);
 
         res.status(201).json({
             success: true,
-            data: result.recordset[0]
+            data: result.recordset[0],
+            message: 'Blog post created successfully'
         });
     } catch (error) {
         console.error(error);
@@ -98,24 +113,27 @@ router.post('/', protect, authorize('admin', 'coach'), async (req, res) => {
     }
 });
 
-// Update blog post (admin/coach only)
-router.put('/:postId', protect, authorize('admin', 'coach'), async (req, res) => {
+// Update blog post (author only)
+router.put('/:postId', protect, async (req, res) => {
     try {
         const { postId } = req.params;
-        const { title, content, status } = req.body;
+        const { title, content, metaDescription, thumbnailURL, status } = req.body;
 
         const result = await pool.request()
             .input('PostID', postId)
             .input('Title', title)
             .input('Content', content)
-            .input('Status', status)
+            .input('MetaDescription', metaDescription || '')
+            .input('ThumbnailURL', thumbnailURL || '')
+            .input('Status', status || 'published')
             .input('AuthorID', req.user.UserID)
             .query(`
         UPDATE BlogPosts
         SET Title = @Title,
             Content = @Content,
-            Status = @Status,
-            UpdatedAt = GETDATE()
+            MetaDescription = @MetaDescription,
+            ThumbnailURL = @ThumbnailURL,
+            Status = @Status
         OUTPUT INSERTED.*
         WHERE PostID = @PostID AND AuthorID = @AuthorID
       `);
@@ -123,13 +141,14 @@ router.put('/:postId', protect, authorize('admin', 'coach'), async (req, res) =>
         if (result.recordset.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Blog post not found'
+                message: 'Blog post not found or you are not authorized to edit it'
             });
         }
 
         res.json({
             success: true,
-            data: result.recordset[0]
+            data: result.recordset[0],
+            message: 'Blog post updated successfully'
         });
     } catch (error) {
         console.error(error);
@@ -140,25 +159,66 @@ router.put('/:postId', protect, authorize('admin', 'coach'), async (req, res) =>
     }
 });
 
+// Delete blog post (author only)
+router.delete('/:postId', protect, async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        const result = await pool.request()
+            .input('PostID', postId)
+            .input('AuthorID', req.user.UserID)
+            .query(`
+        DELETE FROM BlogPosts 
+        WHERE PostID = @PostID AND AuthorID = @AuthorID
+      `);
+
+        if (result.rowsAffected[0] === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Blog post not found or you are not authorized to delete it'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Blog post deleted successfully'
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting blog post'
+        });
+    }
+});
+
 // Add comment to blog post
 router.post('/:postId/comments', protect, async (req, res) => {
     try {
         const { postId } = req.params;
         const { content } = req.body;
 
+        if (!content) {
+            return res.status(400).json({
+                success: false,
+                message: 'Comment content is required'
+            });
+        }
+
         const result = await pool.request()
             .input('PostID', postId)
             .input('UserID', req.user.UserID)
             .input('Content', content)
             .query(`
-        INSERT INTO Comments (PostID, UserID, Content, Status)
+        INSERT INTO Comments (PostID, UserID, CommentText, Status)
         OUTPUT INSERTED.*
-        VALUES (@PostID, @UserID, @Content, 'pending')
+        VALUES (@PostID, @UserID, @Content, 'approved')
       `);
 
         res.status(201).json({
             success: true,
-            data: result.recordset[0]
+            data: result.recordset[0],
+            message: 'Comment added successfully'
         });
     } catch (error) {
         console.error(error);
@@ -200,6 +260,36 @@ router.get('/:postId/comments', async (req, res) => {
     }
 });
 
+// Get user's own posts
+router.get('/my/posts', protect, async (req, res) => {
+    try {
+        const result = await pool.request()
+            .input('AuthorID', req.user.UserID)
+            .query(`
+        SELECT 
+            p.*,
+            u.FirstName as AuthorFirstName,
+            u.LastName as AuthorLastName,
+            (SELECT COUNT(*) FROM Comments c WHERE c.PostID = p.PostID AND c.Status = 'approved') as CommentCount
+        FROM BlogPosts p
+        JOIN Users u ON p.AuthorID = u.UserID
+        WHERE p.AuthorID = @AuthorID
+        ORDER BY p.CreatedAt DESC
+      `);
+
+        res.json({
+            success: true,
+            data: result.recordset
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting your blog posts'
+        });
+    }
+});
+
 // Moderate comment (admin only)
 router.put('/comments/:commentId', protect, authorize('admin'), async (req, res) => {
     try {
@@ -225,7 +315,8 @@ router.put('/comments/:commentId', protect, authorize('admin'), async (req, res)
 
         res.json({
             success: true,
-            data: result.recordset[0]
+            data: result.recordset[0],
+            message: 'Comment moderated successfully'
         });
     } catch (error) {
         console.error(error);

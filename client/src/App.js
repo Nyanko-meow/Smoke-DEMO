@@ -7,15 +7,18 @@ import Home from './components/Home';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import UserProfile from './components/user/UserProfile';
-import BlogList from './components/blog/BlogList';
-import BlogDetail from './components/blog/BlogDetail';
-import BlogEditor from './components/blog/BlogEditor';
+import UserCommentHistory from './components/user/UserCommentHistory';
+import BlogPage from './pages/BlogPage';
 import CommunityList from './components/community/CommunityList';
 import CommunityDetail from './components/community/CommunityDetail';
 import CommunityPost from './components/community/CommunityPost';
 import PrivateRoute from './components/routing/PrivateRoute';
 import MembershipPage from './pages/MembershipPage';
 import SmokingSurveyPage from './pages/SmokingSurveyPage';
+import QuitPlanPage from './pages/QuitPlanPage';
+import CoachQuitPlanDashboard from './pages/CoachQuitPlanDashboard';
+import AchievementPage from './pages/AchievementPage';
+import TestPage from './pages/TestPage';
 import { checkSessionExpiration, refreshSession } from './store/slices/authSlice';
 
 const { Content } = Layout;
@@ -75,24 +78,15 @@ function App() {
                             </PrivateRoute>
                         }
                     />
-                    <Route path="/blog" element={<BlogList />} />
-                    <Route path="/blog/:postId" element={<BlogDetail />} />
                     <Route
-                        path="/blog/edit/:postId"
+                        path="/user/comments"
                         element={
                             <PrivateRoute>
-                                <BlogEditor />
+                                <UserCommentHistory />
                             </PrivateRoute>
                         }
                     />
-                    <Route
-                        path="/blog/new"
-                        element={
-                            <PrivateRoute>
-                                <BlogEditor />
-                            </PrivateRoute>
-                        }
-                    />
+                    <Route path="/blog/*" element={<BlogPage />} />
                     <Route path="/community" element={<CommunityList />} />
                     <Route path="/community/:postId" element={<CommunityDetail />} />
                     <Route
@@ -119,6 +113,31 @@ function App() {
                             </PrivateRoute>
                         }
                     />
+                    <Route
+                        path="/quit-plan"
+                        element={
+                            <PrivateRoute>
+                                <QuitPlanPage />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/coach/quit-plans"
+                        element={
+                            <PrivateRoute>
+                                <CoachQuitPlanDashboard />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/achievement"
+                        element={
+                            <PrivateRoute>
+                                <AchievementPage />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route path="/test" element={<TestPage />} />
                 </Routes>
             </Content>
         </Layout>

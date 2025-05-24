@@ -618,6 +618,23 @@ const MembershipPlans = () => {
                             message="Payment Information"
                             description={
                                 <div>
+                                    <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                                        <img
+                                            src="/api/images/payment-qr.svg"
+                                            alt="Payment QR Code"
+                                            style={{
+                                                width: '200px',
+                                                height: '200px',
+                                                border: '2px solid #d9d9d9',
+                                                borderRadius: '8px',
+                                                padding: '8px',
+                                                backgroundColor: '#fff'
+                                            }}
+                                        />
+                                        <div style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>
+                                            Quét mã QR để thanh toán
+                                        </div>
+                                    </div>
                                     <p>This is a demonstration mode. In a real system:</p>
                                     <ul>
                                         <li>Bank Transfer: You would receive bank details to transfer payment</li>

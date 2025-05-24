@@ -2,22 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { pool } = require('../config/database');
+const AchievementService = require('../services/achievementService');
 
-// Get all achievements
+// Get all achievements with user's earned status
 router.get('/', protect, async (req, res) => {
     try {
         const result = await pool.request()
             .input('UserID', req.user.UserID)
             .query(`
-        SELECT 
-          a.*,
-          CASE WHEN ua.UserAchievementID IS NOT NULL THEN 1 ELSE 0 END as IsEarned,
-          ua.EarnedDate
-        FROM Achievements a
-        LEFT JOIN UserAchievements ua ON a.AchievementID = ua.AchievementID 
-          AND ua.UserID = @UserID
-        ORDER BY a.AchievementID
-      `);
+                SELECT 
+                    a.*,
+                    CASE WHEN ua.UserAchievementID IS NOT NULL THEN 1 ELSE 0 END as IsEarned,
+                    ua.EarnedAt
+                FROM Achievements a
+                LEFT JOIN UserAchievements ua ON a.AchievementID = ua.AchievementID 
+                    AND ua.UserID = @UserID
+                WHERE a.IsActive = 1
+                ORDER BY a.Category, a.Difficulty
+            `);
 
         res.json({
             success: true,
@@ -35,21 +37,11 @@ router.get('/', protect, async (req, res) => {
 // Get user's earned achievements
 router.get('/earned', protect, async (req, res) => {
     try {
-        const result = await pool.request()
-            .input('UserID', req.user.UserID)
-            .query(`
-        SELECT 
-          a.*,
-          ua.EarnedDate
-        FROM UserAchievements ua
-        JOIN Achievements a ON ua.AchievementID = a.AchievementID
-        WHERE ua.UserID = @UserID
-        ORDER BY ua.EarnedDate DESC
-      `);
+        const achievements = await AchievementService.getUserAchievements(req.user.UserID);
 
         res.json({
             success: true,
-            data: result.recordset
+            data: achievements
         });
     } catch (error) {
         console.error(error);
@@ -60,22 +52,159 @@ router.get('/earned', protect, async (req, res) => {
     }
 });
 
+// Get user's top badge for display
+router.get('/top-badge', protect, async (req, res) => {
+    try {
+        const topBadge = await AchievementService.getUserTopBadge(req.user.UserID);
+
+        res.json({
+            success: true,
+            data: topBadge
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting top badge'
+        });
+    }
+});
+
+// Check and award achievements for current user
+router.post('/check', protect, async (req, res) => {
+    try {
+        const result = await AchievementService.checkAndAwardAchievements(req.user.UserID);
+
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking achievements'
+        });
+    }
+});
+
+// Trigger achievement check on progress update
+router.post('/progress-update', protect, async (req, res) => {
+    try {
+        const result = await AchievementService.onProgressUpdate(req.user.UserID);
+
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error processing progress update'
+        });
+    }
+});
+
+// Get achievement statistics
+router.get('/stats', protect, async (req, res) => {
+    try {
+        const result = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT 
+                    COUNT(*) as TotalAchievements,
+                    (SELECT COUNT(*) FROM UserAchievements WHERE UserID = @UserID) as EarnedCount,
+                    (SELECT SUM(Points) FROM Achievements a 
+                     JOIN UserAchievements ua ON a.AchievementID = ua.AchievementID 
+                     WHERE ua.UserID = @UserID) as TotalPoints,
+                    (SELECT COUNT(DISTINCT Category) FROM Achievements a 
+                     JOIN UserAchievements ua ON a.AchievementID = ua.AchievementID 
+                     WHERE ua.UserID = @UserID) as CategoriesCompleted
+                FROM Achievements 
+                WHERE IsActive = 1
+            `);
+
+        const stats = result.recordset[0];
+        const completionRate = stats.TotalAchievements > 0
+            ? Math.round((stats.EarnedCount / stats.TotalAchievements) * 100)
+            : 0;
+
+        res.json({
+            success: true,
+            data: {
+                ...stats,
+                CompletionRate: completionRate
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting achievement statistics'
+        });
+    }
+});
+
+// Get achievements by category
+router.get('/categories/:category', protect, async (req, res) => {
+    try {
+        const { category } = req.params;
+
+        const result = await pool.request()
+            .input('UserID', req.user.UserID)
+            .input('Category', category)
+            .query(`
+                SELECT 
+                    a.*,
+                    CASE WHEN ua.UserAchievementID IS NOT NULL THEN 1 ELSE 0 END as IsEarned,
+                    ua.EarnedAt
+                FROM Achievements a
+                LEFT JOIN UserAchievements ua ON a.AchievementID = ua.AchievementID 
+                    AND ua.UserID = @UserID
+                WHERE a.Category = @Category AND a.IsActive = 1
+                ORDER BY a.Difficulty
+            `);
+
+        res.json({
+            success: true,
+            data: result.recordset
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting achievements by category'
+        });
+    }
+});
+
+// === ADMIN ONLY ROUTES ===
+
 // Create new achievement (admin only)
 router.post('/', protect, authorize('admin'), async (req, res) => {
     try {
-        const { name, description, type, criteria, badgeImage } = req.body;
+        const {
+            name, description, iconUrl, category,
+            milestoneDays, savedMoney, requiredPlan,
+            difficulty, points
+        } = req.body;
 
         const result = await pool.request()
             .input('Name', name)
             .input('Description', description)
-            .input('Type', type)
-            .input('Criteria', criteria)
-            .input('BadgeImage', badgeImage)
+            .input('IconURL', iconUrl)
+            .input('Category', category)
+            .input('MilestoneDays', milestoneDays)
+            .input('SavedMoney', savedMoney)
+            .input('RequiredPlan', requiredPlan)
+            .input('Difficulty', difficulty)
+            .input('Points', points)
             .query(`
-        INSERT INTO Achievements (Name, Description, Type, Criteria, BadgeImage)
-        OUTPUT INSERTED.*
-        VALUES (@Name, @Description, @Type, @Criteria, @BadgeImage)
-      `);
+                INSERT INTO Achievements (
+                    Name, Description, IconURL, Category, MilestoneDays, 
+                    SavedMoney, RequiredPlan, Difficulty, Points, IsActive, CreatedAt
+                )
+                OUTPUT INSERTED.*
+                VALUES (
+                    @Name, @Description, @IconURL, @Category, @MilestoneDays, 
+                    @SavedMoney, @RequiredPlan, @Difficulty, @Points, 1, GETDATE()
+                )
+            `);
 
         res.status(201).json({
             success: true,
@@ -90,71 +219,16 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
     }
 });
 
-// Update achievement (admin only)
-router.put('/:achievementId', protect, authorize('admin'), async (req, res) => {
-    try {
-        const { achievementId } = req.params;
-        const { name, description, type, criteria, badgeImage } = req.body;
-
-        const result = await pool.request()
-            .input('AchievementID', achievementId)
-            .input('Name', name)
-            .input('Description', description)
-            .input('Type', type)
-            .input('Criteria', criteria)
-            .input('BadgeImage', badgeImage)
-            .query(`
-        UPDATE Achievements
-        SET Name = @Name,
-            Description = @Description,
-            Type = @Type,
-            Criteria = @Criteria,
-            BadgeImage = @BadgeImage
-        OUTPUT INSERTED.*
-        WHERE AchievementID = @AchievementID
-      `);
-
-        if (result.recordset.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Achievement not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: result.recordset[0]
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            success: false,
-            message: 'Error updating achievement'
-        });
-    }
-});
-
 // Award achievement to user (admin only)
 router.post('/award', protect, authorize('admin'), async (req, res) => {
     try {
         const { userId, achievementId } = req.body;
 
-        const result = await pool.request()
-            .input('UserID', userId)
-            .input('AchievementID', achievementId)
-            .query(`
-        MERGE INTO UserAchievements AS target
-        USING (SELECT @UserID AS UserID, @AchievementID AS AchievementID) AS source
-        ON target.UserID = source.UserID AND target.AchievementID = source.AchievementID
-        WHEN NOT MATCHED THEN
-          INSERT (UserID, AchievementID)
-          VALUES (@UserID, @AchievementID)
-        OUTPUT INSERTED.*;
-      `);
+        await AchievementService.awardAchievement(userId, achievementId);
 
-        res.status(201).json({
+        res.json({
             success: true,
-            data: result.recordset[0]
+            message: 'Achievement awarded successfully'
         });
     } catch (error) {
         console.error(error);
@@ -165,63 +239,18 @@ router.post('/award', protect, authorize('admin'), async (req, res) => {
     }
 });
 
-// Check and award achievements based on progress
-router.post('/check', protect, async (req, res) => {
+// Check achievements for any user (admin only)
+router.post('/check/:userId', protect, authorize('admin'), async (req, res) => {
     try {
-        const result = await pool.request()
-            .input('UserID', req.user.UserID)
-            .query(`
-        -- Check for smoke-free day achievements
-        INSERT INTO UserAchievements (UserID, AchievementID)
-        SELECT @UserID, a.AchievementID
-        FROM Achievements a
-        WHERE a.Type = 'smoke_free_days'
-        AND NOT EXISTS (
-          SELECT 1 FROM UserAchievements ua 
-          WHERE ua.UserID = @UserID AND ua.AchievementID = a.AchievementID
-        )
-        AND EXISTS (
-          SELECT 1 FROM ProgressTracking pt
-          WHERE pt.UserID = @UserID
-          AND pt.CigarettesSmoked = 0
-          AND pt.Date >= DATEADD(day, -CAST(a.Criteria as int), GETDATE())
-        );
+        const { userId } = req.params;
+        const result = await AchievementService.checkAndAwardAchievements(parseInt(userId));
 
-        -- Check for money saved achievements
-        INSERT INTO UserAchievements (UserID, AchievementID)
-        SELECT @UserID, a.AchievementID
-        FROM Achievements a
-        WHERE a.Type = 'money_saved'
-        AND NOT EXISTS (
-          SELECT 1 FROM UserAchievements ua 
-          WHERE ua.UserID = @UserID AND ua.AchievementID = a.AchievementID
-        )
-        AND EXISTS (
-          SELECT 1 FROM ProgressTracking pt
-          WHERE pt.UserID = @UserID
-          AND pt.MoneySpent >= CAST(a.Criteria as decimal(10,2))
-        );
-
-        -- Return newly earned achievements
-        SELECT 
-          a.*,
-          ua.EarnedDate
-        FROM UserAchievements ua
-        JOIN Achievements a ON ua.AchievementID = a.AchievementID
-        WHERE ua.UserID = @UserID
-        AND ua.EarnedDate >= DATEADD(minute, -5, GETDATE())
-        ORDER BY ua.EarnedDate DESC;
-      `);
-
-        res.json({
-            success: true,
-            data: result.recordset
-        });
+        res.json(result);
     } catch (error) {
         console.error(error);
         res.status(500).json({
             success: false,
-            message: 'Error checking achievements'
+            message: 'Error checking user achievements'
         });
     }
 });

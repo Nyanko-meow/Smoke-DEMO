@@ -63,7 +63,7 @@ const MembershipPage = () => {
                                             style={{ width: '100%' }}
                                             onError={(e) => {
                                                 e.target.onerror = null;
-                                                e.target.src = '/images/default-placeholder.jpg';
+                                                e.target.style.display = 'none';
                                             }}
                                         />
                                     </Col>

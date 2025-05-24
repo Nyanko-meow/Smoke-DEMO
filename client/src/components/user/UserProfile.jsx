@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Card, Avatar, Button, Form, Input, notification } from 'antd';
-import { EditOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Avatar, Button, Form, Input, notification, Row, Col, Tag, Progress, Statistic } from 'antd';
+import { EditOutlined, UserOutlined, TrophyOutlined } from '@ant-design/icons';
 import { getCurrentUser } from '../../store/slices/authSlice';
 import { updateProfile } from '../../store/slices/userSlice';
+import UserBadge from '../common/UserBadge';
+import axios from 'axios';
 import './UserProfile.css';
 
 const UserProfile = () => {
@@ -11,6 +13,9 @@ const UserProfile = () => {
     const { user, loading } = useSelector((state) => state.auth);
     const [editMode, setEditMode] = useState(false);
     const [form] = Form.useForm();
+    const [achievements, setAchievements] = useState([]);
+    const [achievementStats, setAchievementStats] = useState(null);
+    const [loadingAchievements, setLoadingAchievements] = useState(true);
 
     useEffect(() => {
         if (!user) {
@@ -35,8 +40,42 @@ const UserProfile = () => {
                 phoneNumber: user.phoneNumber || '',
                 address: user.address || '',
             });
+
+            // Fetch achievements
+            fetchUserAchievements();
+            fetchAchievementStats();
         }
     }, [user, dispatch, form]);
+
+    const fetchUserAchievements = async () => {
+        try {
+            const response = await axios.get('/api/achievements/earned', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (response.data.success) {
+                setAchievements(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching achievements:', error);
+        } finally {
+            setLoadingAchievements(false);
+        }
+    };
+
+    const fetchAchievementStats = async () => {
+        try {
+            const response = await axios.get('/api/achievements/stats', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (response.data.success) {
+                setAchievementStats(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching achievement stats:', error);
+        }
+    };
 
     const handleCancel = () => {
         setEditMode(false);
@@ -84,7 +123,10 @@ const UserProfile = () => {
                         <div className="profile-avatar">
                             <Avatar size={100} icon={<UserOutlined />} src={user.avatar} />
                         </div>
-                        <h2>{`${user.firstName} ${user.lastName}`}</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
+                            <h2 style={{ margin: '0 8px 0 0' }}>{`${user.firstName} ${user.lastName}`}</h2>
+                            <UserBadge userId={user.UserID} size="medium" />
+                        </div>
                         <p className="role-text">Role: {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}</p>
                         {!editMode && (
                             <Button
@@ -189,6 +231,115 @@ const UserProfile = () => {
                             </div>
                         </Card>
                     )}
+
+                    {/* Achievements Section */}
+                    <Card
+                        title={
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <TrophyOutlined style={{ marginRight: 8, color: '#faad14' }} />
+                                Huy hiệu & Thành tích
+                            </div>
+                        }
+                        style={{ marginTop: 16 }}
+                    >
+                        {achievementStats && (
+                            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                                <Col xs={12} sm={6}>
+                                    <Statistic
+                                        title="Huy hiệu đạt được"
+                                        value={achievementStats.EarnedCount}
+                                        suffix={`/ ${achievementStats.TotalAchievements}`}
+                                    />
+                                </Col>
+                                <Col xs={12} sm={6}>
+                                    <Statistic
+                                        title="Tỷ lệ hoàn thành"
+                                        value={achievementStats.CompletionRate}
+                                        suffix="%"
+                                    />
+                                </Col>
+                                <Col xs={12} sm={6}>
+                                    <Statistic
+                                        title="Tổng điểm"
+                                        value={achievementStats.TotalPoints || 0}
+                                    />
+                                </Col>
+                                <Col xs={12} sm={6}>
+                                    <Statistic
+                                        title="Danh mục hoàn thành"
+                                        value={achievementStats.CategoriesCompleted || 0}
+                                    />
+                                </Col>
+                            </Row>
+                        )}
+
+                        {achievementStats && (
+                            <div style={{ marginBottom: 24 }}>
+                                <p style={{ marginBottom: 8 }}>Tiến độ hoàn thành:</p>
+                                <Progress
+                                    percent={achievementStats.CompletionRate}
+                                    strokeColor={{
+                                        '0%': '#108ee9',
+                                        '100%': '#87d068',
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        <div>
+                            <p style={{ marginBottom: 16, fontWeight: 'bold' }}>Huy hiệu đã đạt được:</p>
+                            {loadingAchievements ? (
+                                <p>Đang tải...</p>
+                            ) : achievements.length > 0 ? (
+                                <Row gutter={[16, 16]}>
+                                    {achievements.map((achievement) => (
+                                        <Col key={achievement.AchievementID} xs={24} sm={12} md={8} lg={6}>
+                                            <Card
+                                                size="small"
+                                                style={{
+                                                    textAlign: 'center',
+                                                    borderColor: achievement.Category === 'pro' ? '#722ed1' :
+                                                        achievement.Category === 'premium' ? '#1890ff' : '#52c41a'
+                                                }}
+                                            >
+                                                <div style={{ fontSize: '32px', marginBottom: 8 }}>
+                                                    {achievement.IconURL}
+                                                </div>
+                                                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: 4 }}>
+                                                    {achievement.Name}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#666', marginBottom: 8 }}>
+                                                    {achievement.Description}
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Tag color={
+                                                        achievement.Category === 'basic' ? 'green' :
+                                                            achievement.Category === 'premium' ? 'blue' :
+                                                                achievement.Category === 'pro' ? 'purple' :
+                                                                    achievement.Category === 'money' ? 'gold' :
+                                                                        achievement.Category === 'special' ? 'red' : 'cyan'
+                                                    }>
+                                                        {achievement.Category}
+                                                    </Tag>
+                                                    <span style={{ fontSize: '12px', color: '#999' }}>
+                                                        {achievement.Points} pts
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#999', marginTop: 4 }}>
+                                                    {new Date(achievement.EarnedAt).toLocaleDateString('vi-VN')}
+                                                </div>
+                                            </Card>
+                                        </Col>
+                                    ))}
+                                </Row>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                                    <TrophyOutlined style={{ fontSize: '48px', marginBottom: 16 }} />
+                                    <p>Chưa có huy hiệu nào. Hãy bắt đầu hành trình cai thuốc để nhận huy hiệu đầu tiên!</p>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
                 </div>
             </div>
         </div>

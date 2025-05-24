@@ -117,17 +117,23 @@ CREATE TABLE QuitPlans (
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
--- Progress Tracking
+ALTER TABLE QuitPlans
+ADD CoachID INT FOREIGN KEY REFERENCES Users(UserID);
+
+-- Progress Tracking (Ghi nhật ký tiến trình)
 CREATE TABLE ProgressTracking (
     ProgressID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
-    Date DATE NOT NULL,
-    CigarettesSmoked INT,
-    CravingLevel INT CHECK (CravingLevel BETWEEN 1 AND 10),
-    MoneySpent DECIMAL(10,2),
-    HealthNotes NVARCHAR(MAX),
+    Date DATE NOT NULL,                            
+    CigarettesSmoked INT,                         
+    CravingLevel INT CHECK (CravingLevel BETWEEN 1 AND 10),  
+    EmotionNotes NVARCHAR(MAX),                   
+    MoneySaved DECIMAL(10,2),                     
+    DaysSmokeFree INT,                            
+    HealthNotes NVARCHAR(MAX),                    
     CreatedAt DATETIME DEFAULT GETDATE()
 );
+
 
 -- Payments
 CREATE TABLE Payments (
@@ -187,11 +193,142 @@ VALUES
 CREATE TABLE BlogPosts (
     PostID INT IDENTITY(1,1) PRIMARY KEY,
     Title NVARCHAR(255) NOT NULL,
+    MetaDescription NVARCHAR(300), 
     Content NVARCHAR(MAX) NOT NULL,
-    AuthorID INT FOREIGN KEY REFERENCES Users(UserID),
-    PublishedAt DATETIME DEFAULT GETDATE(),
-    IsPublished BIT DEFAULT 1
+    ThumbnailURL NVARCHAR(500), 
+    
+    AuthorID INT NOT NULL,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    PublishedAt DATETIME NULL, 
+    
+    Status NVARCHAR(20) DEFAULT 'Pending', 
+    Views INT DEFAULT 0,
+
+    IsFeatured BIT DEFAULT 0, 
+
+    CONSTRAINT FK_BlogPosts_Users FOREIGN KEY (AuthorID)
+        REFERENCES Users(UserID)
 );
+
+-- Insert sample blog posts
+INSERT INTO BlogPosts (Title, MetaDescription, Content, ThumbnailURL, AuthorID, Status, PublishedAt, Views)
+VALUES 
+(N'Hành trình cai thuốc của tôi - 30 ngày đầu tiên', 
+ N'Chia sẻ những khó khăn và thành công trong 30 ngày đầu cai thuốc lá', 
+ N'Xin chào mọi người! Tôi muốn chia sẻ với các bạn hành trình cai thuốc lá của mình trong 30 ngày đầu tiên.
+
+Ngày đầu tiên thực sự rất khó khăn. Tôi đã hút thuốc được 10 năm, mỗi ngày khoảng 1 bao. Khi quyết định cai thuốc, tôi cảm thấy lo lắng và không biết liệu mình có thể thành công hay không.
+
+Những ngày đầu, cơn thèm thuốc xuất hiện liên tục. Tôi đã áp dụng một số phương pháp:
+- Uống nhiều nước
+- Tập thể dục nhẹ
+- Ăn kẹo cao su
+- Tìm hoạt động thay thế
+
+Sau 1 tuần, tôi bắt đầu cảm thấy khỏe hơn. Hơi thở không còn mùi thuốc, răng trắng hơn.
+
+Tuần thứ 2 và 3 là thời gian khó khăn nhất. Có những lúc tôi suýt bỏ cuộc, nhưng nghĩ đến sức khỏe của bản thân và gia đình, tôi đã kiên trì.
+
+Bây giờ, sau 30 ngày, tôi cảm thấy tự hào về bản thân. Tôi đã tiết kiệm được một khoản tiền không nhỏ và quan trọng hơn là sức khỏe được cải thiện rõ rệt.
+
+Lời khuyên của tôi cho những ai đang muốn cai thuốc:
+1. Hãy có động lực mạnh mẽ
+2. Tìm sự hỗ trợ từ gia đình và bạn bè
+3. Thay thế thói quen hút thuốc bằng hoạt động tích cực
+4. Kiên nhẫn với bản thân
+
+Chúc các bạn thành công!', 
+ 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+ 2, 'published', GETDATE(), 45),
+
+(N'5 mẹo giúp vượt qua cơn thèm thuốc', 
+ N'Những phương pháp hiệu quả để đối phó với cơn thèm thuốc lá', 
+ N'Cơn thèm thuốc là một trong những thách thức lớn nhất khi cai thuốc lá. Dưới đây là 5 mẹo đã giúp tôi và nhiều người khác vượt qua:
+
+**1. Kỹ thuật hít thở sâu**
+Khi cảm thấy thèm thuốc, hãy thực hiện:
+- Hít vào sâu trong 4 giây
+- Giữ hơi thở 4 giây  
+- Thở ra chậm trong 6 giây
+- Lặp lại 5-10 lần
+
+**2. Uống nước lạnh**
+Nước lạnh giúp:
+- Làm dịu cơn thèm
+- Giữ miệng luôn bận rộn
+- Thanh lọc cơ thể
+
+**3. Tập thể dục nhẹ**
+- Đi bộ 10-15 phút
+- Làm một vài động tác yoga
+- Chạy bộ tại chỗ
+
+**4. Ăn trái cây hoặc rau củ**
+- Cà rót, cần tây giúp làm sạch miệng
+- Táo, cam cung cấp vitamin C
+- Hạt hướng dương thay thế thói quen cầm nắm
+
+**5. Tìm hoạt động thay thế**
+- Chơi game trên điện thoại
+- Nghe nhạc
+- Gọi điện cho bạn bè
+- Đọc sách
+
+Hãy nhớ rằng cơn thèm thuốc thường chỉ kéo dài 3-5 phút. Nếu bạn có thể vượt qua được khoảng thời gian này, bạn đã thành công!
+
+Chúc các bạn cai thuốc thành công!', 
+ 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+ 3, 'published', DATEADD(DAY, -2, GETDATE()), 32),
+
+(N'Lợi ích sức khỏe khi cai thuốc lá', 
+ N'Những thay đổi tích cực trong cơ thể sau khi ngừng hút thuốc', 
+ N'Cai thuốc lá mang lại rất nhiều lợi ích cho sức khỏe. Dưới đây là timeline những thay đổi tích cực:
+
+**Sau 20 phút:**
+- Nhịp tim và huyết áp giảm
+- Lưu thông máu cải thiện
+
+**Sau 12 giờ:**
+- Nồng độ carbon monoxide trong máu giảm xuống mức bình thường
+- Nồng độ oxy tăng
+
+**Sau 24 giờ:**
+- Nguy cơ đau tim giảm
+
+**Sau 48 giờ:**
+- Khứu giác và vị giác bắt đầu cải thiện
+- Các đầu dây thần kinh bắt đầu tái tạo
+
+**Sau 2 tuần - 3 tháng:**
+- Lưu thông máu cải thiện
+- Chức năng phổi tăng lên đến 30%
+
+**Sau 1-9 tháng:**
+- Ho và khó thở giảm
+- Lông mao trong phổi hoạt động trở lại bình thường
+
+**Sau 1 năm:**
+- Nguy cơ bệnh tim giảm 50%
+
+**Sau 5 năm:**
+- Nguy cơ đột quỵ giảm như người không hút thuốc
+
+**Sau 10 năm:**
+- Nguy cơ ung thư phổi giảm 50%
+
+**Sau 15 năm:**
+- Nguy cơ bệnh tim như người không bao giờ hút thuốc
+
+Ngoài ra, cai thuốc còn mang lại:
+- Tiết kiệm tiền bạc
+- Hơi thở thơm tho
+- Răng trắng hơn
+- Da khỏe mạnh hơn
+- Tự tin hơn trong giao tiếp
+
+Hãy bắt đầu hành trình cai thuốc ngay hôm nay để tận hưởng những lợi ích tuyệt vời này!', 
+ 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+ 3, 'published', DATEADD(DAY, -5, GETDATE()), 67);
 
 -- Comments
 CREATE TABLE Comments (
@@ -199,7 +336,75 @@ CREATE TABLE Comments (
     PostID INT FOREIGN KEY REFERENCES BlogPosts(PostID),
     UserID INT FOREIGN KEY REFERENCES Users(UserID),
     CommentText NVARCHAR(MAX) NOT NULL,
+    Status NVARCHAR(20) DEFAULT 'pending' CHECK (Status IN ('pending', 'approved', 'rejected')),
     CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE Achievements (
+    AchievementID INT PRIMARY KEY IDENTITY(1,1),
+    Name NVARCHAR(100) NOT NULL,
+    Description NVARCHAR(255),
+    IconURL NVARCHAR(255),
+    MilestoneDays INT NULL,
+    SavedMoney INT NULL,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+-- Insert sample achievements
+INSERT INTO Achievements (Name, Description, IconURL, MilestoneDays, SavedMoney)
+VALUES 
+(N'Ngày đầu tiên', N'Chúc mừng bạn đã hoàn thành ngày đầu tiên không hút thuốc!', 'https://img.icons8.com/emoji/48/000000/trophy-emoji.png', 1, NULL),
+(N'Tuần lễ khởi đầu', N'Bạn đã không hút thuốc được 7 ngày liên tiếp!', 'https://img.icons8.com/emoji/48/000000/star-emoji.png', 7, NULL),
+(N'Tháng đầu tiên', N'Một tháng không hút thuốc - một cột mốc quan trọng!', 'https://img.icons8.com/emoji/48/000000/crown-emoji.png', 30, NULL),
+(N'Quý đầu tiên', N'3 tháng không hút thuốc - sức khỏe của bạn đã cải thiện rất nhiều!', 'https://img.icons8.com/emoji/48/000000/gem-stone-emoji.png', 90, NULL),
+(N'Tiết kiệm 100K', N'Bạn đã tiết kiệm được 100,000 VNĐ nhờ việc không hút thuốc!', 'https://img.icons8.com/emoji/48/000000/money-bag-emoji.png', NULL, 100000),
+(N'Tiết kiệm 500K', N'Tuyệt vời! Bạn đã tiết kiệm được 500,000 VNĐ!', 'https://img.icons8.com/emoji/48/000000/money-with-wings-emoji.png', NULL, 500000),
+(N'Tiết kiệm 1 triệu', N'Thành tích đáng kinh ngạc! 1,000,000 VNĐ đã được tiết kiệm!', 'https://img.icons8.com/emoji/48/000000/bank-emoji.png', NULL, 1000000);
+
+CREATE TABLE UserAchievements (
+    UserAchievementID INT PRIMARY KEY IDENTITY(1,1),
+    UserID INT NOT NULL,
+    AchievementID INT NOT NULL,
+    EarnedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (AchievementID) REFERENCES Achievements(AchievementID)
+);
+
+CREATE TABLE CommunityPosts (
+    PostID INT PRIMARY KEY IDENTITY(1,1),
+    UserID INT NOT NULL,
+    Title NVARCHAR(255),
+    Content NVARCHAR(MAX),
+    AchievementID INT NULL, -- Liên kết huy hiệu (nếu có)
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    Likes INT DEFAULT 0,
+    IsPublic BIT DEFAULT 1,
+
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (AchievementID) REFERENCES Achievements(AchievementID)
+);
+
+CREATE TABLE CommunityComments (
+    CommentID INT PRIMARY KEY IDENTITY(1,1),
+    PostID INT NOT NULL,
+    UserID INT NOT NULL,
+    Content NVARCHAR(MAX),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (PostID) REFERENCES CommunityPosts(PostID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+CREATE TABLE PostLikes (
+    LikeID INT PRIMARY KEY IDENTITY(1,1),
+    PostID INT NOT NULL,
+    UserID INT NOT NULL,
+    LikedAt DATETIME DEFAULT GETDATE(),
+
+    UNIQUE(PostID, UserID), -- Không cho like trùng
+    FOREIGN KEY (PostID) REFERENCES CommunityPosts(PostID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
 
 -- Ví dụ Insert Payment & Membership

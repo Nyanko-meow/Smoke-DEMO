@@ -1,219 +1,301 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
-    Container,
-    Paper,
+    Layout,
+    Card,
     Typography,
-    Box,
     Avatar,
     Button,
-    TextField,
+    Input,
     Divider,
-    CircularProgress,
-    Alert,
-    IconButton
-} from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+    Space,
+    message,
+    Modal,
+    List,
+    Spin,
+    Empty,
+    Popconfirm,
+    Tag
+} from 'antd';
 import {
-    getCommunityPost,
-    getCommunityComments,
-    addCommunityComment,
-    updateCommunityComment,
-    deleteCommunityComment,
-    deleteCommunityPost
-} from '../../store/slices/communitySlice';
+    DeleteOutlined,
+    EditOutlined,
+    LikeOutlined,
+    LikeFilled,
+    CommentOutlined,
+    TrophyOutlined,
+    ArrowLeftOutlined
+} from '@ant-design/icons';
+import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import CommentManager from './CommentManager';
+
+const { Content } = Layout;
+const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 const CommunityDetail = () => {
     const { postId } = useParams();
     const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const { currentPost, comments, loading, error } = useSelector(state => state.community);
     const { user } = useSelector(state => state.auth);
+
+    const [post, setPost] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [commentText, setCommentText] = useState('');
-    const [editingComment, setEditingComment] = useState(null);
+    const [submittingComment, setSubmittingComment] = useState(false);
+    const [liked, setLiked] = useState(false);
 
     useEffect(() => {
-        dispatch(getCommunityPost(postId));
-        dispatch(getCommunityComments(postId));
-    }, [dispatch, postId]);
-
-    const handleCommentSubmit = async (e) => {
-        e.preventDefault();
-        if (editingComment) {
-            await dispatch(updateCommunityComment({
-                commentId: editingComment.id,
-                content: commentText
-            }));
-            setEditingComment(null);
-        } else {
-            await dispatch(addCommunityComment({
-                postId,
-                content: commentText
-            }));
+        if (postId) {
+            fetchPost();
+            fetchComments();
+            if (user) {
+                checkLikeStatus();
+            }
         }
-        setCommentText('');
-    };
+    }, [postId, user]);
 
-    const handleEditComment = (comment) => {
-        setEditingComment(comment);
-        setCommentText(comment.content);
-    };
-
-    const handleDeleteComment = async (commentId) => {
-        await dispatch(deleteCommunityComment(commentId));
-    };
-
-    const handleDeletePost = async () => {
-        if (window.confirm('Are you sure you want to delete this post?')) {
-            await dispatch(deleteCommunityPost(postId));
-            navigate('/community');
+    const fetchPost = async () => {
+        try {
+            const response = await axios.get(`/api/community/posts/${postId}`);
+            if (response.data.success) {
+                setPost(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching post:', error);
+            message.error('Lỗi khi tải bài viết');
         }
+    };
+
+    const fetchComments = async () => {
+        try {
+            const response = await axios.get(`/api/community/posts/${postId}/comments`);
+            if (response.data.success) {
+                setComments(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            message.error('Lỗi khi tải comment');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const checkLikeStatus = async () => {
+        try {
+            const response = await axios.get(`/api/community/posts/${postId}/like-status`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (response.data.success) {
+                setLiked(response.data.liked);
+            }
+        } catch (error) {
+            console.error('Error checking like status:', error);
+        }
+    };
+
+    const handleLike = async () => {
+        if (!user) {
+            message.warning('Vui lòng đăng nhập để thích bài viết');
+            return;
+        }
+
+        try {
+            const response = await axios.post(`/api/community/posts/${postId}/like`, {}, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (response.data.success) {
+                setLiked(response.data.liked);
+                setPost(prev => ({ ...prev, LikesCount: response.data.likesCount }));
+            }
+        } catch (error) {
+            message.error('Lỗi khi thực hiện like');
+        }
+    };
+
+    const handleCommentSubmit = async () => {
+        if (!commentText.trim()) return;
+
+        setSubmittingComment(true);
+        try {
+            const response = await axios.post(`/api/community/posts/${postId}/comments`, {
+                content: commentText
+            }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            if (response.data.success) {
+                fetchComments(); // Refresh comments
+                message.success('Thêm comment thành công');
+                setCommentText('');
+            }
+        } catch (error) {
+            message.error('Lỗi khi xử lý comment');
+        } finally {
+            setSubmittingComment(false);
+        }
+    };
+
+    const canEditOrDelete = (item) => {
+        return user && (user.UserID === item.UserID || user.role === 'admin');
     };
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-                <CircularProgress />
-            </Box>
+            <Content style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+                <Spin size="large" />
+            </Content>
         );
     }
 
-    if (error) {
+    if (!post) {
         return (
-            <Container maxWidth="md" sx={{ py: 4 }}>
-                <Alert severity="error">{error}</Alert>
-            </Container>
-        );
-    }
-
-    if (!currentPost) {
-        return (
-            <Container maxWidth="md" sx={{ py: 4 }}>
-                <Alert severity="info">Post not found</Alert>
-            </Container>
+            <Content style={{ padding: '24px' }}>
+                <Empty description="Không tìm thấy bài viết" />
+            </Content>
         );
     }
 
     return (
-        <Container maxWidth="md" sx={{ py: 4 }}>
-            <Paper elevation={0} sx={{ p: 4, mb: 4 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar
-                            src={currentPost.author.avatar}
-                            alt={currentPost.author.name}
-                            sx={{ mr: 2 }}
-                        />
-                        <Box>
-                            <Typography variant="subtitle1" component="div">
-                                {currentPost.author.name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {formatDistanceToNow(new Date(currentPost.createdAt), { addSuffix: true })}
-                            </Typography>
-                        </Box>
-                    </Box>
-                    {user && (user.id === currentPost.author.id || user.role === 'admin') && (
-                        <Box>
-                            <IconButton
-                                color="primary"
-                                onClick={() => navigate(`/community/edit/${postId}`)}
+        <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+            <Content style={{ padding: '24px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+                <Button
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => navigate('/community')}
+                    style={{ marginBottom: 16 }}
+                >
+                    Quay lại
+                </Button>
+
+                <Card style={{ marginBottom: 24 }}>
+                    {/* Post Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar
+                                src={post.Avatar}
+                                size="large"
+                                style={{ marginRight: 12 }}
                             >
-                                <EditIcon />
-                            </IconButton>
-                            <IconButton
-                                color="error"
-                                onClick={handleDeletePost}
-                            >
-                                <DeleteIcon />
-                            </IconButton>
-                        </Box>
-                    )}
-                </Box>
+                                {post.FirstName?.charAt(0)}
+                            </Avatar>
+                            <div>
+                                <Text strong>{`${post.FirstName} ${post.LastName}`}</Text>
+                                <br />
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    {formatDistanceToNow(new Date(post.CreatedAt), {
+                                        addSuffix: true,
+                                        locale: vi
+                                    })}
+                                </Text>
+                            </div>
+                        </div>
 
-                <Typography variant="h4" component="h1" gutterBottom sx={{
-                    fontWeight: 'bold',
-                    color: 'primary.main'
-                }}>
-                    {currentPost.title}
-                </Typography>
+                        {canEditOrDelete(post) && (
+                            <Space>
+                                <Button
+                                    type="text"
+                                    icon={<EditOutlined />}
+                                    size="small"
+                                >
+                                    Sửa
+                                </Button>
+                                <Popconfirm
+                                    title="Bạn có chắc muốn xóa bài viết này?"
+                                    onConfirm={() => {/* Handle delete post */ }}
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                >
+                                    <Button
+                                        type="text"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        size="small"
+                                    >
+                                        Xóa
+                                    </Button>
+                                </Popconfirm>
+                            </Space>
+                        )}
+                    </div>
 
-                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 4 }}>
-                    {currentPost.content}
-                </Typography>
-
-                <Divider sx={{ my: 4 }} />
-
-                <Typography variant="h6" gutterBottom>
-                    Comments ({comments.length})
-                </Typography>
-
-                {user && (
-                    <Box component="form" onSubmit={handleCommentSubmit} sx={{ mb: 4 }}>
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={3}
-                            placeholder="Write a comment..."
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            sx={{ mb: 2 }}
-                        />
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={!commentText.trim()}
+                    {/* Achievement Tag */}
+                    {post.AchievementName && (
+                        <Tag
+                            icon={<TrophyOutlined />}
+                            color="gold"
+                            style={{ marginBottom: 12 }}
                         >
-                            {editingComment ? 'Update Comment' : 'Post Comment'}
-                        </Button>
-                    </Box>
-                )}
+                            {post.AchievementName}
+                        </Tag>
+                    )}
 
-                {comments.map((comment) => (
-                    <Box key={comment.id} sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Avatar
-                                    src={comment.author.avatar}
-                                    alt={comment.author.name}
-                                    sx={{ mr: 2 }}
-                                />
-                                <Box>
-                                    <Typography variant="subtitle2" component="div">
-                                        {comment.author.name}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            {user && (user.id === comment.author.id || user.role === 'admin') && (
-                                <Box>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleEditComment(comment)}
-                                    >
-                                        <EditIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleDeleteComment(comment.id)}
-                                    >
-                                        <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                </Box>
-                            )}
-                        </Box>
-                        <Typography variant="body2" sx={{ ml: 7 }}>
-                            {comment.content}
-                        </Typography>
-                    </Box>
-                ))}
-            </Paper>
-        </Container>
+                    {/* Post Content */}
+                    <Title level={3} style={{ marginBottom: 16 }}>
+                        {post.Title}
+                    </Title>
+
+                    <Paragraph style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: 20 }}>
+                        {post.Content}
+                    </Paragraph>
+
+                    {/* Post Actions */}
+                    <Divider style={{ margin: '16px 0' }} />
+                    <Space size="large">
+                        <Button
+                            type="text"
+                            icon={liked ? <LikeFilled style={{ color: '#1890ff' }} /> : <LikeOutlined />}
+                            onClick={handleLike}
+                        >
+                            {post.LikesCount || 0}
+                        </Button>
+
+                        <Button
+                            type="text"
+                            icon={<CommentOutlined />}
+                        >
+                            {comments.length} comments
+                        </Button>
+                    </Space>
+                </Card>
+
+                {/* Comments Section */}
+                <Card title={`Bình luận (${comments.length})`}>
+                    {user && (
+                        <div style={{ marginBottom: 24 }}>
+                            <TextArea
+                                rows={3}
+                                placeholder="Viết bình luận..."
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                style={{ marginBottom: 12 }}
+                            />
+                            <Button
+                                type="primary"
+                                loading={submittingComment}
+                                onClick={handleCommentSubmit}
+                                disabled={!commentText.trim()}
+                            >
+                                Đăng bình luận
+                            </Button>
+                        </div>
+                    )}
+
+                    {comments.length === 0 ? (
+                        <Empty description="Chưa có bình luận nào" />
+                    ) : (
+                        <CommentManager
+                            comments={comments}
+                            setComments={setComments}
+                            postId={postId}
+                        />
+                    )}
+                </Card>
+            </Content>
+        </Layout>
     );
 };
 

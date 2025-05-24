@@ -44,17 +44,29 @@ body {
 .navbar-menu-desktop {
   display: flex;
   align-items: center;
+  flex: 1;
+  justify-content: center;
 }
 
 .navbar-menu {
   background-color: transparent !important;
   border-bottom: none !important;
   margin-right: 16px;
+  min-width: 0;
+  flex: 1;
 }
 
 .navbar-menu .ant-menu-item {
   color: rgba(255, 255, 255, 0.85) !important;
   border-bottom: 2px solid transparent !important;
+  padding: 0 12px !important;
+  margin: 0 4px !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+
+.navbar-menu .ant-menu-item a {
+  color: inherit !important;
+  font-weight: 500;
 }
 
 .navbar-menu .ant-menu-item:hover {
@@ -149,13 +161,23 @@ body {
 }
 
 /* Media queries for responsive navbar */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .navbar-menu-desktop {
     display: none;
   }
   
   .navbar-mobile-toggle {
     display: block;
+  }
+}
+
+@media (min-width: 1025px) {
+  .navbar-menu-desktop {
+    display: flex;
+  }
+  
+  .navbar-mobile-toggle {
+    display: none;
   }
 }
 
