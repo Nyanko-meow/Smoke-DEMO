@@ -173,6 +173,40 @@ router.get('/categories/:category', protect, async (req, res) => {
     }
 });
 
+// PUBLIC endpoint: Get all achievements without authentication (for display purposes)
+router.get('/public', async (req, res) => {
+    try {
+        const result = await pool.request().query(`
+            SELECT 
+                AchievementID,
+                Name,
+                Description,
+                IconURL,
+                Category,
+                MilestoneDays,
+                SavedMoney,
+                RequiredPlan,
+                Difficulty,
+                Points
+            FROM Achievements
+            WHERE IsActive = 1
+            ORDER BY Category, Difficulty
+        `);
+
+        res.json({
+            success: true,
+            data: result.recordset
+        });
+    } catch (error) {
+        console.error('Error getting public achievements:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting achievements',
+            error: error.message
+        });
+    }
+});
+
 // === ADMIN ONLY ROUTES ===
 
 // Create new achievement (admin only)

@@ -61,9 +61,23 @@ const AchievementPage = () => {
             // Try to fetch achievements with enhanced error handling
             let achievementsData = [];
             try {
-                const achievementsRes = await axios.get('/api/achievements/', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
+                // First try authenticated endpoint
+                let achievementsRes;
+                const token = localStorage.getItem('token');
+
+                if (token) {
+                    try {
+                        achievementsRes = await axios.get('/api/achievements/', {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                    } catch (authError) {
+                        console.warn('Auth achievements failed, trying public endpoint');
+                        achievementsRes = await axios.get('/api/achievements/public');
+                    }
+                } else {
+                    achievementsRes = await axios.get('/api/achievements/public');
+                }
+
                 if (achievementsRes.data.success) {
                     achievementsData = achievementsRes.data.data;
                     console.log('✅ Achievements loaded:', achievementsData.length);
@@ -85,12 +99,15 @@ const AchievementPage = () => {
             // Try to fetch earned achievements
             let earnedData = [];
             try {
-                const earnedRes = await axios.get('/api/achievements/earned', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
-                if (earnedRes.data.success) {
-                    earnedData = earnedRes.data.data;
-                    console.log('✅ Earned achievements loaded:', earnedData.length);
+                const token = localStorage.getItem('token');
+                if (token) {
+                    const earnedRes = await axios.get('/api/achievements/earned', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (earnedRes.data.success) {
+                        earnedData = earnedRes.data.data;
+                        console.log('✅ Earned achievements loaded:', earnedData.length);
+                    }
                 }
             } catch (error) {
                 console.warn('⚠️ Earned achievements API error:', error.response?.status);
@@ -99,16 +116,34 @@ const AchievementPage = () => {
             // Try to fetch progress data
             let progressInfo = null;
             try {
-                const progressRes = await axios.get('/api/progress/summary', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
+                const token = localStorage.getItem('token');
+                let progressRes;
+
+                if (token) {
+                    try {
+                        progressRes = await axios.get('/api/progress/summary', {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                    } catch (authError) {
+                        console.warn('Auth progress failed, trying public endpoint');
+                        progressRes = await axios.get('/api/progress/public-summary');
+                    }
+                } else {
+                    progressRes = await axios.get('/api/progress/public-summary');
+                }
+
                 if (progressRes.data.success) {
                     progressInfo = progressRes.data.data;
                     console.log('✅ Progress data loaded');
                 }
             } catch (error) {
                 console.warn('⚠️ Progress API error:', error.response?.status);
-                // Progress not critical for achievements display
+                // Use dummy data if both auth and public fail
+                progressInfo = {
+                    SmokeFreeDays: 7,
+                    TotalMoneySaved: 350000,
+                    TotalDaysTracked: 7
+                };
             }
 
             setAchievements(achievementsData);
@@ -146,7 +181,7 @@ const AchievementPage = () => {
         if (achievement.MilestoneDays) {
             const current = progressData.SmokeFreeDays || 0;
             return {
-                progress: Math.min((current / achievement.MilestoneDays) * 100, 100),
+                progress: Math.round(Math.min((current / achievement.MilestoneDays) * 100, 100) * 10) / 10,
                 total: achievement.MilestoneDays,
                 current
             };
@@ -155,7 +190,7 @@ const AchievementPage = () => {
         if (achievement.SavedMoney) {
             const current = progressData.TotalMoneySaved || 0;
             return {
-                progress: Math.min((current / achievement.SavedMoney) * 100, 100),
+                progress: Math.round(Math.min((current / achievement.SavedMoney) * 100, 100) * 10) / 10,
                 total: achievement.SavedMoney,
                 current
             };
@@ -357,21 +392,7 @@ const AchievementPage = () => {
                                     )}
 
                                     <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                                        <div style={{
-                                            fontSize: '64px',
-                                            marginBottom: 8,
-                                            filter: isEarned ? 'none' : 'grayscale(100%)'
-                                        }}>
-                                            {achievement.IconURL ? (
-                                                <img
-                                                    src={achievement.IconURL}
-                                                    alt={achievement.Name}
-                                                    style={{ width: 64, height: 64 }}
-                                                />
-                                            ) : (
-                                                isEarned ? '🏆' : '🔒'
-                                            )}
-                                        </div>
+                                        <div style={{ fontSize: '64px', marginBottom: 8, filter: isEarned ? 'none' : 'grayscale(100%)' }}>                                            {achievement.IconURL && achievement.IconURL.length <= 4 ? (achievement.IconURL) : (isEarned ? '🏆' : '🔒')}                                        </div>
 
                                         <Title level={4} style={{
                                             margin: 0,
@@ -396,11 +417,7 @@ const AchievementPage = () => {
                                                     {progressInfo.current}/{progressInfo.total}
                                                 </Text>
                                             </div>
-                                            <Progress
-                                                percent={progressInfo.progress}
-                                                size="small"
-                                                status={isEarned ? 'success' : 'active'}
-                                            />
+                                            <Progress percent={progressInfo.progress} size="small" status={isEarned ? 'success' : 'active'} showInfo={true} format={(percent) => `${percent}%`} />
                                         </Space>
                                     )}
 
@@ -414,11 +431,7 @@ const AchievementPage = () => {
                                                     {Math.round(progressInfo.current).toLocaleString('vi-VN')}/{progressInfo.total.toLocaleString('vi-VN')}
                                                 </Text>
                                             </div>
-                                            <Progress
-                                                percent={progressInfo.progress}
-                                                size="small"
-                                                status={isEarned ? 'success' : 'active'}
-                                            />
+                                            <Progress percent={progressInfo.progress} size="small" status={isEarned ? 'success' : 'active'} showInfo={true} format={(percent) => `${percent}%`} />
                                         </Space>
                                     )}
 

@@ -129,13 +129,38 @@ const requireActivated = async (req, res, next) => {
 
 const authorize = (...roles) => {
     return (req, res, next) => {
+        console.log('🔍 Authorization check:');
+        console.log('   req.user:', req.user);
+        console.log('   req.user.Role:', req.user?.Role);
+        console.log('   Required roles:', roles);
+        console.log('   Role type:', typeof req.user?.Role);
+        console.log('   Role includes check:', roles.includes(req.user?.Role));
+
+        if (!req.user) {
+            console.log('❌ No user in request');
+            return res.status(401).json({
+                success: false,
+                message: 'Bạn cần đăng nhập để truy cập trang này'
+            });
+        }
+
+        if (!req.user.Role) {
+            console.log('❌ No role in user object');
+            return res.status(403).json({
+                success: false,
+                message: 'Không xác định được quyền của bạn'
+            });
+        }
+
         if (!roles.includes(req.user.Role)) {
-            console.log('Unauthorized role access. User role:', req.user.Role, 'Required roles:', roles);
+            console.log('❌ Unauthorized role access. User role:', req.user.Role, 'Required roles:', roles);
             return res.status(403).json({
                 success: false,
                 message: `Bạn không có quyền truy cập tính năng này`
             });
         }
+
+        console.log('✅ Authorization passed');
         next();
     };
 };

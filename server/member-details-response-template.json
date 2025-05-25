@@ -1,0 +1,121 @@
+{
+    "success": true,
+    "message": "Đã lấy thông tin chi tiết thành viên thành công",
+    "data": {
+        "id": 2,
+        "email": "member@example.com",
+        "firstName": "Member",
+        "lastName": "User",
+        "fullName": "Member User",
+        "role": "member",
+        "phoneNumber": "0987654321",
+        "address": "456 Member Rd",
+        "avatar": "avatar2.jpg",
+        "isActive": true,
+        "emailVerified": true,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "lastLoginAt": "2024-01-15T10:30:00.000Z",
+        "membership": {
+            "id": 1,
+            "planId": 1,
+            "planName": "Basic Plan",
+            "planDescription": "A basic plan for quitting support.",
+            "planPrice": 99.00,
+            "planDuration": 30,
+            "planFeatures": [
+                "Progress tracking",
+                "Basic quitting tips",
+                "Community access"
+            ],
+            "startDate": "2024-01-01T00:00:00.000Z",
+            "endDate": "2024-01-31T00:00:00.000Z",
+            "daysRemaining": 15,
+            "status": "active"
+        },
+        "quitSmokingStatus": {
+            "status": "đang tiến triển",
+            "description": "Tiến trình tốt! Trung bình 0.0 điếu/ngày trong tuần qua.",
+            "statusCode": "progressing",
+            "recommendation": "Tiếp tục duy trì và có thể tăng cường các hoạt động tích cực khác.",
+            "metrics": {
+                "recentAvgCigarettes": "0.0",
+                "recentAvgCraving": "1.3",
+                "daysSmokeFree": 16,
+                "totalProgressDays": 28
+            }
+        },
+        "quitPlan": {
+            "id": 1,
+            "startDate": "2024-01-15T00:00:00.000Z",
+            "targetDate": "2024-03-15T00:00:00.000Z",
+            "reason": "Muốn có sức khỏe tốt hơn cho gia đình và tiết kiệm tiền",
+            "motivationLevel": 8,
+            "detailedPlan": "Giảm dần số lượng điếu mỗi ngày, thay thế bằng kẹo cao su và tập thể dục",
+            "status": "active",
+            "createdAt": "2024-01-15T00:00:00.000Z",
+            "coachId": 3,
+            "daysInPlan": 28
+        },
+        "smokingStatus": {
+            "cigarettesPerDay": 20,
+            "cigarettePrice": 45000,
+            "smokingFrequency": "Hàng ngày, đặc biệt sau bữa ăn và khi stress",
+            "lastUpdated": "2024-01-15T00:00:00.000Z"
+        },
+        "statistics": {
+            "totalDaysTracked": 28,
+            "averageCigarettesPerDay": 2.1,
+            "averageCravingLevel": 3.2,
+            "totalMoneySaved": 1215000,
+            "bestDaysSmokeFree": 16,
+            "progressTrend": "improving",
+            "cigarettesPerDayBeforeQuitting": 20,
+            "smokingFrequency": "Hàng ngày, đặc biệt sau bữa ăn và khi stress"
+        },
+        "recentProgress": [
+            {
+                "Date": "2024-02-11T00:00:00.000Z",
+                "CigarettesSmoked": 0,
+                "CravingLevel": 1,
+                "EmotionNotes": "Cảm thấy tự tin và khỏe mạnh",
+                "MoneySaved": 1215000,
+                "DaysSmokeFree": 16,
+                "HealthNotes": "Hơi thở thơm hơn, ngủ ngon hơn",
+                "CreatedAt": "2024-02-11T00:00:00.000Z"
+            },
+            {
+                "Date": "2024-02-10T00:00:00.000Z",
+                "CigarettesSmoked": 0,
+                "CravingLevel": 1,
+                "EmotionNotes": "Cảm thấy tự tin và khỏe mạnh",
+                "MoneySaved": 1170000,
+                "DaysSmokeFree": 15,
+                "HealthNotes": "Hơi thở thơm hơn, ngủ ngon hơn",
+                "CreatedAt": "2024-02-10T00:00:00.000Z"
+            }
+        ],
+        "achievements": [
+            {
+                "AchievementID": 2,
+                "Name": "Tuần lễ khởi đầu",
+                "Description": "Bạn đã không hút thuốc được 7 ngày liên tiếp!",
+                "IconURL": "https://img.icons8.com/emoji/48/000000/star-emoji.png",
+                "MilestoneDays": 7,
+                "SavedMoney": null,
+                "EarnedAt": "2024-02-02T00:00:00.000Z"
+            },
+            {
+                "AchievementID": 1,
+                "Name": "Ngày đầu tiên",
+                "Description": "Chúc mừng bạn đã hoàn thành ngày đầu tiên không hút thuốc!",
+                "IconURL": "https://img.icons8.com/emoji/48/000000/trophy-emoji.png",
+                "MilestoneDays": 1,
+                "SavedMoney": null,
+                "EarnedAt": "2024-01-27T00:00:00.000Z"
+            }
+        ],
+        "achievementCount": 2,
+        "isSubscribed": true,
+        "hasActiveQuitPlan": true
+    }
+}

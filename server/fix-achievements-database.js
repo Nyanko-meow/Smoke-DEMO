@@ -1,170 +1,138 @@
-const { pool } = require('./src/config/database');
+const sql = require('mssql');
+
+const config = {
+    server: 'localhost',
+    database: 'SMOKEKING',
+    options: {
+        encrypt: false,
+        trustServerCertificate: true
+    },
+    authentication: {
+        type: 'default',
+        options: {
+            userName: 'sa',
+            password: '12345'  // Use correct password from config
+        }
+    }
+};
 
 async function fixAchievementsDatabase() {
     try {
-        console.log('🔧 Fixing Achievements Database Issues...\n');
+        await sql.connect(config);
+        console.log('🔌 Connected to database');
 
-        // Step 1: Check if Achievements table exists
-        console.log('1. 📊 Checking Achievements table...');
-        const tableCheck = await pool.request().query(`
-            SELECT COUNT(*) as count 
+        // Check if Achievements table exists and has required columns
+        const tableCheck = await sql.query`
+            SELECT COUNT(*) as TableExists 
             FROM INFORMATION_SCHEMA.TABLES 
             WHERE TABLE_NAME = 'Achievements'
-        `);
+        `;
 
-        if (tableCheck.recordset[0].count === 0) {
-            console.log('❌ Achievements table does not exist. Creating...');
+        if (tableCheck.recordset[0].TableExists === 0) {
+            console.log('❌ Achievements table does not exist! Creating it...');
 
-            await pool.request().query(`
+            // Create Achievements table
+            await sql.query`
                 CREATE TABLE Achievements (
                     AchievementID INT PRIMARY KEY IDENTITY(1,1),
                     Name NVARCHAR(100) NOT NULL,
                     Description NVARCHAR(255),
                     IconURL NVARCHAR(255),
+                    Category NVARCHAR(50) DEFAULT 'general',
                     MilestoneDays INT NULL,
-                    SavedMoney INT NULL,
-                    Category NVARCHAR(50),
-                    RequiredPlan NVARCHAR(20),
-                    Difficulty INT,
-                    Points INT DEFAULT 0,
+                    SavedMoney DECIMAL(10,2) NULL,
+                    RequiredPlan NVARCHAR(20) DEFAULT 'any',
+                    Difficulty NVARCHAR(20) DEFAULT 'easy',
+                    Points INT DEFAULT 10,
                     IsActive BIT DEFAULT 1,
                     CreatedAt DATETIME DEFAULT GETDATE()
                 )
-            `);
-            console.log('✅ Achievements table created');
+            `;
+            console.log('✅ Created Achievements table');
         } else {
             console.log('✅ Achievements table exists');
 
-            // Step 2: Check if new columns exist
-            console.log('\n2. 🔍 Checking for missing columns...');
-            const columns = await pool.request().query(`
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = 'Achievements'
-            `);
+            // Check for missing columns and add them
+            const columnsToCheck = [
+                { name: 'Category', type: 'NVARCHAR(50)', default: "'general'" },
+                { name: 'RequiredPlan', type: 'NVARCHAR(20)', default: "'any'" },
+                { name: 'Difficulty', type: 'NVARCHAR(20)', default: "'easy'" },
+                { name: 'Points', type: 'INT', default: '10' },
+                { name: 'IsActive', type: 'BIT', default: '1' }
+            ];
 
-            const existingColumns = columns.recordset.map(col => col.COLUMN_NAME);
-            const requiredColumns = ['Category', 'RequiredPlan', 'Difficulty', 'Points', 'IsActive'];
+            for (const column of columnsToCheck) {
+                const columnCheck = await sql.query`
+                    SELECT COUNT(*) as ColumnExists 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'Achievements' AND COLUMN_NAME = ${column.name}
+                `;
 
-            for (const column of requiredColumns) {
-                if (!existingColumns.includes(column)) {
-                    console.log(`➕ Adding missing column: ${column}`);
-
-                    switch (column) {
-                        case 'Category':
-                            await pool.request().query('ALTER TABLE Achievements ADD Category NVARCHAR(50)');
-                            break;
-                        case 'RequiredPlan':
-                            await pool.request().query('ALTER TABLE Achievements ADD RequiredPlan NVARCHAR(20)');
-                            break;
-                        case 'Difficulty':
-                            await pool.request().query('ALTER TABLE Achievements ADD Difficulty INT');
-                            break;
-                        case 'Points':
-                            await pool.request().query('ALTER TABLE Achievements ADD Points INT DEFAULT 0');
-                            break;
-                        case 'IsActive':
-                            await pool.request().query('ALTER TABLE Achievements ADD IsActive BIT DEFAULT 1');
-                            break;
+                if (columnCheck.recordset[0].ColumnExists === 0) {
+                    console.log(`➕ Adding column ${column.name}...`);
+                    await sql.query(`ALTER TABLE Achievements ADD ${column.name} ${column.type} DEFAULT ${column.default}`);
+                    if (column.name === 'IsActive') {
+                        await sql.query`UPDATE Achievements SET IsActive = 1 WHERE IsActive IS NULL`;
                     }
-                    console.log(`✅ Added column: ${column}`);
-                } else {
-                    console.log(`✅ Column exists: ${column}`);
                 }
             }
         }
 
-        // Step 3: Clear existing data and insert new achievements
-        console.log('\n3. 🧹 Clearing existing achievements...');
-        await pool.request().query('DELETE FROM UserAchievements');
-        await pool.request().query('DELETE FROM Achievements');
+        // Check achievement count
+        const countResult = await sql.query`SELECT COUNT(*) as AchievementCount FROM Achievements`;
+        console.log('🏆 Current achievements count:', countResult.recordset[0].AchievementCount);
 
-        // Step 4: Insert enhanced achievements
-        console.log('\n4. 🚀 Inserting enhanced achievements...');
+        if (countResult.recordset[0].AchievementCount === 0) {
+            console.log('📝 Inserting sample achievements...');
 
-        const achievements = [
-            // Basic Plan
-            { name: '🌟 Bước đầu khởi đầu', desc: 'Hoàn thành ngày đầu tiên không hút thuốc (Basic Plan)', icon: '🌟', cat: 'basic', days: 1, money: null, plan: 'basic', diff: 1, pts: 10 },
-            { name: '⭐ Tuần lễ dẻo dai', desc: 'Kiên trì 7 ngày không hút thuốc (Basic Plan)', icon: '⭐', cat: 'basic', days: 7, money: null, plan: 'basic', diff: 2, pts: 50 },
-            { name: '🏅 Chiến binh tháng đầu', desc: 'Vượt qua thử thách 30 ngày đầu tiên (Basic Plan)', icon: '🏅', cat: 'basic', days: 30, money: null, plan: 'basic', diff: 3, pts: 200 },
+            // Insert sample achievements
+            await sql.query`
+                INSERT INTO Achievements (Name, Description, IconURL, Category, MilestoneDays, SavedMoney, Difficulty, Points, IsActive)
+                VALUES 
+                (N'Ngày đầu tiên', N'Chúc mừng bạn đã hoàn thành ngày đầu tiên không hút thuốc!', 'https://img.icons8.com/emoji/48/000000/trophy-emoji.png', 'time_based', 1, NULL, 'easy', 10, 1),
+                (N'Tuần lễ khởi đầu', N'Bạn đã không hút thuốc được 7 ngày liên tiếp!', 'https://img.icons8.com/emoji/48/000000/star-emoji.png', 'time_based', 7, NULL, 'medium', 50, 1),
+                (N'Tháng đầu tiên', N'Một tháng không hút thuốc - một cột mốc quan trọng!', 'https://img.icons8.com/emoji/48/000000/crown-emoji.png', 'time_based', 30, NULL, 'hard', 200, 1),
+                (N'Quý đầu tiên', N'3 tháng không hút thuốc - sức khỏe của bạn đã cải thiện rất nhiều!', 'https://img.icons8.com/emoji/48/000000/gem-stone-emoji.png', 'time_based', 90, NULL, 'expert', 500, 1),
+                (N'Tiết kiệm 100K', N'Bạn đã tiết kiệm được 100,000 VNĐ nhờ việc không hút thuốc!', 'https://img.icons8.com/emoji/48/000000/money-bag-emoji.png', 'savings', NULL, 100000, 'easy', 25, 1),
+                (N'Tiết kiệm 500K', N'Tuyệt vời! Bạn đã tiết kiệm được 500,000 VNĐ!', 'https://img.icons8.com/emoji/48/000000/money-with-wings-emoji.png', 'savings', NULL, 500000, 'medium', 100, 1),
+                (N'Tiết kiệm 1 triệu', N'Thành tích đáng kinh ngạc! 1,000,000 VNĐ đã được tiết kiệm!', 'https://img.icons8.com/emoji/48/000000/bank-emoji.png', 'savings', NULL, 1000000, 'hard', 300, 1)
+            `;
 
-            // Premium Plan
-            { name: '💎 Khởi đầu Premium', desc: 'Hoàn thành ngày đầu với gói Premium', icon: '💎', cat: 'premium', days: 1, money: null, plan: 'premium', diff: 1, pts: 15 },
-            { name: '🔥 Tuần lễ Premium', desc: 'Kiên trì 7 ngày với hỗ trợ Premium', icon: '🔥', cat: 'premium', days: 7, money: null, plan: 'premium', diff: 2, pts: 75 },
-            { name: '👑 Tháng vàng Premium', desc: '30 ngày hoàn hảo với gói Premium', icon: '👑', cat: 'premium', days: 30, money: null, plan: 'premium', diff: 3, pts: 300 },
-            { name: '🎯 Quý Master Premium', desc: '90 ngày kiên định với Premium', icon: '🎯', cat: 'premium', days: 90, money: null, plan: 'premium', diff: 4, pts: 500 },
-
-            // Pro Plan
-            { name: '🚀 Pro Starter', desc: 'Bắt đầu hành trình với gói Pro', icon: '🚀', cat: 'pro', days: 1, money: null, plan: 'pro', diff: 1, pts: 20 },
-            { name: '💪 Pro Warrior', desc: 'Chiến thắng tuần đầu với Pro', icon: '💪', cat: 'pro', days: 7, money: null, plan: 'pro', diff: 2, pts: 100 },
-            { name: '🏆 Pro Champion', desc: 'Tháng đầu hoàn hảo với Pro', icon: '🏆', cat: 'pro', days: 30, money: null, plan: 'pro', diff: 3, pts: 400 },
-            { name: '🌟 Pro Legend', desc: 'Quý đầu huyền thoại với Pro', icon: '🌟', cat: 'pro', days: 90, money: null, plan: 'pro', diff: 4, pts: 800 },
-            { name: '👨‍🎓 Pro Master', desc: '6 tháng kiên trì với Pro', icon: '👨‍🎓', cat: 'pro', days: 180, money: null, plan: 'pro', diff: 5, pts: 1500 },
-            { name: '🎖️ Pro Grandmaster', desc: '1 năm hoàn hảo với Pro', icon: '🎖️', cat: 'pro', days: 365, money: null, plan: 'pro', diff: 6, pts: 3000 },
-
-            // Money Achievements
-            { name: '💰 Tiết kiệm khởi đầu', desc: 'Tiết kiệm được 50,000 VNĐ', icon: '💰', cat: 'money', days: null, money: 50000, plan: null, diff: 1, pts: 25 },
-            { name: '💵 Túi tiền dày lên', desc: 'Tiết kiệm được 100,000 VNĐ', icon: '💵', cat: 'money', days: null, money: 100000, plan: null, diff: 2, pts: 50 },
-            { name: '💎 Kho báu nhỏ', desc: 'Tiết kiệm được 500,000 VNĐ', icon: '💎', cat: 'money', days: null, money: 500000, plan: null, diff: 3, pts: 150 },
-            { name: '🏦 Triệu phú nhỏ', desc: 'Tiết kiệm được 1,000,000 VNĐ', icon: '🏦', cat: 'money', days: null, money: 1000000, plan: null, diff: 4, pts: 300 },
-            { name: '💸 Tỷ phú tương lai', desc: 'Tiết kiệm được 5,000,000 VNĐ', icon: '💸', cat: 'money', days: null, money: 5000000, plan: null, diff: 5, pts: 750 },
-
-            // Special & Social
-            { name: '🎉 Người tiên phong', desc: 'Là một trong 100 người đầu tiên tham gia', icon: '🎉', cat: 'special', days: null, money: null, plan: null, diff: 1, pts: 100 },
-            { name: '🤝 Người chia sẻ', desc: 'Chia sẻ 10 bài viết trong cộng đồng', icon: '🤝', cat: 'social', days: null, money: null, plan: null, diff: 2, pts: 80 },
-            { name: '💬 Người truyền cảm hứng', desc: 'Nhận được 50 likes trong cộng đồng', icon: '💬', cat: 'social', days: null, money: null, plan: null, diff: 3, pts: 120 }
-        ];
-
-        for (const ach of achievements) {
-            try {
-                await pool.request()
-                    .input('Name', ach.name)
-                    .input('Description', ach.desc)
-                    .input('IconURL', ach.icon)
-                    .input('MilestoneDays', ach.days)
-                    .input('SavedMoney', ach.money)
-                    .input('Category', ach.cat)
-                    .input('RequiredPlan', ach.plan)
-                    .input('Difficulty', ach.diff)
-                    .input('Points', ach.pts)
-                    .query(`
-                        INSERT INTO Achievements (
-                            Name, Description, IconURL, MilestoneDays, SavedMoney,
-                            Category, RequiredPlan, Difficulty, Points, IsActive, CreatedAt
-                        ) VALUES (
-                            @Name, @Description, @IconURL, @MilestoneDays, @SavedMoney,
-                            @Category, @RequiredPlan, @Difficulty, @Points, 1, GETDATE()
-                        )
-                    `);
-                console.log(`✅ Created: ${ach.name}`);
-            } catch (error) {
-                console.error(`❌ Error creating ${ach.name}:`, error.message);
-            }
+            const newCount = await sql.query`SELECT COUNT(*) as AchievementCount FROM Achievements`;
+            console.log('✅ Inserted achievements. New count:', newCount.recordset[0].AchievementCount);
         }
 
-        // Step 5: Show summary
-        const count = await pool.request().query('SELECT COUNT(*) as count FROM Achievements');
-        console.log(`\n🎯 Total achievements created: ${count.recordset[0].count}`);
+        // Check UserAchievements table
+        const userAchievementsCheck = await sql.query`
+            SELECT COUNT(*) as TableExists 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_NAME = 'UserAchievements'
+        `;
 
-        console.log('\n✅ Database fix completed successfully!');
-        console.log('💡 You can now reload the frontend page to see achievements!');
+        if (userAchievementsCheck.recordset[0].TableExists === 0) {
+            console.log('❌ UserAchievements table does not exist! Creating it...');
+            await sql.query`
+                CREATE TABLE UserAchievements (
+                    UserAchievementID INT PRIMARY KEY IDENTITY(1,1),
+                    UserID INT NOT NULL,
+                    AchievementID INT NOT NULL,
+                    EarnedAt DATETIME DEFAULT GETDATE(),
+                    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+                    FOREIGN KEY (AchievementID) REFERENCES Achievements(AchievementID),
+                    UNIQUE(UserID, AchievementID)
+                )
+            `;
+            console.log('✅ Created UserAchievements table');
+        }
+
+        console.log('\n🎉 Achievements database setup complete!');
+        console.log('🌐 You can now access the achievements page at: http://localhost:3000/achievement');
 
     } catch (error) {
-        console.error('❌ Error fixing database:', error);
-        throw error;
+        console.error('❌ Error:', error.message);
+    } finally {
+        await sql.close();
     }
 }
 
-if (require.main === module) {
-    fixAchievementsDatabase()
-        .then(() => {
-            console.log('✅ Script completed successfully!');
-            process.exit(0);
-        })
-        .catch((error) => {
-            console.error('❌ Script failed:', error);
-            process.exit(1);
-        });
-}
-
-module.exports = { fixAchievementsDatabase }; 
+fixAchievementsDatabase(); 
