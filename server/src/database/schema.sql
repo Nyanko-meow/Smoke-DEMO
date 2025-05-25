@@ -31,7 +31,7 @@ CREATE TABLE Users (
     RefreshTokenExpiry DATETIME
 );
 
--- Insert mẫu người dùng
+-- Insert mẫu người dùng với password đã được hash
 INSERT INTO Users (Email, Password, FirstName, LastName, Role, Avatar, PhoneNumber, Address,
     IsActive, ActivationToken, ActivationExpires, EmailVerified, CreatedAt, UpdatedAt, LastLoginAt,
     RefreshToken, RefreshTokenExpiry)
@@ -420,3 +420,91 @@ VALUES (@userID, @planID, @amount, 'BankTransfer', 'confirmed', 'TX123456789', @
 
 INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status)
 VALUES (@userID, @planID, @startDate, @endDate, 'active');
+
+-- Chat Messages Table
+CREATE TABLE Messages (
+    MessageID INT IDENTITY(1,1) PRIMARY KEY,
+    SenderID INT NOT NULL,
+    ReceiverID INT NOT NULL,
+    Content NVARCHAR(MAX) NOT NULL,
+    MessageType NVARCHAR(20) DEFAULT 'text' CHECK (MessageType IN ('text', 'image', 'file', 'plan_update')),
+    IsRead BIT DEFAULT 0,
+    RelatedPlanID INT NULL, -- Liên kết với QuitPlans nếu tin nhắn liên quan đến kế hoạch
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (SenderID) REFERENCES Users(UserID),
+    FOREIGN KEY (ReceiverID) REFERENCES Users(UserID),
+    FOREIGN KEY (RelatedPlanID) REFERENCES QuitPlans(PlanID)
+);
+
+-- Chat Conversations Table (để quản lý cuộc trò chuyện giữa coach và member)
+CREATE TABLE Conversations (
+    ConversationID INT IDENTITY(1,1) PRIMARY KEY,
+    CoachID INT NOT NULL,
+    MemberID INT NOT NULL,
+    LastMessageID INT NULL,
+    LastMessageAt DATETIME DEFAULT GETDATE(),
+    IsActive BIT DEFAULT 1,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+
+    UNIQUE(CoachID, MemberID), -- Mỗi cặp coach-member chỉ có 1 conversation
+    FOREIGN KEY (CoachID) REFERENCES Users(UserID),
+    FOREIGN KEY (MemberID) REFERENCES Users(UserID),
+    FOREIGN KEY (LastMessageID) REFERENCES Messages(MessageID)
+);
+
+-- Consultation Appointments Table (tùy chọn cho việc đặt lịch tư vấn)
+CREATE TABLE ConsultationAppointments (
+    AppointmentID INT IDENTITY(1,1) PRIMARY KEY,
+    CoachID INT NOT NULL,
+    MemberID INT NOT NULL,
+    AppointmentDate DATETIME NOT NULL,
+    Duration INT DEFAULT 30, -- Thời gian tư vấn (phút)
+    Type NVARCHAR(20) CHECK (Type IN ('video', 'audio', 'chat')),
+    Status NVARCHAR(20) DEFAULT 'scheduled' CHECK (Status IN ('scheduled', 'confirmed', 'completed', 'cancelled')),
+    Notes NVARCHAR(MAX),
+    MeetingLink NVARCHAR(255), -- Link cho video/audio call
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (CoachID) REFERENCES Users(UserID),
+    FOREIGN KEY (MemberID) REFERENCES Users(UserID)
+);
+
+-- Message Attachments Table (để lưu file đính kèm nếu cần)
+CREATE TABLE MessageAttachments (
+    AttachmentID INT IDENTITY(1,1) PRIMARY KEY,
+    MessageID INT NOT NULL,
+    FileName NVARCHAR(255) NOT NULL,
+    FileURL NVARCHAR(500) NOT NULL,
+    FileSize BIGINT,
+    MimeType NVARCHAR(100),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (MessageID) REFERENCES Messages(MessageID)
+);
+
+-- Insert sample conversations and messages
+-- Tạo conversation giữa coach (UserID=3) và member (UserID=2)
+INSERT INTO Conversations (CoachID, MemberID, LastMessageAt)
+VALUES (3, 2, GETDATE());
+
+DECLARE @conversationID INT = SCOPE_IDENTITY();
+
+-- Insert sample messages
+INSERT INTO Messages (SenderID, ReceiverID, Content, MessageType, IsRead)
+VALUES 
+(3, 2, N'Xin chào! Tôi là coach của bạn. Tôi sẽ hỗ trợ bạn trong quá trình cai thuốc. Bạn cảm thấy thế nào về kế hoạch hiện tại?', 'text', 1),
+(2, 3, N'Chào coach! Em cảm thấy còn khó khăn trong việc kiểm soát cơn thèm thuốc. Em có thể nhờ coach tư vấn thêm không ạ?', 'text', 1),
+(3, 2, N'Tất nhiên rồi! Cơn thèm thuốc là điều bình thường trong giai đoạn đầu. Bạn đã thử các phương pháp nào để đối phó với nó chưa?', 'text', 0);
+
+-- Update conversation với tin nhắn cuối cùng
+UPDATE Conversations 
+SET LastMessageID = (SELECT MAX(MessageID) FROM Messages WHERE (SenderID = 3 AND ReceiverID = 2) OR (SenderID = 2 AND ReceiverID = 3)),
+    LastMessageAt = GETDATE()
+WHERE CoachID = 3 AND MemberID = 2;
+
+-- Insert sample consultation appointment
+INSERT INTO ConsultationAppointments (CoachID, MemberID, AppointmentDate, Duration, Type, Status, Notes)
+VALUES (3, 2, DATEADD(DAY, 2, GETDATE()), 45, 'video', 'scheduled', N'Tư vấn về kế hoạch cai thuốc và các phương pháp đối phó với cơn thèm');

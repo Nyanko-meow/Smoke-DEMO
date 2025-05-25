@@ -406,23 +406,18 @@ router.put('/change-password', [
 
         const user = result.recordset[0];
 
-        // Verify current password
-        const isMatch = await bcrypt.compare(currentPassword, user.Password);
-        if (!isMatch) {
+        // Verify current password (plain text comparison)
+        if (currentPassword !== user.Password) {
             return res.status(401).json({
                 success: false,
                 message: 'Mật khẩu hiện tại không đúng'
             });
         }
 
-        // Hash new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        // Update password
+        // Update password (no hashing - plain text)
         await pool.request()
             .input('UserID', req.user.UserID)
-            .input('Password', hashedPassword)
+            .input('Password', newPassword)
             .query(`
                 UPDATE Users
                 SET Password = @Password, UpdatedAt = GETDATE()

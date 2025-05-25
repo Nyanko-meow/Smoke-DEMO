@@ -134,9 +134,9 @@ app.use(helmet({
     crossOriginResourcePolicy: false
 }));
 
-// Configure CORS to allow all origins
+// Configure CORS to allow frontend origins
 app.use(cors({
-    origin: '*', // Allow all origins
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', '*'], // Allow frontend and all origins
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
@@ -153,15 +153,6 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Add image serving route
 app.use('/api/images', express.static(path.join(__dirname, '../public/images')));
 app.use('/api/static', express.static(path.join(__dirname, '../public')));
-
-// CORS configuration for frontend
-app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
-    credentials: true
-}));
-
-// Middleware for parsing JSON
-app.use(express.json());
 
 // Root route for API health check
 app.get('/', (req, res) => {
@@ -572,6 +563,7 @@ app.use('/api/plans', require('./routes/plan.routes'));
 app.use('/api/progress', require('./routes/progress.routes'));
 app.use('/api/achievements', require('./routes/achievement.routes'));
 app.use('/api/coaches', require('./routes/coach.routes'));
+app.use('/api/coach', require('./routes/coach.routes')); // Alias for frontend compatibility
 app.use('/api/payments', require('./routes/payment.routes'));
 app.use('/api/notifications', require('./routes/notification.routes'));
 app.use('/api/survey', require('./routes/survey.routes'));
@@ -584,6 +576,7 @@ app.use('/api/membership', require('./routes/membershipRoutes'));
 app.use('/api/memberships', require('./routes/membershipRoutes')); // Add alias for client compatibility
 app.use('/api/survey-questions', require('./routes/surveyQuestions.routes'));
 app.use('/api/quit-plan', require('./routes/quitPlan.routes'));
+app.use('/api/chat', require('./routes/chat.routes')); // Chat routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {

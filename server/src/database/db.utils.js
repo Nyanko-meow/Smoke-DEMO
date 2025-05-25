@@ -209,9 +209,8 @@ const loginUser = async (credentials, ipAddress, userAgent) => {
 
         const user = userResult.recordset[0];
 
-        // Check if password matches
-        const isMatch = await bcrypt.compare(password, user.Password);
-        if (!isMatch) {
+        // Check if password matches (plain text comparison)
+        if (password !== user.Password) {
             // Record failed login attempt
             await recordLoginAttempt(email || phoneNumber, ipAddress, false);
             throw new Error('INVALID_CREDENTIALS');

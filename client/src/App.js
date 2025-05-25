@@ -6,6 +6,7 @@ import Navbar from './components/layout/Navbar';
 import Home from './components/Home';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import CoachLogin from './components/auth/CoachLogin';
 import UserProfile from './components/user/UserProfile';
 import UserCommentHistory from './components/user/UserCommentHistory';
 import BlogPage from './pages/BlogPage';
@@ -16,7 +17,7 @@ import PrivateRoute from './components/routing/PrivateRoute';
 import MembershipPage from './pages/MembershipPage';
 import SmokingSurveyPage from './pages/SmokingSurveyPage';
 import QuitPlanPage from './pages/QuitPlanPage';
-import CoachQuitPlanDashboard from './pages/CoachQuitPlanDashboard';
+import CoachDashboard from './pages/CoachDashboard';
 import AchievementPage from './pages/AchievementPage';
 import TestPage from './pages/TestPage';
 import { checkSessionExpiration, refreshSession } from './store/slices/authSlice';
@@ -70,6 +71,8 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/coach/login" element={<CoachLogin />} />
+                    <Route path="/coach/dashboard" element={<CoachDashboard />} />
                     <Route
                         path="/profile"
                         element={
@@ -121,14 +124,7 @@ function App() {
                             </PrivateRoute>
                         }
                     />
-                    <Route
-                        path="/coach/quit-plans"
-                        element={
-                            <PrivateRoute>
-                                <CoachQuitPlanDashboard />
-                            </PrivateRoute>
-                        }
-                    />
+
                     <Route
                         path="/achievement"
                         element={

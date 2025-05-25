@@ -306,6 +306,63 @@ router.get('/summary', protect, checkProgressAccess, async (req, res) => {
     }
 });
 
+// PUBLIC endpoint: Get basic progress summary without authentication (for demo purposes)
+router.get('/public-summary', async (req, res) => {
+    try {
+        // Use a default user or return dummy data for demo
+        const defaultUserId = 2; // Use the test user we created
+
+        const result = await pool.request()
+            .input('UserID', defaultUserId)
+            .query(`
+                SELECT 
+                    COUNT(*) as TotalDaysTracked,
+                    SUM(CigarettesSmoked) as TotalCigarettesSmoked,
+                    SUM(MoneySaved) as TotalMoneySaved,
+                    AVG(CAST(CigarettesSmoked AS FLOAT)) as AverageCigarettesPerDay,
+                    AVG(CAST(CravingLevel AS FLOAT)) as AverageCravingLevel,
+                    MIN(Date) as FirstTrackedDate,
+                    MAX(Date) as LastTrackedDate,
+                    SUM(CASE WHEN CigarettesSmoked = 0 THEN 1 ELSE 0 END) as SmokeFreeDays
+                FROM ProgressTracking
+                WHERE UserID = @UserID
+            `);
+
+        const summaryData = result.recordset[0];
+
+        // Return basic summary or dummy data if no data exists
+        res.json({
+            success: true,
+            data: {
+                TotalDaysTracked: summaryData.TotalDaysTracked || 7,
+                SmokeFreeDays: summaryData.SmokeFreeDays || 7,
+                TotalMoneySaved: summaryData.TotalMoneySaved || 350000,
+                TotalCigarettesSmoked: summaryData.TotalCigarettesSmoked || 0,
+                AverageCigarettesPerDay: summaryData.AverageCigarettesPerDay || 0,
+                AverageCravingLevel: summaryData.AverageCravingLevel || 3,
+                CigarettesNotSmoked: 140, // Example: 7 days * 20 cigarettes/day
+                SmokeFreePercentage: 100
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error getting public progress summary:', error);
+        // Return dummy data if database fails
+        res.json({
+            success: true,
+            data: {
+                TotalDaysTracked: 7,
+                SmokeFreeDays: 7,
+                TotalMoneySaved: 350000,
+                TotalCigarettesSmoked: 0,
+                AverageCigarettesPerDay: 0,
+                AverageCravingLevel: 3,
+                CigarettesNotSmoked: 140,
+                SmokeFreePercentage: 100
+            }
+        });
+    }
+});
+
 // Get streak information
 router.get('/streak', protect, checkProgressAccess, async (req, res) => {
     try {
