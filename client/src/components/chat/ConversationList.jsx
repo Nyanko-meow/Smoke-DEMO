@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import notificationManager from '../../utils/notifications';
 
 const { Text, Title } = Typography;
 const { Search } = Input;
@@ -25,9 +26,20 @@ const ConversationList = ({ onSelectConversation, selectedConversationId }) => {
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
+    const [lastConversationCount, setLastConversationCount] = useState(0);
 
     useEffect(() => {
         loadConversations();
+    }, []);
+
+    // Auto-refresh conversations every 30 seconds (further reduced)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('🔄 Auto-refreshing conversations...');
+            loadConversations();
+        }, 30000); // Refresh every 30 seconds (reduced from 15)
+
+        return () => clearInterval(interval);
     }, []);
 
     const loadConversations = async () => {
@@ -51,8 +63,23 @@ const ConversationList = ({ onSelectConversation, selectedConversationId }) => {
             );
 
             if (response.data.success) {
-                setConversations(response.data.data);
-                console.log('Loaded conversations:', response.data.data.length);
+                const newConversations = response.data.data;
+
+                // Check for new conversations
+                if (newConversations.length > lastConversationCount && lastConversationCount > 0) {
+                    const newConversationCount = newConversations.length - lastConversationCount;
+                    const latestConversation = newConversations[0]; // Assuming sorted by LastMessageAt DESC
+
+                    // Show notification for new conversation
+                    if (latestConversation) {
+                        notificationManager.showNewConversationNotification(latestConversation.MemberName);
+                        notificationManager.playNotificationSound();
+                    }
+                }
+
+                setConversations(newConversations);
+                setLastConversationCount(newConversations.length);
+                console.log('Loaded conversations:', newConversations.length);
             } else {
                 console.error('Failed to load conversations:', response.data.message);
             }

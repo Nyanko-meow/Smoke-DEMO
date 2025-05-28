@@ -22,9 +22,19 @@ const CoachChat = ({ onBack }) => {
                 const parsedData = JSON.parse(coachData);
                 setCurrentUser({
                     userId: parsedData.UserID || parsedData.userId,
+                    UserID: parsedData.UserID || parsedData.userId, // Add this for compatibility
                     role: 'coach',
+                    Role: 'coach', // Add this for compatibility
+                    firstName: parsedData.FirstName,
+                    lastName: parsedData.LastName,
                     name: `${parsedData.FirstName} ${parsedData.LastName}`,
                     email: parsedData.Email
+                });
+                console.log('🔍 CoachChat currentUser set:', {
+                    userId: parsedData.UserID || parsedData.userId,
+                    role: 'coach',
+                    firstName: parsedData.FirstName,
+                    lastName: parsedData.LastName
                 });
             } catch (error) {
                 console.error('Error parsing coach data:', error);
@@ -119,6 +129,7 @@ const CoachChat = ({ onBack }) => {
                             conversationId={selectedConversation.ConversationID}
                             receiverId={selectedConversation.MemberID}
                             receiverInfo={{
+                                FullName: selectedConversation.MemberName,
                                 MemberName: selectedConversation.MemberName,
                                 MemberAvatar: selectedConversation.MemberAvatar,
                                 MemberEmail: selectedConversation.MemberEmail
@@ -126,6 +137,7 @@ const CoachChat = ({ onBack }) => {
                             currentUser={currentUser}
                             onNewMessage={handleNewMessage}
                             height={600}
+                            isCoachView={true}
                         />
                     ) : (
                         <Card style={{ height: '100%' }}>
@@ -139,7 +151,7 @@ const CoachChat = ({ onBack }) => {
                                             </Text>
                                             <br />
                                             <Text type="secondary">
-                                                Hoặc chọn tab "Thành viên" để bắt đầu cuộc trò chuyện mới
+                                                Hoặc chọn tab &quot;Thành viên&quot; để bắt đầu cuộc trò chuyện mới
                                             </Text>
                                             <div className="mt-4">
                                                 <Button

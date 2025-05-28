@@ -250,7 +250,7 @@ const CommunityList = () => {
                                         hoverable
                                         style={{ textAlign: 'center' }}
                                         actions={[
-                                            <Tooltip title="Chia sẻ thành tích">
+                                            <Tooltip key="share" title="Chia sẻ thành tích">
                                                 <Button
                                                     type="text"
                                                     icon={<ShareAltOutlined />}
@@ -397,7 +397,7 @@ const CommunityList = () => {
                         >
                             <TextArea
                                 rows={4}
-                                placeholder={`Tôi vừa đạt được huy hiệu "${selectedAchievement?.Name}"! ${selectedAchievement?.Description}`}
+                                placeholder={`Tôi vừa đạt được huy hiệu &quot;${selectedAchievement?.Name}&quot;! ${selectedAchievement?.Description}`}
                             />
                         </Form.Item>
                         <Form.Item>

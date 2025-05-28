@@ -137,15 +137,25 @@ app.use(helmet({
 // Configure CORS to allow frontend origins
 app.use(cors({
     origin: ['http://localhost:3000', 'http://127.0.0.1:3000', '*'], // Allow frontend and all origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Add PATCH method
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    preflightContinue: false,
+    optionsSuccessStatus: 200
 }));
 
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Handle preflight requests for all routes
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.sendStatus(200);
+});
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
@@ -154,12 +164,25 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/images', express.static(path.join(__dirname, '../public/images')));
 app.use('/api/static', express.static(path.join(__dirname, '../public')));
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Root route for API health check
 app.get('/', (req, res) => {
     res.json({
         success: true,
         message: 'Smoking Cessation API Server is running',
         version: '1.0.0'
+    });
+});
+
+// Test endpoint for frontend connection testing
+app.get('/api/test', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Server is running and accessible',
+        timestamp: new Date().toISOString(),
+        port: process.env.PORT || 4000
     });
 });
 
@@ -576,7 +599,8 @@ app.use('/api/membership', require('./routes/membershipRoutes'));
 app.use('/api/memberships', require('./routes/membershipRoutes')); // Add alias for client compatibility
 app.use('/api/survey-questions', require('./routes/surveyQuestions.routes'));
 app.use('/api/quit-plan', require('./routes/quitPlan.routes'));
-app.use('/api/chat', require('./routes/chat.routes')); // Chat routes
+app.use('/api/chat', require('./routes/chat.routes')); // Chat routes with file attachment
+app.use('/api/upload', require('./routes/upload.routes')); // File upload routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {

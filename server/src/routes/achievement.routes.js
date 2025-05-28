@@ -289,4 +289,119 @@ router.post('/check/:userId', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// Manual fix achievements endpoint
+router.post('/fix-unlock', protect, async (req, res) => {
+    try {
+        console.log('🔓 Manual achievement fix requested by user:', req.user.UserID);
+
+        // Get user's progress data
+        const progressResult = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT 
+                    COALESCE(MAX(DaysSmokeFree), 0) as DaysSmokeFree,
+                    COALESCE(SUM(MoneySaved), 0) as TotalMoneySaved,
+                    COUNT(*) as ProgressEntries
+                FROM ProgressTracking 
+                WHERE UserID = @UserID
+            `);
+
+        const progressData = progressResult.recordset[0];
+        console.log('User progress:', progressData);
+
+        // If no progress data, create basic entry
+        if (progressData.ProgressEntries === 0) {
+            console.log('Creating basic progress entry for user...');
+
+            await pool.request()
+                .input('UserID', req.user.UserID)
+                .input('Date', new Date().toISOString().split('T')[0])
+                .input('DaysSmokeFree', 1)
+                .input('MoneySaved', 50000)
+                .input('CigarettesSmoked', 0)
+                .input('CravingLevel', 5)
+                .query(`
+                    INSERT INTO ProgressTracking (UserID, Date, DaysSmokeFree, MoneySaved, CigarettesSmoked, CravingLevel, CreatedAt)
+                    VALUES (@UserID, @Date, @DaysSmokeFree, @MoneySaved, @CigarettesSmoked, @CravingLevel, GETDATE())
+                `);
+
+            progressData.DaysSmokeFree = 1;
+            progressData.TotalMoneySaved = 50000;
+        }
+
+        // Get achievements user doesn't have yet
+        const availableAchievements = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT a.*
+                FROM Achievements a
+                WHERE a.AchievementID NOT IN (
+                    SELECT AchievementID 
+                    FROM UserAchievements 
+                    WHERE UserID = @UserID
+                )
+                ORDER BY a.AchievementID
+            `);
+
+        const newAchievements = [];
+
+        // Check each achievement
+        for (const achievement of availableAchievements.recordset) {
+            let shouldUnlock = false;
+
+            // Check milestone days
+            if (achievement.MilestoneDays !== null) {
+                if (progressData.DaysSmokeFree >= achievement.MilestoneDays) {
+                    shouldUnlock = true;
+                    console.log(`User qualifies for "${achievement.Name}" (${achievement.MilestoneDays} days)`);
+                }
+            }
+
+            // Check saved money
+            if (achievement.SavedMoney !== null) {
+                if (progressData.TotalMoneySaved >= achievement.SavedMoney) {
+                    shouldUnlock = true;
+                    console.log(`User qualifies for "${achievement.Name}" (${achievement.SavedMoney} VND)`);
+                }
+            }
+
+            // Award achievement
+            if (shouldUnlock) {
+                try {
+                    await pool.request()
+                        .input('UserID', req.user.UserID)
+                        .input('AchievementID', achievement.AchievementID)
+                        .query(`
+                            INSERT INTO UserAchievements (UserID, AchievementID, EarnedAt)
+                            VALUES (@UserID, @AchievementID, GETDATE())
+                        `);
+
+                    newAchievements.push(achievement);
+                    console.log(`🏆 UNLOCKED: ${achievement.Name}`);
+                } catch (error) {
+                    if (!error.message.includes('duplicate')) {
+                        console.error(`Error unlocking "${achievement.Name}":`, error.message);
+                    }
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            message: newAchievements.length > 0
+                ? `Đã mở khóa ${newAchievements.length} huy hiệu mới!`
+                : 'Không có huy hiệu mới để mở khóa.',
+            newAchievements,
+            progressData
+        });
+
+    } catch (error) {
+        console.error('Error fixing achievements:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi kiểm tra huy hiệu'
+        });
+    }
+});
+
 module.exports = router; 

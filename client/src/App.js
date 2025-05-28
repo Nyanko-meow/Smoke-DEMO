@@ -18,6 +18,7 @@ import MembershipPage from './pages/MembershipPage';
 import SmokingSurveyPage from './pages/SmokingSurveyPage';
 import QuitPlanPage from './pages/QuitPlanPage';
 import CoachDashboard from './pages/CoachDashboard';
+import MemberDashboard from './pages/MemberDashboard';
 import AchievementPage from './pages/AchievementPage';
 import TestPage from './pages/TestPage';
 import { checkSessionExpiration, refreshSession } from './store/slices/authSlice';
@@ -73,6 +74,14 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/coach/login" element={<CoachLogin />} />
                     <Route path="/coach/dashboard" element={<CoachDashboard />} />
+                    <Route
+                        path="/member/dashboard"
+                        element={
+                            <PrivateRoute>
+                                <MemberDashboard />
+                            </PrivateRoute>
+                        }
+                    />
                     <Route
                         path="/profile"
                         element={

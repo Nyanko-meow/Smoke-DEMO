@@ -118,6 +118,70 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Get all coaches (for member to select when booking appointments)
+router.get('/', async (req, res) => {
+    try {
+        console.log('🔍 Getting all coaches...');
+
+        const result = await pool.request()
+            .query(`
+                SELECT 
+                    u.UserID,
+                    u.Email,
+                    u.FirstName,
+                    u.LastName,
+                    u.Avatar,
+                    u.PhoneNumber,
+                    u.IsActive,
+                    cp.Bio,
+                    cp.Specialization,
+                    cp.Experience,
+                    cp.HourlyRate,
+                    cp.IsAvailable,
+                    (SELECT AVG(CAST(Rating AS FLOAT)) FROM CoachReviews WHERE CoachUserID = u.UserID AND IsPublic = 1) as AverageRating,
+                    (SELECT COUNT(*) FROM CoachReviews WHERE CoachUserID = u.UserID AND IsPublic = 1) as ReviewCount
+                FROM Users u
+                LEFT JOIN CoachProfiles cp ON u.UserID = cp.UserID
+                WHERE u.Role = 'coach' AND u.IsActive = 1
+                ORDER BY u.FirstName, u.LastName
+            `);
+
+        const coaches = result.recordset.map(coach => ({
+            UserID: coach.UserID,
+            Email: coach.Email,
+            FirstName: coach.FirstName,
+            LastName: coach.LastName,
+            FullName: `${coach.FirstName} ${coach.LastName}`,
+            Avatar: coach.Avatar,
+            PhoneNumber: coach.PhoneNumber,
+            IsActive: coach.IsActive === true || coach.IsActive === 1,
+            Bio: coach.Bio,
+            Specialization: coach.Specialization,
+            Experience: coach.Experience,
+            HourlyRate: coach.HourlyRate,
+            IsAvailable: coach.IsAvailable === true || coach.IsAvailable === 1,
+            AverageRating: coach.AverageRating ? parseFloat(coach.AverageRating).toFixed(1) : 0,
+            ReviewCount: coach.ReviewCount || 0
+        }));
+
+        console.log(`✅ Found ${coaches.length} coaches`);
+
+        res.json({
+            success: true,
+            data: coaches,
+            message: `Tìm thấy ${coaches.length} coach`
+        });
+
+    } catch (error) {
+        console.error('Error getting coaches:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy danh sách coach',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 // Coach logout
 router.post('/logout', protect, authorize('coach'), async (req, res) => {
     try {
@@ -176,6 +240,9 @@ router.get('/profile', protect, authorize('coach'), async (req, res) => {
                 ORDER BY CreatedAt DESC
             `);
 
+        // Get the coach profile data if exists
+        const coachProfile = profileResult.recordset.length > 0 ? profileResult.recordset[0] : null;
+
         // Combine all data
         const profileData = {
             // Basic user info
@@ -190,8 +257,23 @@ router.get('/profile', protect, authorize('coach'), async (req, res) => {
             CreatedAt: user.CreatedAt,
             LastLoginAt: user.LastLoginAt,
 
-            // Professional info (if exists)
-            professionalProfile: profileResult.recordset.length > 0 ? profileResult.recordset[0] : null,
+            // Professional info from CoachProfiles (flatten to root level for easier access)
+            Bio: coachProfile?.Bio || null,
+            Specialization: coachProfile?.Specialization || null,
+            Experience: coachProfile?.Experience || 0,
+            HourlyRate: coachProfile?.HourlyRate || null,
+            IsAvailable: coachProfile?.IsAvailable || true,
+            YearsOfExperience: coachProfile?.YearsOfExperience || 0,
+            Education: coachProfile?.Education || null,
+            Certifications: coachProfile?.Certifications || null,
+            Languages: coachProfile?.Languages || null,
+            WorkingHours: coachProfile?.WorkingHours || null,
+            ConsultationTypes: coachProfile?.ConsultationTypes || null,
+            SuccessRate: coachProfile?.SuccessRate || 0,
+            TotalClients: coachProfile?.TotalClients || 0,
+
+            // Keep professional profile as well for compatibility
+            professionalProfile: coachProfile,
 
             // Reviews
             reviews: reviewsResult.recordset || [],
@@ -244,6 +326,14 @@ router.put('/profile', protect, authorize('coach'), async (req, res) => {
             servicesOffered
         } = req.body;
 
+        console.log('Update coach profile request:', {
+            userId: req.user.UserID,
+            firstName,
+            lastName,
+            phoneNumber,
+            address
+        });
+
         // Validate required fields
         if (!firstName || !lastName) {
             return res.status(400).json({
@@ -252,19 +342,23 @@ router.put('/profile', protect, authorize('coach'), async (req, res) => {
             });
         }
 
+        // Import sql from database config
+        const { sql } = require('../config/database');
+
         // Start transaction
-        const transaction = pool.transaction();
+        const transaction = new sql.Transaction(pool);
         await transaction.begin();
 
         try {
             // Update basic user information
-            await transaction.request()
-                .input('UserID', req.user.UserID)
-                .input('FirstName', firstName)
-                .input('LastName', lastName)
-                .input('PhoneNumber', phoneNumber || null)
-                .input('Address', address || null)
-                .input('Avatar', avatar || null)
+            const updateUserRequest = new sql.Request(transaction);
+            await updateUserRequest
+                .input('UserID', sql.Int, req.user.UserID)
+                .input('FirstName', sql.NVarChar, firstName)
+                .input('LastName', sql.NVarChar, lastName)
+                .input('PhoneNumber', sql.NVarChar, phoneNumber || null)
+                .input('Address', sql.NVarChar, address || null)
+                .input('Avatar', sql.NVarChar, avatar || null)
                 .query(`
                     UPDATE Users SET 
                         FirstName = @FirstName,
@@ -276,87 +370,79 @@ router.put('/profile', protect, authorize('coach'), async (req, res) => {
                     WHERE UserID = @UserID
                 `);
 
+            console.log('Basic user info updated successfully');
+
             // Check if professional profile exists
-            const existingProfile = await transaction.request()
-                .input('UserID', req.user.UserID)
+            const checkProfileRequest = new sql.Request(transaction);
+            const existingProfile = await checkProfileRequest
+                .input('UserID', sql.Int, req.user.UserID)
                 .query('SELECT ProfileID FROM CoachProfiles WHERE UserID = @UserID');
 
             if (existingProfile.recordset.length > 0) {
-                // Update existing professional profile
-                await transaction.request()
-                    .input('UserID', req.user.UserID)
-                    .input('Specialization', specialization || null)
-                    .input('YearsOfExperience', yearsOfExperience || 0)
-                    .input('Education', education || null)
-                    .input('Certifications', certifications || null)
-                    .input('License', license || null)
-                    .input('Bio', bio || null)
-                    .input('Methodology', methodology || null)
-                    .input('SuccessStory', successStory || null)
-                    .input('Languages', languages || null)
-                    .input('CommunicationStyle', communicationStyle || null)
-                    .input('WorkingHours', workingHours || null)
-                    .input('Website', website || null)
-                    .input('LinkedIn', linkedin || null)
-                    .input('HourlyRate', hourlyRate || null)
-                    .input('ConsultationFee', consultationFee || null)
-                    .input('ServicesOffered', servicesOffered || null)
+                console.log('Updating existing professional profile');
+                // Update existing professional profile with all available fields
+                const updateProfileRequest = new sql.Request(transaction);
+                await updateProfileRequest
+                    .input('UserID', sql.Int, req.user.UserID)
+                    .input('Specialization', sql.NVarChar, specialization || null)
+                    .input('Experience', sql.Int, yearsOfExperience || 0)
+                    .input('Bio', sql.NVarChar, bio || null)
+                    .input('HourlyRate', sql.Decimal(10, 2), hourlyRate || null)
+                    .input('YearsOfExperience', sql.Int, yearsOfExperience || 0)
+                    .input('Education', sql.NVarChar, education || null)
+                    .input('Certifications', sql.NVarChar, certifications || null)
+                    .input('Languages', sql.NVarChar, languages || null)
+                    .input('WorkingHours', sql.NVarChar, workingHours || null)
+                    .input('ConsultationTypes', sql.NVarChar, servicesOffered || null)
                     .query(`
                         UPDATE CoachProfiles SET 
                             Specialization = @Specialization,
+                            Experience = @Experience,
+                            Bio = @Bio,
+                            HourlyRate = @HourlyRate,
                             YearsOfExperience = @YearsOfExperience,
                             Education = @Education,
                             Certifications = @Certifications,
-                            License = @License,
-                            Bio = @Bio,
-                            Methodology = @Methodology,
-                            SuccessStory = @SuccessStory,
                             Languages = @Languages,
-                            CommunicationStyle = @CommunicationStyle,
                             WorkingHours = @WorkingHours,
-                            Website = @Website,
-                            LinkedIn = @LinkedIn,
-                            HourlyRate = @HourlyRate,
-                            ConsultationFee = @ConsultationFee,
-                            ServicesOffered = @ServicesOffered,
+                            ConsultationTypes = @ConsultationTypes,
                             UpdatedAt = GETDATE()
                         WHERE UserID = @UserID
                     `);
+                console.log('Updated professional profile with complete data');
             } else {
-                // Create new professional profile
-                await transaction.request()
-                    .input('UserID', req.user.UserID)
-                    .input('Specialization', specialization || null)
-                    .input('YearsOfExperience', yearsOfExperience || 0)
-                    .input('Education', education || null)
-                    .input('Certifications', certifications || null)
-                    .input('License', license || null)
-                    .input('Bio', bio || null)
-                    .input('Methodology', methodology || null)
-                    .input('SuccessStory', successStory || null)
-                    .input('Languages', languages || null)
-                    .input('CommunicationStyle', communicationStyle || null)
-                    .input('WorkingHours', workingHours || null)
-                    .input('Website', website || null)
-                    .input('LinkedIn', linkedin || null)
-                    .input('HourlyRate', hourlyRate || null)
-                    .input('ConsultationFee', consultationFee || null)
-                    .input('ServicesOffered', servicesOffered || null)
+                console.log('Creating new professional profile');
+                // Create new professional profile with all available fields
+                const createProfileRequest = new sql.Request(transaction);
+                await createProfileRequest
+                    .input('UserID', sql.Int, req.user.UserID)
+                    .input('Specialization', sql.NVarChar, specialization || null)
+                    .input('Experience', sql.Int, yearsOfExperience || 0)
+                    .input('Bio', sql.NVarChar, bio || null)
+                    .input('HourlyRate', sql.Decimal(10, 2), hourlyRate || null)
+                    .input('YearsOfExperience', sql.Int, yearsOfExperience || 0)
+                    .input('Education', sql.NVarChar, education || null)
+                    .input('Certifications', sql.NVarChar, certifications || null)
+                    .input('Languages', sql.NVarChar, languages || null)
+                    .input('WorkingHours', sql.NVarChar, workingHours || null)
+                    .input('ConsultationTypes', sql.NVarChar, servicesOffered || null)
                     .query(`
                         INSERT INTO CoachProfiles (
-                            UserID, Specialization, YearsOfExperience, Education, Certifications, License,
-                            Bio, Methodology, SuccessStory, Languages, CommunicationStyle, WorkingHours,
-                            Website, LinkedIn, HourlyRate, ConsultationFee, ServicesOffered
+                            UserID, Specialization, Experience, Bio, HourlyRate, YearsOfExperience,
+                            Education, Certifications, Languages, WorkingHours, ConsultationTypes,
+                            IsAvailable, CreatedAt, UpdatedAt
                         ) VALUES (
-                            @UserID, @Specialization, @YearsOfExperience, @Education, @Certifications, @License,
-                            @Bio, @Methodology, @SuccessStory, @Languages, @CommunicationStyle, @WorkingHours,
-                            @Website, @LinkedIn, @HourlyRate, @ConsultationFee, @ServicesOffered
+                            @UserID, @Specialization, @Experience, @Bio, @HourlyRate, @YearsOfExperience,
+                            @Education, @Certifications, @Languages, @WorkingHours, @ConsultationTypes,
+                            1, GETDATE(), GETDATE()
                         )
                     `);
+                console.log('Created new professional profile with complete data');
             }
 
             // Commit transaction
             await transaction.commit();
+            console.log('Transaction committed successfully');
 
             res.json({
                 success: true,
@@ -365,6 +451,7 @@ router.put('/profile', protect, authorize('coach'), async (req, res) => {
 
         } catch (error) {
             // Rollback transaction on error
+            console.error('Transaction error, rolling back:', error);
             await transaction.rollback();
             throw error;
         }
@@ -375,6 +462,46 @@ router.put('/profile', protect, authorize('coach'), async (req, res) => {
             success: false,
             message: 'Lỗi khi cập nhật thông tin',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Test endpoint for debugging profile update
+router.put('/profile-test', protect, authorize('coach'), async (req, res) => {
+    try {
+        console.log('🧪 Test profile update endpoint hit');
+        console.log('User ID:', req.user.UserID);
+        console.log('Request body:', req.body);
+
+        const { firstName, lastName } = req.body;
+
+        // Simple user update only
+        await pool.request()
+            .input('UserID', req.user.UserID)
+            .input('FirstName', firstName || 'TestCoach')
+            .input('LastName', lastName || 'TestName')
+            .query(`
+                UPDATE Users SET 
+                    FirstName = @FirstName,
+                    LastName = @LastName,
+                    UpdatedAt = GETDATE()
+                WHERE UserID = @UserID
+            `);
+
+        console.log('✅ Test update successful');
+
+        res.json({
+            success: true,
+            message: 'Test update successful',
+            userId: req.user.UserID
+        });
+
+    } catch (error) {
+        console.error('❌ Test update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Test update failed',
+            error: error.message
         });
     }
 });
@@ -1409,5 +1536,940 @@ function calculateDetailedProgressAnalytics(progressData, smokingStatus) {
         }
     };
 }
+
+// ==================== COACHING APPOINTMENT APIS ====================
+
+// Create appointment (Coach schedules with Member)
+router.post('/schedule', protect, authorize('coach'), async (req, res) => {
+    try {
+        const { memberId, appointmentDate, duration = 30, type = 'chat', notes } = req.body;
+        const coachId = req.user.UserID;
+
+        console.log('📅 Coach schedule appointment request:', {
+            coachId,
+            memberId,
+            appointmentDate,
+            duration,
+            type,
+            notes,
+            user: req.user
+        });
+
+        // Validate input
+        if (!memberId || !appointmentDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng cung cấp đầy đủ thông tin: memberId và appointmentDate'
+            });
+        }
+
+        // Validate appointment date (must be in the future)
+        const appointmentDateTime = new Date(appointmentDate);
+        const now = new Date();
+        if (appointmentDateTime <= now) {
+            return res.status(400).json({
+                success: false,
+                message: 'Thời gian hẹn phải trong tương lai'
+            });
+        }
+
+        // Check if member exists
+        const memberCheck = await pool.request()
+            .input('MemberID', memberId)
+            .query(`
+                SELECT u.UserID, u.FirstName, u.LastName, u.Email,
+                       um.Status as MembershipStatus, mp.Name as PlanName
+                FROM Users u
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                WHERE u.UserID = @MemberID AND u.Role IN ('member', 'guest')
+            `);
+
+        if (memberCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy thành viên'
+            });
+        }
+
+        const member = memberCheck.recordset[0];
+
+        // Check if coach and member have an existing relationship (through quit plan)
+        // Temporarily disabled for testing
+        /*
+        const relationshipCheck = await pool.request()
+            .input('CoachID', coachId)
+            .input('MemberID', memberId)
+            .query(`
+                SELECT COUNT(*) as count
+                FROM QuitPlans
+                WHERE CoachID = @CoachID AND UserID = @MemberID AND Status = 'active'
+            `);
+
+        if (relationshipCheck.recordset[0].count === 0) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn chưa được assign làm coach cho thành viên này'
+            });
+        }
+        */
+
+        // Check for scheduling conflicts
+        const conflictCheck = await pool.request()
+            .input('CoachID', coachId)
+            .input('AppointmentDate', appointmentDate)
+            .input('Duration', duration)
+            .query(`
+                SELECT COUNT(*) as count
+                FROM ConsultationAppointments
+                WHERE CoachID = @CoachID 
+                AND Status IN ('scheduled', 'confirmed')
+                AND (
+                    (AppointmentDate <= @AppointmentDate AND DATEADD(MINUTE, Duration, AppointmentDate) > @AppointmentDate)
+                    OR
+                    (AppointmentDate < DATEADD(MINUTE, @Duration, @AppointmentDate) AND AppointmentDate >= @AppointmentDate)
+                )
+            `);
+
+        if (conflictCheck.recordset[0].count > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'Thời gian này đã có lịch hẹn khác. Vui lòng chọn thời gian khác'
+            });
+        }
+
+        // Create the appointment
+        const result = await pool.request()
+            .input('CoachID', coachId)
+            .input('MemberID', memberId)
+            .input('AppointmentDate', appointmentDate)
+            .input('Duration', duration)
+            .input('Type', type)
+            .input('Notes', notes || '')
+            .query(`
+                INSERT INTO ConsultationAppointments (CoachID, MemberID, AppointmentDate, Duration, Type, Notes, Status)
+                OUTPUT INSERTED.AppointmentID, INSERTED.AppointmentDate, INSERTED.Duration, INSERTED.Type, INSERTED.Status
+                VALUES (@CoachID, @MemberID, @AppointmentDate, @Duration, @Type, @Notes, 'scheduled')
+            `);
+
+        const appointment = result.recordset[0];
+
+        // Generate meeting link if it's video/audio call
+        let meetingLink = null;
+        if (type === 'video' || type === 'audio') {
+            // In a real app, you would integrate with Zoom/Google Meet API here
+            meetingLink = `https://meet.smokeking.com/room/${appointment.AppointmentID}`;
+
+            // Update appointment with meeting link
+            await pool.request()
+                .input('AppointmentID', appointment.AppointmentID)
+                .input('MeetingLink', meetingLink)
+                .query(`
+                    UPDATE ConsultationAppointments 
+                    SET MeetingLink = @MeetingLink 
+                    WHERE AppointmentID = @AppointmentID
+                `);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Lịch tư vấn đã được đặt thành công',
+            data: {
+                appointmentId: appointment.AppointmentID,
+                appointmentDate: appointment.AppointmentDate,
+                duration: appointment.Duration,
+                type: appointment.Type,
+                status: appointment.Status,
+                meetingLink: meetingLink,
+                member: {
+                    id: member.UserID,
+                    name: `${member.FirstName} ${member.LastName}`,
+                    email: member.Email,
+                    planName: member.PlanName
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error creating appointment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi tạo lịch hẹn',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get coach's appointments
+router.get('/appointments', protect, authorize('coach'), async (req, res) => {
+    try {
+        const coachId = req.user.UserID;
+        const { status, date, limit = 50, offset = 0 } = req.query;
+
+        let query = `
+            SELECT 
+                ca.AppointmentID,
+                ca.AppointmentDate,
+                ca.Duration,
+                ca.Type,
+                ca.Status,
+                ca.Notes,
+                ca.MeetingLink,
+                ca.CreatedAt,
+                ca.UpdatedAt,
+                u.UserID as MemberID,
+                u.FirstName as MemberFirstName,
+                u.LastName as MemberLastName,
+                u.Email as MemberEmail,
+                u.Avatar as MemberAvatar,
+                mp.Name as MembershipPlan
+            FROM ConsultationAppointments ca
+            INNER JOIN Users u ON ca.MemberID = u.UserID
+            LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+            LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+            WHERE ca.CoachID = @CoachID
+        `;
+
+        const request = pool.request().input('CoachID', coachId);
+
+        // Add filters
+        if (status) {
+            query += ` AND ca.Status = @Status`;
+            request.input('Status', status);
+        }
+
+        if (date) {
+            query += ` AND CAST(ca.AppointmentDate AS DATE) = @Date`;
+            request.input('Date', date);
+        }
+
+        query += ` ORDER BY ca.AppointmentDate DESC`;
+        query += ` OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY`;
+
+        request.input('Offset', parseInt(offset));
+        request.input('Limit', parseInt(limit));
+
+        const result = await request.query(query);
+
+        // Get total count for pagination
+        let countQuery = `
+            SELECT COUNT(*) as total
+            FROM ConsultationAppointments ca
+            WHERE ca.CoachID = @CoachID
+        `;
+
+        const countRequest = pool.request().input('CoachID', coachId);
+
+        if (status) {
+            countQuery += ` AND ca.Status = @Status`;
+            countRequest.input('Status', status);
+        }
+
+        if (date) {
+            countQuery += ` AND CAST(ca.AppointmentDate AS DATE) = @Date`;
+            countRequest.input('Date', date);
+        }
+
+        const countResult = await countRequest.query(countQuery);
+        const total = countResult.recordset[0].total;
+
+        // Format appointments data
+        const appointments = result.recordset.map(appointment => ({
+            id: appointment.AppointmentID,
+            appointmentDate: appointment.AppointmentDate,
+            duration: appointment.Duration,
+            type: appointment.Type,
+            status: appointment.Status,
+            notes: appointment.Notes,
+            meetingLink: appointment.MeetingLink,
+            createdAt: appointment.CreatedAt,
+            updatedAt: appointment.UpdatedAt,
+            member: {
+                id: appointment.MemberID,
+                firstName: appointment.MemberFirstName,
+                lastName: appointment.MemberLastName,
+                fullName: `${appointment.MemberFirstName} ${appointment.MemberLastName}`,
+                email: appointment.MemberEmail,
+                avatar: appointment.MemberAvatar,
+                membershipPlan: appointment.MembershipPlan
+            }
+        }));
+
+        res.json({
+            success: true,
+            data: appointments,
+            pagination: {
+                total,
+                limit: parseInt(limit),
+                offset: parseInt(offset),
+                hasMore: (parseInt(offset) + parseInt(limit)) < total
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi tải danh sách lịch hẹn',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Update appointment status
+router.patch('/appointments/:appointmentId', protect, authorize('coach'), async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { status, notes, meetingLink } = req.body;
+        const coachId = req.user.UserID;
+
+        // Validate status
+        const validStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled'];
+        if (status && !validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Trạng thái không hợp lệ'
+            });
+        }
+
+        // Check if appointment exists and belongs to this coach
+        const appointmentCheck = await pool.request()
+            .input('AppointmentID', appointmentId)
+            .input('CoachID', coachId)
+            .query(`
+                SELECT AppointmentID, Status, AppointmentDate
+                FROM ConsultationAppointments
+                WHERE AppointmentID = @AppointmentID AND CoachID = @CoachID
+            `);
+
+        if (appointmentCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy lịch hẹn hoặc bạn không có quyền chỉnh sửa'
+            });
+        }
+
+        const appointment = appointmentCheck.recordset[0];
+
+        // Build update query dynamically
+        let updateFields = [];
+        const request = pool.request()
+            .input('AppointmentID', appointmentId)
+            .input('CoachID', coachId);
+
+        if (status) {
+            updateFields.push('Status = @Status');
+            request.input('Status', status);
+        }
+
+        if (notes !== undefined) {
+            updateFields.push('Notes = @Notes');
+            request.input('Notes', notes);
+        }
+
+        if (meetingLink !== undefined) {
+            updateFields.push('MeetingLink = @MeetingLink');
+            request.input('MeetingLink', meetingLink);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Không có thông tin nào để cập nhật'
+            });
+        }
+
+        updateFields.push('UpdatedAt = GETDATE()');
+
+        const updateQuery = `
+            UPDATE ConsultationAppointments 
+            SET ${updateFields.join(', ')}
+            OUTPUT INSERTED.AppointmentID, INSERTED.Status, INSERTED.Notes, INSERTED.MeetingLink, INSERTED.UpdatedAt
+            WHERE AppointmentID = @AppointmentID AND CoachID = @CoachID
+        `;
+
+        const result = await request.query(updateQuery);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không thể cập nhật lịch hẹn'
+            });
+        }
+
+        const updatedAppointment = result.recordset[0];
+
+        res.json({
+            success: true,
+            message: 'Cập nhật lịch hẹn thành công',
+            data: {
+                appointmentId: updatedAppointment.AppointmentID,
+                status: updatedAppointment.Status,
+                notes: updatedAppointment.Notes,
+                meetingLink: updatedAppointment.MeetingLink,
+                updatedAt: updatedAppointment.UpdatedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error updating appointment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi cập nhật lịch hẹn',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Delete appointment
+router.delete('/appointments/:appointmentId', protect, authorize('coach'), async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const coachId = req.user.UserID;
+
+        // Check if appointment exists and belongs to this coach
+        const appointmentCheck = await pool.request()
+            .input('AppointmentID', appointmentId)
+            .input('CoachID', coachId)
+            .query(`
+                SELECT AppointmentID, Status, AppointmentDate
+                FROM ConsultationAppointments
+                WHERE AppointmentID = @AppointmentID AND CoachID = @CoachID
+            `);
+
+        if (appointmentCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy lịch hẹn hoặc bạn không có quyền xóa'
+            });
+        }
+
+        const appointment = appointmentCheck.recordset[0];
+
+        // Check if appointment can be deleted (not completed)
+        if (appointment.Status === 'completed') {
+            return res.status(400).json({
+                success: false,
+                message: 'Không thể xóa lịch hẹn đã hoàn thành'
+            });
+        }
+
+        // Delete the appointment
+        await pool.request()
+            .input('AppointmentID', appointmentId)
+            .input('CoachID', coachId)
+            .query(`
+                DELETE FROM ConsultationAppointments
+                WHERE AppointmentID = @AppointmentID AND CoachID = @CoachID
+            `);
+
+        res.json({
+            success: true,
+            message: 'Xóa lịch hẹn thành công'
+        });
+
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi xóa lịch hẹn',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get available time slots for scheduling
+router.get('/available-slots', protect, authorize('coach'), async (req, res) => {
+    try {
+        const coachId = req.user.UserID;
+        const { date, duration = 30 } = req.query;
+
+        if (!date) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng cung cấp ngày cần kiểm tra'
+            });
+        }
+
+        // Get coach's working hours (default: 8:00 - 17:00)
+        const workingHours = {
+            start: 8, // 8:00 AM
+            end: 17,  // 5:00 PM
+            interval: parseInt(duration) // minutes
+        };
+
+        // Get existing appointments for the date
+        const existingAppointments = await pool.request()
+            .input('CoachID', coachId)
+            .input('Date', date)
+            .query(`
+                SELECT AppointmentDate, Duration
+                FROM ConsultationAppointments
+                WHERE CoachID = @CoachID 
+                AND CAST(AppointmentDate AS DATE) = @Date
+                AND Status IN ('scheduled', 'confirmed')
+                ORDER BY AppointmentDate
+            `);
+
+        // Generate available time slots
+        const availableSlots = [];
+        const selectedDate = new Date(date);
+
+        for (let hour = workingHours.start; hour < workingHours.end; hour++) {
+            for (let minute = 0; minute < 60; minute += workingHours.interval) {
+                const slotStart = new Date(selectedDate);
+                slotStart.setHours(hour, minute, 0, 0);
+
+                const slotEnd = new Date(slotStart);
+                slotEnd.setMinutes(slotEnd.getMinutes() + workingHours.interval);
+
+                // Check if this slot conflicts with existing appointments
+                const hasConflict = existingAppointments.recordset.some(appointment => {
+                    const appointmentStart = new Date(appointment.AppointmentDate);
+                    const appointmentEnd = new Date(appointmentStart);
+                    appointmentEnd.setMinutes(appointmentEnd.getMinutes() + appointment.Duration);
+
+                    return (slotStart < appointmentEnd && slotEnd > appointmentStart);
+                });
+
+                // Check if slot is in the future
+                const now = new Date();
+                const isInFuture = slotStart > now;
+
+                if (!hasConflict && isInFuture) {
+                    availableSlots.push({
+                        startTime: slotStart.toISOString(),
+                        endTime: slotEnd.toISOString(),
+                        duration: workingHours.interval,
+                        available: true
+                    });
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                date: date,
+                duration: workingHours.interval,
+                workingHours: {
+                    start: `${workingHours.start}:00`,
+                    end: `${workingHours.end}:00`
+                },
+                availableSlots: availableSlots,
+                totalSlots: availableSlots.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching available slots:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi tải thời gian trống',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// =================== FEEDBACK ENDPOINTS ===================
+
+// Get coach feedback/ratings (for coach to view their ratings)
+router.get('/feedback', protect, authorize('coach'), async (req, res) => {
+    try {
+        const coachId = req.user.UserID;
+        const { page = 1, limit = 10, status = 'active' } = req.query;
+        const offset = (page - 1) * limit;
+
+        // Get feedback with member info
+        const result = await pool.request()
+            .input('CoachID', coachId)
+            .input('Status', status)
+            .input('Limit', parseInt(limit))
+            .input('Offset', offset)
+            .query(`
+                SELECT 
+                    cf.FeedbackID,
+                    cf.Rating,
+                    cf.Comment,
+                    cf.Categories,
+                    cf.IsAnonymous,
+                    cf.CreatedAt,
+                    cf.UpdatedAt,
+                    CASE 
+                        WHEN cf.IsAnonymous = 1 THEN N'Ẩn danh'
+                        ELSE u.FirstName + ' ' + u.LastName
+                    END as MemberName,
+                    CASE 
+                        WHEN cf.IsAnonymous = 1 THEN NULL
+                        ELSE u.Avatar
+                    END as MemberAvatar,
+                    ca.AppointmentDate,
+                    ca.Type as AppointmentType
+                FROM CoachFeedback cf
+                INNER JOIN Users u ON cf.MemberID = u.UserID
+                LEFT JOIN ConsultationAppointments ca ON cf.AppointmentID = ca.AppointmentID
+                WHERE cf.CoachID = @CoachID AND cf.Status = @Status
+                ORDER BY cf.CreatedAt DESC
+                OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
+            `);
+
+        // Get total count
+        const countResult = await pool.request()
+            .input('CoachID', coachId)
+            .input('Status', status)
+            .query(`
+                SELECT COUNT(*) as Total
+                FROM CoachFeedback
+                WHERE CoachID = @CoachID AND Status = @Status
+            `);
+
+        // Get rating statistics
+        const statsResult = await pool.request()
+            .input('CoachID', coachId)
+            .query(`
+                SELECT * FROM CoachRatingStats WHERE CoachID = @CoachID
+            `);
+
+        const feedback = result.recordset.map(item => ({
+            ...item,
+            Categories: item.Categories ? JSON.parse(item.Categories) : null,
+            CreatedAt: new Date(item.CreatedAt).toISOString(),
+            UpdatedAt: new Date(item.UpdatedAt).toISOString(),
+            AppointmentDate: item.AppointmentDate ? new Date(item.AppointmentDate).toISOString() : null
+        }));
+
+        const total = countResult.recordset[0]?.Total || 0;
+        const stats = statsResult.recordset[0] || {
+            TotalReviews: 0,
+            AverageRating: 0,
+            FiveStarCount: 0,
+            FourStarCount: 0,
+            ThreeStarCount: 0,
+            TwoStarCount: 0,
+            OneStarCount: 0
+        };
+
+        res.json({
+            success: true,
+            data: {
+                feedback,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                },
+                statistics: {
+                    totalReviews: stats.TotalReviews,
+                    averageRating: parseFloat(stats.AverageRating || 0).toFixed(1),
+                    ratingDistribution: {
+                        5: stats.FiveStarCount,
+                        4: stats.FourStarCount,
+                        3: stats.ThreeStarCount,
+                        2: stats.TwoStarCount,
+                        1: stats.OneStarCount
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting coach feedback:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tải đánh giá',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Submit feedback (Member đánh giá Coach)
+router.post('/feedback', protect, authorize('member', 'guest'), async (req, res) => {
+    try {
+        const memberId = req.user.UserID;
+        const {
+            coachId,
+            appointmentId,
+            rating,
+            comment,
+            categories,
+            isAnonymous = false
+        } = req.body;
+
+        // Validate required fields
+        if (!coachId || !rating) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coach ID và đánh giá là bắt buộc'
+            });
+        }
+
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Đánh giá phải từ 1 đến 5 sao'
+            });
+        }
+
+        // Verify coach exists
+        const coachCheck = await pool.request()
+            .input('CoachID', coachId)
+            .query(`
+                SELECT UserID FROM Users 
+                WHERE UserID = @CoachID AND Role = 'coach' AND IsActive = 1
+            `);
+
+        if (coachCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coach không tồn tại'
+            });
+        }
+
+        // Check if appointment exists and belongs to this member
+        if (appointmentId) {
+            const appointmentCheck = await pool.request()
+                .input('AppointmentID', appointmentId)
+                .input('MemberID', memberId)
+                .input('CoachID', coachId)
+                .query(`
+                    SELECT AppointmentID 
+                    FROM ConsultationAppointments
+                    WHERE AppointmentID = @AppointmentID 
+                    AND MemberID = @MemberID 
+                    AND CoachID = @CoachID
+                `);
+
+            if (appointmentCheck.recordset.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cuộc hẹn không hợp lệ'
+                });
+            }
+        }
+
+        // Check if feedback already exists for this combination
+        const existingFeedback = await pool.request()
+            .input('MemberID', memberId)
+            .input('CoachID', coachId)
+            .input('AppointmentID', appointmentId || null)
+            .query(`
+                SELECT FeedbackID 
+                FROM CoachFeedback
+                WHERE MemberID = @MemberID 
+                AND CoachID = @CoachID 
+                AND (
+                    (@AppointmentID IS NULL AND AppointmentID IS NULL) 
+                    OR AppointmentID = @AppointmentID
+                )
+            `);
+
+        if (existingFeedback.recordset.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Bạn đã đánh giá coach này rồi'
+            });
+        }
+
+        // Insert feedback
+        const request = pool.request()
+            .input('CoachID', coachId)
+            .input('MemberID', memberId)
+            .input('Rating', rating)
+            .input('IsAnonymous', isAnonymous);
+
+        if (appointmentId) request.input('AppointmentID', appointmentId);
+        if (comment) request.input('Comment', comment);
+        if (categories) request.input('Categories', JSON.stringify(categories));
+
+        const insertQuery = `
+            INSERT INTO CoachFeedback (
+                CoachID, MemberID, ${appointmentId ? 'AppointmentID,' : ''} 
+                Rating, ${comment ? 'Comment,' : ''} ${categories ? 'Categories,' : ''} IsAnonymous
+            )
+            OUTPUT INSERTED.FeedbackID, INSERTED.CreatedAt
+            VALUES (
+                @CoachID, @MemberID, ${appointmentId ? '@AppointmentID,' : ''}
+                @Rating, ${comment ? '@Comment,' : ''} ${categories ? '@Categories,' : ''} @IsAnonymous
+            )
+        `;
+
+        const result = await request.query(insertQuery);
+        const feedback = result.recordset[0];
+
+        res.status(201).json({
+            success: true,
+            message: 'Đánh giá đã được gửi thành công',
+            data: {
+                feedbackId: feedback.FeedbackID,
+                createdAt: feedback.CreatedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi gửi đánh giá',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Update feedback status (Coach có thể ẩn/hiện feedback)
+router.patch('/feedback/:feedbackId', protect, authorize('coach'), async (req, res) => {
+    try {
+        const coachId = req.user.UserID;
+        const { feedbackId } = req.params;
+        const { status } = req.body;
+
+        if (!['active', 'hidden'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Trạng thái không hợp lệ'
+            });
+        }
+
+        // Verify feedback belongs to this coach
+        const feedbackCheck = await pool.request()
+            .input('FeedbackID', feedbackId)
+            .input('CoachID', coachId)
+            .query(`
+                SELECT FeedbackID 
+                FROM CoachFeedback
+                WHERE FeedbackID = @FeedbackID AND CoachID = @CoachID
+            `);
+
+        if (feedbackCheck.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy đánh giá'
+            });
+        }
+
+        // Update status
+        await pool.request()
+            .input('FeedbackID', feedbackId)
+            .input('Status', status)
+            .query(`
+                UPDATE CoachFeedback 
+                SET Status = @Status, UpdatedAt = GETDATE()
+                WHERE FeedbackID = @FeedbackID
+            `);
+
+        res.json({
+            success: true,
+            message: `Đánh giá đã được ${status === 'hidden' ? 'ẩn' : 'hiển thị'}`
+        });
+
+    } catch (error) {
+        console.error('Error updating feedback status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi cập nhật trạng thái đánh giá',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get public feedback for a coach (for members to view before booking)
+router.get('/:coachId/feedback', async (req, res) => {
+    try {
+        const { coachId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+
+        // Get public feedback
+        const result = await pool.request()
+            .input('CoachID', coachId)
+            .input('Limit', parseInt(limit))
+            .input('Offset', offset)
+            .query(`
+                SELECT 
+                    cf.FeedbackID,
+                    cf.Rating,
+                    cf.Comment,
+                    cf.Categories,
+                    cf.CreatedAt,
+                    CASE 
+                        WHEN cf.IsAnonymous = 1 THEN N'Thành viên ẩn danh'
+                        ELSE u.FirstName + ' ' + u.LastName
+                    END as MemberName,
+                    CASE 
+                        WHEN cf.IsAnonymous = 1 THEN NULL
+                        ELSE u.Avatar
+                    END as MemberAvatar
+                FROM CoachFeedback cf
+                INNER JOIN Users u ON cf.MemberID = u.UserID
+                WHERE cf.CoachID = @CoachID AND cf.Status = 'active'
+                ORDER BY cf.CreatedAt DESC
+                OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
+            `);
+
+        // Get total count and stats
+        const countResult = await pool.request()
+            .input('CoachID', coachId)
+            .query(`
+                SELECT COUNT(*) as Total
+                FROM CoachFeedback
+                WHERE CoachID = @CoachID AND Status = 'active'
+            `);
+
+        const statsResult = await pool.request()
+            .input('CoachID', coachId)
+            .query(`
+                SELECT * FROM CoachRatingStats WHERE CoachID = @CoachID
+            `);
+
+        const feedback = result.recordset.map(item => ({
+            ...item,
+            Categories: item.Categories ? JSON.parse(item.Categories) : null,
+            CreatedAt: new Date(item.CreatedAt).toISOString()
+        }));
+
+        const total = countResult.recordset[0]?.Total || 0;
+        const stats = statsResult.recordset[0] || {
+            TotalReviews: 0,
+            AverageRating: 0,
+            FiveStarCount: 0,
+            FourStarCount: 0,
+            ThreeStarCount: 0,
+            TwoStarCount: 0,
+            OneStarCount: 0
+        };
+
+        res.json({
+            success: true,
+            data: {
+                feedback,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                },
+                statistics: {
+                    totalReviews: stats.TotalReviews,
+                    averageRating: parseFloat(stats.AverageRating || 0).toFixed(1),
+                    ratingDistribution: {
+                        5: stats.FiveStarCount,
+                        4: stats.FourStarCount,
+                        3: stats.ThreeStarCount,
+                        2: stats.TwoStarCount,
+                        1: stats.OneStarCount
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting public coach feedback:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tải đánh giá',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
 
 module.exports = router; 

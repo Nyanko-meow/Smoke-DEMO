@@ -171,7 +171,7 @@ const Home = () => {
                                         <Title level={4} className="testimonial-name">Nguyễn Văn A</Title>
                                         <Text type="secondary" className="testimonial-info">Đã cai thuốc 8 tháng</Text>
                                         <Paragraph className="testimonial-quote">
-                                            "Tôi đã thử nhiều phương pháp cai thuốc nhưng đều thất bại. Với SmokeKing, tôi đã cai thuốc thành công và cảm thấy khỏe mạnh hơn rất nhiều. Cảm ơn đội ngũ SmokeKing!"
+                                            &quot;Tôi đã thử nhiều phương pháp cai thuốc nhưng đều thất bại. Với SmokeKing, tôi đã cai thuốc thành công và cảm thấy khỏe mạnh hơn rất nhiều. Cảm ơn đội ngũ SmokeKing!&quot;
                                         </Paragraph>
                                     </div>
                                 </div>
@@ -185,7 +185,7 @@ const Home = () => {
                                         <Title level={4} className="testimonial-name">Trần Thị B</Title>
                                         <Text type="secondary" className="testimonial-info">Đã cai thuốc 1 năm</Text>
                                         <Paragraph className="testimonial-quote">
-                                            "Cộng đồng hỗ trợ trên SmokeKing thực sự giúp tôi vượt qua những giai đoạn khó khăn nhất. Giờ đây tôi đã có thể hít thở tự do và tiết kiệm được rất nhiều tiền."
+                                            &quot;Cộng đồng hỗ trợ trên SmokeKing thực sự giúp tôi vượt qua những giai đoạn khó khăn nhất. Giờ đây tôi đã có thể hít thở tự do và tiết kiệm được rất nhiều tiền.&quot;
                                         </Paragraph>
                                     </div>
                                 </div>

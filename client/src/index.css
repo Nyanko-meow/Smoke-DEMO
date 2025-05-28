@@ -117,6 +117,22 @@ body {
   border-color: rgba(255, 255, 255, 0.9) !important;
 }
 
+/* Appointment button styling */
+.navbar-appointment-btn {
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 6px !important;
+  transition: all 0.3s ease !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-appointment-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
 .navbar-mobile-toggle {
   display: none;
 }

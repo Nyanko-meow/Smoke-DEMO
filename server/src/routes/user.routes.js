@@ -387,6 +387,110 @@ router.get('/progress', auth, async (req, res) => {
     }
 });
 
+// Add progress entry
+router.post('/progress', auth, async (req, res) => {
+    try {
+        const { date, cigarettesSmoked, cravingLevel, emotionNotes, healthNotes } = req.body;
+
+        // Validate input
+        if (!date) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ngày là bắt buộc'
+            });
+        }
+
+        if (cigarettesSmoked === null || cigarettesSmoked === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Số điếu hút là bắt buộc'
+            });
+        }
+
+        if (!cravingLevel || cravingLevel < 1 || cravingLevel > 10) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mức độ thèm thuốc phải từ 1-10'
+            });
+        }
+
+        // Get user's smoking info for calculations
+        const smokingInfo = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 CigarettesPerDay, CigarettePrice 
+                FROM SmokingStatus 
+                WHERE UserID = @UserID 
+                ORDER BY LastUpdated DESC
+            `);
+
+        let moneySaved = 0;
+        let daysSmokeFree = 0;
+
+        if (smokingInfo.recordset.length > 0) {
+            const { CigarettesPerDay, CigarettePrice } = smokingInfo.recordset[0];
+
+            // Calculate money saved for this day
+            const cigarettesNotSmoked = Math.max(0, CigarettesPerDay - cigarettesSmoked);
+            moneySaved = cigarettesNotSmoked * CigarettePrice;
+
+            // Calculate total smoke-free days
+            const smokeFreeQuery = await pool.request()
+                .input('UserID', req.user.UserID)
+                .query(`
+                    SELECT COUNT(*) as SmokeFreeDays
+                    FROM ProgressTracking 
+                    WHERE UserID = @UserID AND CigarettesSmoked = 0
+                `);
+
+            daysSmokeFree = smokeFreeQuery.recordset[0].SmokeFreeDays;
+            if (cigarettesSmoked === 0) {
+                daysSmokeFree += 1; // Add current day if smoke-free
+            }
+        }
+
+        const result = await pool.request()
+            .input('UserID', req.user.UserID)
+            .input('Date', date)
+            .input('CigarettesSmoked', cigarettesSmoked)
+            .input('CravingLevel', cravingLevel)
+            .input('EmotionNotes', emotionNotes || '')
+            .input('HealthNotes', healthNotes || '')
+            .input('MoneySaved', moneySaved)
+            .input('DaysSmokeFree', daysSmokeFree)
+            .query(`
+                MERGE INTO ProgressTracking AS target
+                USING (SELECT @UserID AS UserID, @Date AS Date) AS source
+                ON target.UserID = source.UserID AND target.Date = source.Date
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        CigarettesSmoked = @CigarettesSmoked,
+                        CravingLevel = @CravingLevel,
+                        EmotionNotes = @EmotionNotes,
+                        HealthNotes = @HealthNotes,
+                        MoneySaved = @MoneySaved,
+                        DaysSmokeFree = @DaysSmokeFree,
+                        CreatedAt = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (UserID, Date, CigarettesSmoked, CravingLevel, EmotionNotes, HealthNotes, MoneySaved, DaysSmokeFree, CreatedAt)
+                    VALUES (@UserID, @Date, @CigarettesSmoked, @CravingLevel, @EmotionNotes, @HealthNotes, @MoneySaved, @DaysSmokeFree, GETDATE())
+                OUTPUT INSERTED.*;
+            `);
+
+        res.status(201).json({
+            success: true,
+            data: result.recordset[0],
+            message: 'Đã ghi nhận tiến trình thành công'
+        });
+    } catch (error) {
+        console.error('Error adding progress:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi ghi nhận tiến trình. Vui lòng thử lại.'
+        });
+    }
+});
+
 // Admin only routes
 router.get('/', auth, authorize('admin'), async (req, res) => {
     try {

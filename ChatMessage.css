@@ -1,0 +1,283 @@
+.chat-message {
+    margin: 15px 0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    max-width: 70%;
+    word-wrap: break-word;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.chat-message.current-user {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-message.other-user {
+    background-color: #f1f3f4;
+    color: #333;
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+}
+
+.chat-message.coach {
+    border-left: 4px solid #28a745;
+}
+
+.chat-message.member {
+    border-left: 4px solid #007bff;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.sender-name {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.message-time {
+    font-size: 11px;
+    font-style: italic;
+}
+
+.message-content {
+    line-height: 1.4;
+}
+
+.message-text {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.message-attachment {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.chat-message.other-user .message-attachment {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.attachment-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.file-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 2px;
+    word-break: break-all;
+}
+
+.file-size {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.image-preview {
+    margin: 8px 0;
+    text-align: center;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.preview-image:hover {
+    transform: scale(1.02);
+}
+
+.attachment-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.download-btn, .view-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: inherit;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.chat-message.other-user .download-btn,
+.chat-message.other-user .view-btn {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.download-btn:hover, .view-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.chat-message.other-user .download-btn:hover,
+.chat-message.other-user .view-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.message-type-indicator {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 6px;
+    font-style: italic;
+}
+
+/* Animation for new messages */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-message {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .chat-message {
+        max-width: 85%;
+        padding: 10px 12px;
+        margin: 10px 0;
+    }
+    
+    .message-header {
+        font-size: 11px;
+    }
+    
+    .sender-name {
+        font-size: 12px;
+    }
+    
+    .message-time {
+        font-size: 10px;
+    }
+    
+    .message-text {
+        font-size: 13px;
+    }
+    
+    .file-name {
+        font-size: 13px;
+    }
+    
+    .file-size {
+        font-size: 10px;
+    }
+    
+    .attachment-actions {
+        flex-direction: column;
+    }
+    
+    .download-btn, .view-btn {
+        font-size: 11px;
+        padding: 8px;
+    }
+    
+    .preview-image {
+        max-height: 150px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .chat-message.other-user {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .chat-message.other-user .message-attachment {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .chat-message.other-user .download-btn,
+    .chat-message.other-user .view-btn {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .chat-message.other-user .download-btn:hover,
+    .chat-message.other-user .view-btn:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+}
+
+/* File type specific styling */
+.message-attachment[data-file-type="image"] {
+    border-left: 3px solid #28a745;
+}
+
+.message-attachment[data-file-type="document"] {
+    border-left: 3px solid #dc3545;
+}
+
+.message-attachment[data-file-type="audio"] {
+    border-left: 3px solid #ffc107;
+}
+
+.message-attachment[data-file-type="video"] {
+    border-left: 3px solid #6f42c1;
+}
+
+/* Loading state */
+.message-attachment.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.message-attachment.loading::after {
+    content: "Đang tải...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+} 

@@ -62,6 +62,8 @@ import axios from 'axios';
 import MemberDetailsModal from '../components/MemberDetailsModal';
 import MemberProgressTracking from '../components/MemberProgressTracking';
 import { CoachChat } from '../components/chat';
+import AppointmentCalendar from '../components/coach/AppointmentCalendar';
+import CoachFeedbackView from '../components/coach/CoachFeedbackView';
 
 const { Header, Content, Sider } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -96,6 +98,12 @@ const CoachDashboard = () => {
 
     useEffect(() => {
         checkAuthAndLoadProfile();
+
+        // Check if should open appointments tab from navbar
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'appointments') {
+            setActiveTab('appointments');
+        }
     }, []);
 
     const checkAuthAndLoadProfile = async () => {
@@ -361,6 +369,16 @@ const CoachDashboard = () => {
             key: 'chat',
             icon: <MessageOutlined />,
             label: 'Chat',
+        },
+        {
+            key: 'appointments',
+            icon: <CalendarOutlined />,
+            label: 'Lịch hẹn',
+        },
+        {
+            key: 'feedback',
+            icon: <StarOutlined />,
+            label: 'Đánh giá',
         },
     ];
 
@@ -965,6 +983,10 @@ const CoachDashboard = () => {
         );
     };
 
+    const renderAppointments = () => {
+        return <AppointmentCalendar />;
+    };
+
     const renderContent = () => {
         switch (activeTab) {
             case 'dashboard':
@@ -977,6 +999,10 @@ const CoachDashboard = () => {
                 return renderProgressTracking();
             case 'chat':
                 return <CoachChat />;
+            case 'appointments':
+                return renderAppointments();
+            case 'feedback':
+                return <CoachFeedbackView />;
             default:
                 return renderDashboard();
         }
@@ -994,6 +1020,10 @@ const CoachDashboard = () => {
                 return 'Theo dõi tiến trình';
             case 'chat':
                 return 'Chat';
+            case 'appointments':
+                return 'Lịch hẹn tư vấn';
+            case 'feedback':
+                return 'Đánh giá từ thành viên';
             default:
                 return 'Dashboard';
         }
@@ -1011,6 +1041,10 @@ const CoachDashboard = () => {
                 return 'Theo dõi tiến trình cai thuốc của các thành viên.';
             case 'chat':
                 return 'Chat với các thành viên trong hệ thống.';
+            case 'appointments':
+                return 'Quản lý lịch hẹn tư vấn với các thành viên. Tạo, xem và theo dõi các cuộc hẹn.';
+            case 'feedback':
+                return 'Xem và quản lý tất cả đánh giá từ các thành viên đã tư vấn. Theo dõi thống kê và cải thiện chất lượng dịch vụ.';
             default:
                 return `Chào mừng bạn trở lại, ${getCoachDisplayName()}! Đây là trang quản lý dành cho huấn luyện viên.`;
         }

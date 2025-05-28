@@ -35,13 +35,12 @@ import {
     FireOutlined,
     SmileOutlined,
     SaveOutlined,
-    LineChartOutlined,
-    MessageOutlined
+    LineChartOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import dayjs from 'dayjs';
-import { MemberChat } from '../components/chat';
+
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -496,7 +495,7 @@ const QuitPlanPage = () => {
                                 <Text>
                                     Để theo dõi tiến trình hiệu quả, bạn nên tạo kế hoạch cai thuốc trước.
                                     Hãy chuyển sang tab{' '}
-                                    <Text strong className="text-green-600">"Kế hoạch"</Text>{' '}
+                                    <Text strong className="text-green-600">&quot;Kế hoạch&quot;</Text>{' '}
                                     để thiết lập mục tiêu và lộ trình chi tiết.
                                 </Text>
                                 <div className="mt-2">
@@ -1143,50 +1142,7 @@ const QuitPlanPage = () => {
                         >
                             <ProgressLogs hasAccess={hasAccess} existingPlans={existingPlans} setActiveTab={setActiveTab} />
                         </TabPane>
-                        <TabPane
-                            tab={
-                                <span>
-                                    <MessageOutlined />
-                                    Chat với Coach
-                                    {hasAccess && (
-                                        <Badge
-                                            status="success"
-                                            style={{ marginLeft: 8 }}
-                                        />
-                                    )}
-                                </span>
-                            }
-                            key="chat"
-                        >
-                            {hasAccess ? (
-                                <Row gutter={[24, 24]}>
-                                    <Col span={24}>
-                                        <MemberChat height={500} />
-                                    </Col>
-                                    <Col span={24}>
-                                        <Card size="small" className="bg-blue-50">
-                                            <Title level={5}>
-                                                <MessageOutlined className="mr-2" />
-                                                Hướng dẫn sử dụng Chat
-                                            </Title>
-                                            <ul className="text-sm space-y-1">
-                                                <li>• Chat trực tiếp với Coach được assign cho bạn</li>
-                                                <li>• Chia sẻ khó khăn và nhận tư vấn kịp thời</li>
-                                                <li>• Coach có thể cập nhật kế hoạch cai thuốc của bạn</li>
-                                                <li>• Đặt lịch tư vấn video/audio khi cần thiết</li>
-                                            </ul>
-                                        </Card>
-                                    </Col>
-                                </Row>
-                            ) : (
-                                <Alert
-                                    message="Không thể truy cập Chat"
-                                    description="Bạn cần có gói dịch vụ active để sử dụng tính năng chat với Coach."
-                                    type="warning"
-                                    showIcon
-                                />
-                            )}
-                        </TabPane>
+
                     </Tabs>
                 </Card>
 

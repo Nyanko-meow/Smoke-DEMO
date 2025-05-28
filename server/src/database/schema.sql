@@ -31,7 +31,7 @@ CREATE TABLE Users (
     RefreshTokenExpiry DATETIME
 );
 
--- Insert mẫu người dùng với password đã được hash
+-- Insert mẫu người dùng với password bình thường (không hash)
 INSERT INTO Users (Email, Password, FirstName, LastName, Role, Avatar, PhoneNumber, Address,
     IsActive, ActivationToken, ActivationExpires, EmailVerified, CreatedAt, UpdatedAt, LastLoginAt,
     RefreshToken, RefreshTokenExpiry)
@@ -214,7 +214,7 @@ CREATE TABLE BlogPosts (
 INSERT INTO BlogPosts (Title, MetaDescription, Content, ThumbnailURL, AuthorID, Status, PublishedAt, Views)
 VALUES 
 (N'Hành trình cai thuốc của tôi - 30 ngày đầu tiên', 
- N'Chia sẻ những khó khăn và thành công trong 30 ngày đầu cai thuốc lá', 
+ N'Chia sẻ những khó khăn và thành công trong 30 ngày đầu tiên cai thuốc lá', 
  N'Xin chào mọi người! Tôi muốn chia sẻ với các bạn hành trình cai thuốc lá của mình trong 30 ngày đầu tiên.
 
 Ngày đầu tiên thực sự rất khó khăn. Tôi đã hút thuốc được 10 năm, mỗi ngày khoảng 1 bao. Khi quyết định cai thuốc, tôi cảm thấy lo lắng và không biết liệu mình có thể thành công hay không.
@@ -238,7 +238,7 @@ Lời khuyên của tôi cho những ai đang muốn cai thuốc:
 4. Kiên nhẫn với bản thân
 
 Chúc các bạn thành công!', 
- 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+ '/api/images/blog/quit-smoking-journey.jpg',
  2, 'published', GETDATE(), 45),
 
 (N'5 mẹo giúp vượt qua cơn thèm thuốc', 
@@ -277,7 +277,7 @@ Nước lạnh giúp:
 Hãy nhớ rằng cơn thèm thuốc thường chỉ kéo dài 3-5 phút. Nếu bạn có thể vượt qua được khoảng thời gian này, bạn đã thành công!
 
 Chúc các bạn cai thuốc thành công!', 
- 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+ '/api/images/blog/coping-with-cravings.jpg',
  3, 'published', DATEADD(DAY, -2, GETDATE()), 32),
 
 (N'Lợi ích sức khỏe khi cai thuốc lá', 
@@ -327,7 +327,7 @@ Ngoài ra, cai thuốc còn mang lại:
 - Tự tin hơn trong giao tiếp
 
 Hãy bắt đầu hành trình cai thuốc ngay hôm nay để tận hưởng những lợi ích tuyệt vời này!', 
- 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+ '/api/images/blog/health-benefits.jpg',
  3, 'published', DATEADD(DAY, -5, GETDATE()), 67);
 
 -- Comments
@@ -353,13 +353,13 @@ CREATE TABLE Achievements (
 -- Insert sample achievements
 INSERT INTO Achievements (Name, Description, IconURL, MilestoneDays, SavedMoney)
 VALUES 
-(N'Ngày đầu tiên', N'Chúc mừng bạn đã hoàn thành ngày đầu tiên không hút thuốc!', 'https://img.icons8.com/emoji/48/000000/trophy-emoji.png', 1, NULL),
-(N'Tuần lễ khởi đầu', N'Bạn đã không hút thuốc được 7 ngày liên tiếp!', 'https://img.icons8.com/emoji/48/000000/star-emoji.png', 7, NULL),
-(N'Tháng đầu tiên', N'Một tháng không hút thuốc - một cột mốc quan trọng!', 'https://img.icons8.com/emoji/48/000000/crown-emoji.png', 30, NULL),
-(N'Quý đầu tiên', N'3 tháng không hút thuốc - sức khỏe của bạn đã cải thiện rất nhiều!', 'https://img.icons8.com/emoji/48/000000/gem-stone-emoji.png', 90, NULL),
-(N'Tiết kiệm 100K', N'Bạn đã tiết kiệm được 100,000 VNĐ nhờ việc không hút thuốc!', 'https://img.icons8.com/emoji/48/000000/money-bag-emoji.png', NULL, 100000),
-(N'Tiết kiệm 500K', N'Tuyệt vời! Bạn đã tiết kiệm được 500,000 VNĐ!', 'https://img.icons8.com/emoji/48/000000/money-with-wings-emoji.png', NULL, 500000),
-(N'Tiết kiệm 1 triệu', N'Thành tích đáng kinh ngạc! 1,000,000 VNĐ đã được tiết kiệm!', 'https://img.icons8.com/emoji/48/000000/bank-emoji.png', NULL, 1000000);
+(N'Ngày đầu tiên', N'Chúc mừng bạn đã hoàn thành ngày đầu tiên không hút thuốc!', '/images/achievements/trophy-bronze.png', 1, NULL),
+(N'Tuần lễ khởi đầu', N'Bạn đã không hút thuốc được 7 ngày liên tiếp!', '/images/achievements/star-silver.png', 7, NULL),
+(N'Tháng đầu tiên', N'Một tháng không hút thuốc - một cột mốc quan trọng!', '/images/achievements/crown-gold.png', 30, NULL),
+(N'Quý đầu tiên', N'3 tháng không hút thuốc - sức khỏe của bạn đã cải thiện rất nhiều!', '/images/achievements/gem-diamond.png', 90, NULL),
+(N'Tiết kiệm 100K', N'Bạn đã tiết kiệm được 100,000 VNĐ nhờ việc không hút thuốc!', '/images/achievements/money-bronze.png', NULL, 100000),
+(N'Tiết kiệm 500K', N'Tuyệt vời! Bạn đã tiết kiệm được 500,000 VNĐ!', '/images/achievements/money-silver.png', NULL, 500000),
+(N'Tiết kiệm 1 triệu', N'Thành tích đáng kinh ngạc! 1,000,000 VNĐ đã được tiết kiệm!', '/images/achievements/money-gold.png', NULL, 1000000);
 
 CREATE TABLE UserAchievements (
     UserAchievementID INT PRIMARY KEY IDENTITY(1,1),
@@ -508,3 +508,106 @@ WHERE CoachID = 3 AND MemberID = 2;
 -- Insert sample consultation appointment
 INSERT INTO ConsultationAppointments (CoachID, MemberID, AppointmentDate, Duration, Type, Status, Notes)
 VALUES (3, 2, DATEADD(DAY, 2, GETDATE()), 45, 'video', 'scheduled', N'Tư vấn về kế hoạch cai thuốc và các phương pháp đối phó với cơn thèm');
+
+-- Coach Feedback Table (Member đánh giá Coach)
+CREATE TABLE CoachProfiles (
+    ProfileID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL,
+    Bio NVARCHAR(MAX),
+    Specialization NVARCHAR(255),
+    Experience INT, -- Số năm kinh nghiệm
+    HourlyRate DECIMAL(10,2),
+    IsAvailable BIT DEFAULT 1,
+    YearsOfExperience INT,
+    Education NVARCHAR(MAX),
+    Certifications NVARCHAR(MAX),
+    Languages NVARCHAR(255),
+    WorkingHours NVARCHAR(255),
+    ConsultationTypes NVARCHAR(255),
+    SuccessRate DECIMAL(5,2),
+    TotalClients INT DEFAULT 0,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+
+CREATE TABLE CoachReviews (
+    ReviewID INT IDENTITY(1,1) PRIMARY KEY,
+    CoachUserID INT NOT NULL,
+    ClientName NVARCHAR(255),
+    ReviewTitle NVARCHAR(255),
+    ReviewContent NVARCHAR(MAX),
+    Rating INT NOT NULL CHECK (Rating BETWEEN 1 AND 5),
+    IsAnonymous BIT DEFAULT 0,
+    IsVerified BIT DEFAULT 0,
+    IsPublic BIT DEFAULT 1,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (CoachUserID) REFERENCES Users(UserID)
+);
+
+-- Insert sample coach profiles
+INSERT INTO CoachProfiles (UserID, Bio, Specialization, Experience, HourlyRate, IsAvailable, YearsOfExperience, Education, Certifications, Languages, WorkingHours, ConsultationTypes, SuccessRate, TotalClients)
+VALUES 
+(3, N'Tôi là một coach chuyên nghiệp với nhiều năm kinh nghiệm hỗ trợ người cai thuốc lá. Tôi đã giúp hàng trăm người thành công trong hành trình cai thuốc của họ.', 
+ N'Cai thuốc lá, Tư vấn sức khỏe tâm lý', 5, 200000.00, 1, 5, 
+ N'Thạc sĩ Tâm lý học - Đại học Y Hà Nội', 
+ N'Chứng chỉ tư vấn viên cai thuốc quốc tế, Chứng chỉ CBT (Cognitive Behavioral Therapy)', 
+ N'Tiếng Việt, Tiếng Anh', 
+ N'Thứ 2-6: 8:00-17:00, Thứ 7: 8:00-12:00', 
+ N'Video call, Voice call, Chat', 
+ 85.5, 150);
+
+-- Insert sample reviews
+INSERT INTO CoachReviews (CoachUserID, ClientName, ReviewTitle, ReviewContent, Rating, IsAnonymous, IsVerified, IsPublic)
+VALUES 
+(3, N'Nguyễn Văn A', N'Coach rất tận tâm', N'Coach Smith đã giúp tôi rất nhiều trong việc cai thuốc. Những lời khuyên của coach rất thiết thực và hiệu quả.', 5, 0, 1, 1),
+(3, N'Trần Thị B', N'Phương pháp hiệu quả', N'Tôi đã thử nhiều cách nhưng không thành công. Nhờ có coach mà tôi đã cai được thuốc sau 3 tháng.', 5, 0, 1, 1),
+(3, N'Lê Văn C', N'Hỗ trợ tốt', N'Coach luôn sẵn sàng hỗ trợ khi tôi gặp khó khăn. Rất recommend!', 4, 0, 1, 1);
+
+CREATE TABLE CoachFeedback (
+    FeedbackID INT IDENTITY(1,1) PRIMARY KEY,
+    CoachID INT NOT NULL,
+    MemberID INT NOT NULL,
+    AppointmentID INT NULL, -- Liên kết với buổi tư vấn (nếu có)
+    Rating INT NOT NULL CHECK (Rating BETWEEN 1 AND 5), -- Đánh giá từ 1-5 sao
+    Comment NVARCHAR(MAX), -- Nhận xét của member
+    Categories NVARCHAR(MAX), -- JSON string chứa đánh giá theo từng tiêu chí
+    IsAnonymous BIT DEFAULT 0, -- Có hiển thị tên member hay không
+    Status NVARCHAR(20) DEFAULT 'active' CHECK (Status IN ('active', 'hidden', 'deleted')),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (CoachID) REFERENCES Users(UserID),
+    FOREIGN KEY (MemberID) REFERENCES Users(UserID),
+    FOREIGN KEY (AppointmentID) REFERENCES ConsultationAppointments(AppointmentID),
+    UNIQUE(MemberID, CoachID, AppointmentID) -- Mỗi member chỉ đánh giá 1 lần cho 1 coach trong 1 buổi
+);
+
+-- Insert sample feedback data
+INSERT INTO CoachFeedback (CoachID, MemberID, AppointmentID, Rating, Comment, Categories, IsAnonymous)
+VALUES 
+(3, 2, NULL, 5, N'Coach Smith rất tận tâm và kiên nhẫn. Những lời khuyên của coach đã giúp em rất nhiều trong việc cai thuốc.', 
+ '{"professionalism": 5, "helpfulness": 5, "communication": 5, "knowledge": 4}', 0),
+(3, 4, NULL, 4, N'Coach có kiến thức chuyên môn tốt, tuy nhiên em mong muốn có thêm thời gian tư vấn.', 
+ '{"professionalism": 4, "helpfulness": 4, "communication": 4, "knowledge": 5}', 1);
+GO
+
+-- Coach Statistics View (để tính toán thống kê đánh giá)
+CREATE VIEW CoachRatingStats AS
+SELECT 
+    c.UserID as CoachID,
+    c.FirstName + ' ' + c.LastName as CoachName,
+    COUNT(cf.FeedbackID) as TotalReviews,
+    AVG(CAST(cf.Rating as FLOAT)) as AverageRating,
+    COUNT(CASE WHEN cf.Rating = 5 THEN 1 END) as FiveStarCount,
+    COUNT(CASE WHEN cf.Rating = 4 THEN 1 END) as FourStarCount,
+    COUNT(CASE WHEN cf.Rating = 3 THEN 1 END) as ThreeStarCount,
+    COUNT(CASE WHEN cf.Rating = 2 THEN 1 END) as TwoStarCount,
+    COUNT(CASE WHEN cf.Rating = 1 THEN 1 END) as OneStarCount
+FROM Users c
+LEFT JOIN CoachFeedback cf ON c.UserID = cf.CoachID AND cf.Status = 'active'
+WHERE c.Role = 'coach'
+GROUP BY c.UserID, c.FirstName, c.LastName;

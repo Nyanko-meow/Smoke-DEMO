@@ -175,6 +175,43 @@ const AchievementPage = () => {
         }
     };
 
+    const fixAchievements = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                message.error('Vui lòng đăng nhập để kiểm tra huy hiệu');
+                return;
+            }
+
+            const response = await axios.post('/api/achievements/fix-unlock', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                message.success(response.data.message);
+
+                if (response.data.newAchievements.length > 0) {
+                    // Show notification for new achievements
+                    response.data.newAchievements.forEach(achievement => {
+                        message.success(`🏆 Mở khóa huy hiệu: ${achievement.Name}`, 5);
+                    });
+                }
+
+                // Refresh data
+                await fetchAllData();
+            } else {
+                message.error(response.data.message || 'Lỗi khi kiểm tra huy hiệu');
+            }
+        } catch (error) {
+            console.error('Error fixing achievements:', error);
+            message.error('Lỗi khi kiểm tra huy hiệu: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const getProgressToNextAchievement = (achievement) => {
         if (!progressData) return { progress: 0, total: 100, current: 0 };
 
@@ -300,12 +337,37 @@ const AchievementPage = () => {
         <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
             <Content style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
                 <div style={{ marginBottom: 24 }}>
-                    <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-                        🏆 Huy hiệu thành tích
-                    </Title>
-                    <Text type="secondary">
-                        Theo dõi và chia sẻ những thành tích trong hành trình cai thuốc
-                    </Text>
+                    <Row justify="space-between" align="middle">
+                        <Col>
+                            <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
+                                🏆 Huy hiệu thành tích
+                            </Title>
+                            <Text type="secondary">
+                                Theo dõi và chia sẻ những thành tích trong hành trình cai thuốc
+                            </Text>
+                        </Col>
+                        <Col>
+                            <Space>
+                                <Button
+                                    type="primary"
+                                    icon={<ReloadOutlined />}
+                                    onClick={fetchAllData}
+                                    loading={loading}
+                                >
+                                    Làm mới
+                                </Button>
+                                <Button
+                                    type="default"
+                                    icon={<TrophyOutlined />}
+                                    onClick={fixAchievements}
+                                    loading={loading}
+                                    style={{ backgroundColor: '#faad14', borderColor: '#faad14', color: 'white' }}
+                                >
+                                    Kiểm tra huy hiệu
+                                </Button>
+                            </Space>
+                        </Col>
+                    </Row>
                 </div>
 
                 {/* Summary Stats */}

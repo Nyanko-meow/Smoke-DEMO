@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Layout, Menu, Button, Avatar, Dropdown, Space } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, DashboardOutlined, HomeOutlined, BookOutlined, TeamOutlined, MenuOutlined, FormOutlined, BulbOutlined, TrophyOutlined, CommentOutlined } from '@ant-design/icons';
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Drawer } from 'antd';
+import { UserOutlined, LogoutOutlined, SettingOutlined, DashboardOutlined, HomeOutlined, BookOutlined, TeamOutlined, MenuOutlined, FormOutlined, BulbOutlined, TrophyOutlined, CommentOutlined, MessageOutlined, CalendarOutlined } from '@ant-design/icons';
 import { logout } from '../../store/slices/authSlice';
+import MemberChat from '../chat/MemberChat';
 
 const { Header } = Layout;
 
@@ -12,6 +13,7 @@ const Navbar = () => {
     const navigate = useNavigate();
     const { isAuthenticated, user } = useSelector(state => state.auth || {});
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
 
     const handleLogout = () => {
         dispatch(logout());
@@ -38,22 +40,22 @@ const Navbar = () => {
         {
             key: 'profile',
             icon: <UserOutlined />,
-            label: <Link to="/profile">Profile</Link>,
+            label: <Link to="/profile">Hồ sơ</Link>,
         },
         {
             key: 'comments',
             icon: <CommentOutlined />,
-            label: <Link to="/user/comments">Quản lý comments</Link>,
+            label: <Link to="/user/comments">Quản lý bình luận</Link>,
         },
         ...(user?.role === 'admin' ? [{
             key: 'admin',
             icon: <DashboardOutlined />,
-            label: <Link to="/admin">Admin Dashboard</Link>,
+            label: <Link to="/admin">Bảng điều khiển Admin</Link>,
         }] : []),
         {
             key: 'logout',
             icon: <LogoutOutlined />,
-            label: <span onClick={handleLogout}>Logout</span>,
+            label: <span onClick={handleLogout}>Đăng xuất</span>,
         },
     ];
 
@@ -63,7 +65,7 @@ const Navbar = () => {
             {
                 key: 'home',
                 icon: <HomeOutlined />,
-                label: <Link to="/">Home</Link>,
+                label: <Link to="/">Trang chủ</Link>,
             },
             {
                 key: 'blog',
@@ -73,7 +75,7 @@ const Navbar = () => {
             {
                 key: 'community',
                 icon: <TeamOutlined />,
-                label: <Link to="/community">Community</Link>,
+                label: <Link to="/community">Cộng đồng</Link>,
             },
         ];
 
@@ -85,12 +87,12 @@ const Navbar = () => {
                 {
                     key: 'achievement',
                     icon: <TrophyOutlined />,
-                    label: <Link to="/achievement">Achievements</Link>,
+                    label: <Link to="/achievement">Thành tích</Link>,
                 },
                 {
                     key: 'quit-plan',
                     icon: <BulbOutlined />,
-                    label: <Link to="/quit-plan">Quit Plan</Link>,
+                    label: <Link to="/quit-plan">Kế hoạch cai thuốc</Link>,
                 },
             ];
 
@@ -101,7 +103,7 @@ const Navbar = () => {
                     {
                         key: 'plans',
                         icon: <SettingOutlined />,
-                        label: <Link to="/membership">Service Package</Link>,
+                        label: <Link to="/membership">Gói dịch vụ</Link>,
                     },
                 ];
             } else if (user.role === 'member') {
@@ -111,12 +113,12 @@ const Navbar = () => {
                     {
                         key: 'plans',
                         icon: <SettingOutlined />,
-                        label: <Link to="/membership">Service Package</Link>,
+                        label: <Link to="/membership">Gói dịch vụ</Link>,
                     },
                     {
                         key: 'survey',
                         icon: <FormOutlined />,
-                        label: <Link to="/smoking-survey">Survey</Link>,
+                        label: <Link to="/smoking-survey">Khảo sát</Link>,
                     },
                 ];
             } else if (user.role === 'coach') {
@@ -126,7 +128,7 @@ const Navbar = () => {
                     {
                         key: 'dashboard',
                         icon: <DashboardOutlined />,
-                        label: <Link to="/coach/dashboard">Coach Dashboard</Link>,
+                        label: <Link to="/coach/dashboard">Bảng điều khiển Coach</Link>,
                     },
                 ];
             } else if (user.role === 'admin') {
@@ -136,12 +138,12 @@ const Navbar = () => {
                     {
                         key: 'plans',
                         icon: <SettingOutlined />,
-                        label: <Link to="/membership">Service Package</Link>,
+                        label: <Link to="/membership">Gói dịch vụ</Link>,
                     },
                     {
                         key: 'survey',
                         icon: <FormOutlined />,
-                        label: <Link to="/smoking-survey">Survey</Link>,
+                        label: <Link to="/smoking-survey">Khảo sát</Link>,
                     },
                 ];
             }
@@ -153,7 +155,7 @@ const Navbar = () => {
             {
                 key: 'plans',
                 icon: <SettingOutlined />,
-                label: <Link to="/membership">Service Package</Link>,
+                label: <Link to="/membership">Gói dịch vụ</Link>,
             },
         ];
     };
@@ -207,35 +209,80 @@ const Navbar = () => {
                 />
 
                 {isAuthenticated ? (
-                    <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-                        <div className="navbar-user" style={{
-                            cursor: 'pointer',
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            background: 'rgba(255,255,255,0.1)',
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            transition: 'all 0.3s ease'
-                        }}>
-                            <Space>
-                                <span className="navbar-username" style={{
+                    <Space>
+                        {/* Appointment button for members */}
+                        {user?.role === 'member' && (
+                            <Button
+                                type="text"
+                                icon={<CalendarOutlined />}
+                                onClick={() => navigate('/member/dashboard?tab=appointments')}
+                                className="navbar-appointment-btn"
+                                style={{ marginRight: '8px' }}
+                            >
+                                Lịch hẹn
+                            </Button>
+                        )}
+
+                        {/* Chat button for members */}
+                        {user?.role === 'member' && (
+                            <Button
+                                type="text"
+                                icon={<MessageOutlined />}
+                                onClick={() => setChatDrawerOpen(true)}
+                                style={{
                                     color: '#fff',
-                                    fontWeight: '500'
-                                }}>
-                                    {getUserDisplayName()}
-                                </span>
-                                <Avatar
-                                    src={user?.avatar}
-                                    icon={!user?.avatar && <UserOutlined />}
-                                    alt={getUserDisplayName()}
-                                    style={{
-                                        background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
-                                        border: '2px solid rgba(255,255,255,0.3)'
-                                    }}
-                                />
-                            </Space>
-                        </div>
-                    </Dropdown>
+                                    border: '1px solid rgba(255,255,255,0.3)',
+                                    borderRadius: '6px',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                Chat với Coach
+                            </Button>
+                        )}
+
+                        {/* Appointment button for coaches */}
+                        {user?.role === 'coach' && (
+                            <Button
+                                type="text"
+                                icon={<CalendarOutlined />}
+                                onClick={() => navigate('/coach/dashboard?tab=appointments')}
+                                className="navbar-appointment-btn"
+                                style={{ marginRight: '8px' }}
+                            >
+                                Lịch hẹn
+                            </Button>
+                        )}
+
+                        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+                            <div className="navbar-user" style={{
+                                cursor: 'pointer',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                background: 'rgba(255,255,255,0.1)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                <Space>
+                                    <span className="navbar-username" style={{
+                                        color: '#fff',
+                                        fontWeight: '500'
+                                    }}>
+                                        {getUserDisplayName()}
+                                    </span>
+                                    <Avatar
+                                        src={user?.avatar}
+                                        icon={!user?.avatar && <UserOutlined />}
+                                        alt={getUserDisplayName()}
+                                        style={{
+                                            background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+                                            border: '2px solid rgba(255,255,255,0.3)'
+                                        }}
+                                    />
+                                </Space>
+                            </div>
+                        </Dropdown>
+                    </Space>
                 ) : (
                     <div className="navbar-auth-buttons" style={{ display: 'flex', gap: '8px' }}>
                         <Button
@@ -248,7 +295,7 @@ const Navbar = () => {
                                 transition: 'all 0.3s ease'
                             }}
                         >
-                            <Link to="/login" style={{ color: 'inherit' }}>Login</Link>
+                            <Link to="/login" style={{ color: 'inherit' }}>Đăng nhập</Link>
                         </Button>
                         <Button
                             type="text"
@@ -260,7 +307,7 @@ const Navbar = () => {
                                 transition: 'all 0.3s ease'
                             }}
                         >
-                            <Link to="/coach/login" style={{ color: 'inherit' }}>Coach Login</Link>
+                            <Link to="/coach/login" style={{ color: 'inherit' }}>Đăng nhập Coach</Link>
                         </Button>
                         <Button
                             type="primary"
@@ -273,7 +320,7 @@ const Navbar = () => {
                                 transition: 'all 0.3s ease'
                             }}
                         >
-                            <Link to="/register" style={{ color: '#fff' }}>Register</Link>
+                            <Link to="/register" style={{ color: '#fff' }}>Đăng ký</Link>
                         </Button>
                     </div>
                 )}
@@ -319,19 +366,33 @@ const Navbar = () => {
                         ) : (
                             <div className="mobile-auth-buttons" style={{ padding: '16px' }}>
                                 <Button block type="text" className="mobile-login-btn" style={{ marginBottom: '8px', color: '#fff' }}>
-                                    <Link to="/login" style={{ color: 'inherit' }}>Login</Link>
+                                    <Link to="/login" style={{ color: 'inherit' }}>Đăng nhập</Link>
                                 </Button>
                                 <Button block type="text" className="mobile-coach-btn" style={{ marginBottom: '8px', color: '#fff' }}>
-                                    <Link to="/coach/login" style={{ color: 'inherit' }}>Coach Login</Link>
+                                    <Link to="/coach/login" style={{ color: 'inherit' }}>Đăng nhập Coach</Link>
                                 </Button>
                                 <Button block type="primary" className="mobile-register-btn" style={{ background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)', border: 'none' }}>
-                                    <Link to="/register" style={{ color: '#fff' }}>Register</Link>
+                                    <Link to="/register" style={{ color: '#fff' }}>Đăng ký</Link>
                                 </Button>
                             </div>
                         )}
                     </div>
                 )}
             </div>
+
+            {/* Chat Drawer for Members */}
+            <Drawer
+                title="Chat với Coach"
+                placement="right"
+                onClose={() => setChatDrawerOpen(false)}
+                open={chatDrawerOpen}
+                width={400}
+                bodyStyle={{ padding: 0 }}
+            >
+                {user?.role === 'member' && (
+                    <MemberChat height={600} />
+                )}
+            </Drawer>
         </Header>
     );
 };

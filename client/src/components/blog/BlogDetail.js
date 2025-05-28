@@ -266,6 +266,10 @@ const BlogDetail = () => {
                             mb: 4,
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                         }}
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/api/images/default-blog.jpg';
+                        }}
                     />
                 )}
 

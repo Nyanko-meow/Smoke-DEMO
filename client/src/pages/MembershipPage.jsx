@@ -58,12 +58,12 @@ const MembershipPage = () => {
                                 <Row gutter={[16, 16]} align="middle">
                                     <Col xs={24} md={8}>
                                         <img
-                                            src="/images/membership-benefits.jpg"
+                                            src="/api/images/smoking-cessation-1.svg"
                                             alt="Lợi ích thành viên"
                                             style={{ width: '100%' }}
                                             onError={(e) => {
                                                 e.target.onerror = null;
-                                                e.target.style.display = 'none';
+                                                e.target.src = '/api/images/default-blog.jpg';
                                             }}
                                         />
                                     </Col>

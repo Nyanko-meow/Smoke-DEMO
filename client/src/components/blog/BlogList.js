@@ -143,11 +143,15 @@ const BlogList = () => {
                                 <CardMedia
                                     component="img"
                                     height="220"
-                                    image={post.ThumbnailURL || '/images/default-blog.jpg'}
+                                    image={post.ThumbnailURL || '/api/images/default-blog.jpg'}
                                     alt={post.Title}
                                     sx={{
                                         borderRadius: '8px 8px 0 0',
                                         objectFit: 'cover'
+                                    }}
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = '/api/images/default-blog.jpg';
                                     }}
                                 />
                                 <CardContent sx={{ flexGrow: 1, p: 3 }}>

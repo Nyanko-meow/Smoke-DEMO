@@ -275,7 +275,7 @@ const MemberDetailsModal = ({
                                             <div>Ngày không hút: {progress.DaysSmokeFree}</div>
                                             <div>Tiền tiết kiệm: {progress.MoneySaved?.toLocaleString()}₫</div>
                                             {progress.EmotionNotes && (
-                                                <div className="text-gray-600 italic mt-1">"{progress.EmotionNotes}"</div>
+                                                <div className="text-gray-600 italic mt-1">&quot;{progress.EmotionNotes}&quot;</div>
                                             )}
                                         </Timeline.Item>
                                     ))}

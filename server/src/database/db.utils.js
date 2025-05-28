@@ -116,9 +116,8 @@ const createUser = async (userData, activationToken = null) => {
             }
         }
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        // Use plain text password (no hashing)
+        const plainPassword = password;
 
         // Set activation token expiry if provided
         let activationExpires = null;
@@ -146,7 +145,7 @@ const createUser = async (userData, activationToken = null) => {
             )`,
             {
                 Email: email || null,
-                Password: hashedPassword,
+                Password: plainPassword,
                 FirstName: firstName,
                 LastName: lastName,
                 Role: role,
