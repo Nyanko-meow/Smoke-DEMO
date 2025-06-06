@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gói Dịch Vụ - SmokeKing</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .card {
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-price {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-duration {
+            color: #6c757d;
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-features {
+            padding-left: 20px;
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-features li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-smoking-ban mr-2"></i>SmokeKing
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Trang chủ</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/plans.html">Gói dịch vụ <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/blog.html">Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/community.html">Cộng đồng</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item" id="loginBtn">
+                        <a class="nav-link" href="/login.html">Đăng nhập</a>
+                    </li>
+                    <li class="nav-item" id="registerBtn">
+                        <a class="nav-link" href="/register.html">Đăng ký</a>
+                    </li>
+                    <li class="nav-item dropdown" id="profileBtn" style="display: none;">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-user-circle mr-1"></i> Tài khoản
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="/profile.html">Hồ sơ cá nhân</a>
+                            <a class="dropdown-item" href="/dashboard.html">Bảng điều khiển</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="logoutBtn">Đăng xuất</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="bg-primary text-white text-center py-5">
+        <div class="container">
+            <h1 class="display-4">Gói Dịch Vụ</h1>
+            <p class="lead">Chọn gói phù hợp để bắt đầu hành trình cai thuốc lá của bạn</p>
+        </div>
+    </section>
+
+    <!-- Plans Section -->
+    <section class="py-5">
+        <div class="container">
+            <div id="alert-container" class="mb-4"></div>
+
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Lựa chọn gói dịch vụ phù hợp</h5>
+                            <p class="card-text">
+                                SmoreKing cung cấp nhiều gói dịch vụ khác nhau để đáp ứng nhu cầu của bạn trong hành
+                                trình cai thuốc lá.
+                                Từ gói miễn phí cho người mới bắt đầu đến các gói cao cấp với đầy đủ tính năng và hỗ trợ
+                                từ chuyên gia.
+                            </p>
+                            <p class="card-text">
+                                <i class="fas fa-check-circle text-success"></i> Thanh toán an toàn, bảo mật<br>
+                                <i class="fas fa-check-circle text-success"></i> Hỗ trợ 24/7<br>
+                                <i class="fas fa-check-circle text-success"></i> Có thể nâng cấp gói bất kỳ lúc nào
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="plans-container">
+                <!-- Plans will be loaded here -->
+                <div class="col-12 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>SmokeKing</h5>
+                    <p>Hỗ trợ bạn trong hành trình cai thuốc lá và sống khỏe mạnh hơn.</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Liên kết</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="/" class="text-white">Trang chủ</a></li>
+                        <li><a href="/plans.html" class="text-white">Gói dịch vụ</a></li>
+                        <li><a href="/blog.html" class="text-white">Blog</a></li>
+                        <li><a href="/community.html" class="text-white">Cộng đồng</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Liên hệ</h5>
+                    <address>
+                        <i class="fas fa-map-marker-alt mr-2"></i> 123 Đường Cai Thuốc, TP.HCM<br>
+                        <i class="fas fa-phone mr-2"></i> (028) 1234 5678<br>
+                        <i class="fas fa-envelope mr-2"></i> info@smokeking.vn
+                    </address>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p>© 2024 SmokeKing. Đã đăng ký bản quyền.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Custom JS -->
+    <script src="js/common.js"></script>
+    <script src="js/plans.js"></script>
+</body>
+
+</html>

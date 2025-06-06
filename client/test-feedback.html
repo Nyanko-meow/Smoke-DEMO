@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Coach Feedback</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+
+        .success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+
+        .warning {
+            border-left-color: #ffc107;
+            background-color: #fff3cd;
+        }
+
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .token-display {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Test Coach Feedback Authorization</h1>
+
+        <div class="step">
+            <h3>📋 Tình trạng hiện tại:</h3>
+            <p>✅ Đã fix lỗi authorization trong <code>server/src/routes/coach.routes.js</code></p>
+            <p>🔧 Thay đổi: <code>authorize(['member', 'guest'])</code> → <code>authorize('member', 'guest')</code></p>
+            <p>⚠️ Server cần được restart để áp dụng thay đổi</p>
+        </div>
+
+        <div class="step">
+            <h3>🔑 Bước 1: Setup Token</h3>
+            <p>Click nút dưới để tự động setup token trong localStorage:</p>
+            <button onclick="setupToken()">Setup Test Token</button>
+            <div id="tokenInfo" style="display: none;">
+                <p>✅ Token đã được setup!</p>
+                <div class="token-display" id="tokenDisplay"></div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📡 Bước 2: Test API</h3>
+            <p>Test feedback API với token đã setup:</p>
+            <button onclick="testFeedback()">Test Feedback API</button>
+        </div>
+
+        <div class="step">
+            <h3>🌐 Bước 3: Test Frontend</h3>
+            <p>Mở component CoachFeedback và thử submit feedback</p>
+            <p>Nếu vẫn lỗi 403, hãy restart server trước</p>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // JWT token generation (simplified for testing)
+        function generateTestToken() {
+            // This is a pre-generated token for testing
+            // In real app, this would come from login
+            return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiZW1haWwiOiJtZW1iZXJAZXhhbXBsZS5jb20iLCJyb2xlIjoibWVtYmVyIiwiaWF0IjoxNzM0NTk5NzAwLCJleHAiOjE3MzQ2ODYxMDB9.example';
+        }
+
+        function setupToken() {
+            const token = generateTestToken();
+            const userInfo = {
+                UserID: 2,
+                id: 2,
+                Email: 'member@example.com',
+                Role: 'member',
+                FirstName: 'Member',
+                LastName: 'User'
+            };
+
+            // Set all possible token storage locations
+            localStorage.setItem('token', token);
+            localStorage.setItem('memberToken', token);
+            localStorage.setItem('user', JSON.stringify(userInfo));
+            localStorage.setItem('member', JSON.stringify(userInfo));
+
+            // Show success
+            document.getElementById('tokenInfo').style.display = 'block';
+            document.getElementById('tokenDisplay').textContent = `Token: ${token.substring(0, 50)}...`;
+
+            showResult('✅ Token setup thành công! Bạn có thể test feedback ngay bây giờ.', 'success');
+        }
+
+        async function testFeedback() {
+            const token = localStorage.getItem('token') || localStorage.getItem('memberToken');
+
+            if (!token) {
+                showResult('❌ Chưa có token! Hãy setup token trước.', 'error');
+                return;
+            }
+
+            const feedbackData = {
+                coachId: 3,
+                rating: 5,
+                comment: 'Test feedback từ HTML test page',
+                categories: {
+                    professionalism: 5,
+                    helpfulness: 5,
+                    communication: 4,
+                    knowledge: 5
+                },
+                isAnonymous: false
+            };
+
+            try {
+                showResult('🔄 Đang test API...', 'warning');
+
+                const response = await fetch('http://localhost:4000/api/coach/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(feedbackData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult(`🎉 SUCCESS! Feedback đã được gửi thành công!\n\nResponse: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    if (response.status === 403) {
+                        showResult(`❌ Vẫn còn lỗi 403! Server cần được restart.\n\nLỗi: ${data.message}\n\nHướng dẫn:\n1. Stop server (Ctrl+C)\n2. Chạy: npm start\n3. Test lại`, 'error');
+                    } else {
+                        showResult(`❌ Lỗi ${response.status}: ${data.message}`, 'error');
+                    }
+                }
+            } catch (error) {
+                if (error.message.includes('fetch')) {
+                    showResult('❌ Không thể kết nối server! Hãy chắc chắn server đang chạy trên port 4000.', 'error');
+                } else {
+                    showResult(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = type;
+            resultDiv.style.display = 'block';
+        }
+
+        // Auto-check if tokens exist
+        window.onload = function () {
+            const token = localStorage.getItem('token') || localStorage.getItem('memberToken');
+            if (token) {
+                document.getElementById('tokenInfo').style.display = 'block';
+                document.getElementById('tokenDisplay').textContent = `Token: ${token.substring(0, 50)}...`;
+            }
+        };
+    </script>
+</body>
+
+</html>

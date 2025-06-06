@@ -1,0 +1,24 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8F5FF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#B8E6FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#87CEEB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Diamond shape -->
+  <polygon points="32,8 48,24 32,56 16,24" fill="url(#diamondGradient)" stroke="#4682B4" stroke-width="2"/>
+  
+  <!-- Diamond facets -->
+  <polygon points="32,8 40,24 32,32 24,24" fill="#F0F8FF"/>
+  <polygon points="24,24 32,32 16,24" fill="#E0F6FF"/>
+  <polygon points="40,24 48,24 32,32" fill="#E0F6FF"/>
+  <polygon points="32,32 32,56 16,24" fill="#D0F0FF"/>
+  <polygon points="32,32 48,24 32,56" fill="#D0F0FF"/>
+  
+  <!-- Sparkles -->
+  <circle cx="20" cy="16" r="1" fill="#FFFFFF"/>
+  <circle cx="44" cy="20" r="1.5" fill="#FFFFFF"/>
+  <circle cx="48" cy="40" r="1" fill="#FFFFFF"/>
+</svg>
