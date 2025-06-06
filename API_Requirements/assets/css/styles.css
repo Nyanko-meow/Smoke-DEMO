@@ -1,0 +1,114 @@
+.mobile-nav {
+    transition: all 0.3s ease;
+}
+
+.mobile-nav.hidden {
+    opacity: 0;
+    transform: translateY(-100%);
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.mobile-nav.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.toggle-button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-button.active {
+    transform: rotate(90deg);
+}
+
+/* Method Badges */
+.method-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.method-get {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.method-post {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.method-put {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.method-delete {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Active Navigation Link */
+.active-link {
+    @apply text-blue-600 font-medium;
+}
+
+/* Table Styles */
+.overflow-x-auto {
+    @apply w-full overflow-x-auto;
+}
+
+/* Request/Response Toggle */
+.request-response {
+    @apply transition-all duration-300 ease-in-out;
+}
+
+.request-response.hidden {
+    @apply max-h-0 opacity-0 overflow-hidden;
+}
+
+.request-response:not(.hidden) {
+    @apply max-h-[1000px] opacity-100;
+}
+
+.nav-link {
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #4f46e5;
+}
+
+.endpoint-row {
+    transition: all 0.3s ease;
+}
+
+.endpoint-row:hover {
+    background-color: #f8fafc;
+}
+
+.menu-toggle-btn {
+    transition: all 0.3s ease;
+}
+
+.menu-toggle-btn:hover {
+    color: #4f46e5;
+}
+
+@media (max-width: 768px) {
+    .mobile-nav {
+        transform: translateY(-100%);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .mobile-nav.active {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+} 

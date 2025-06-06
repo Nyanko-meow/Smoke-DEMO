@@ -1,0 +1,93 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="300" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">
+    Sự Phục Hồi Sức Khỏe Sau Khi Cai Thuốc
+  </text>
+  
+  <!-- Timeline line -->
+  <line x1="50" y1="60" x2="350" y2="60" stroke="#3498db" stroke-width="3"/>
+  
+  <!-- 20 minutes -->
+  <g transform="translate(50, 60)">
+    <circle cx="0" cy="0" r="6" fill="#e74c3c"/>
+    <line x1="0" y1="0" x2="0" y2="30" stroke="#e74c3c" stroke-width="2"/>
+    <rect x="-25" y="35" width="50" height="40" fill="#fff" stroke="#e74c3c" stroke-width="1" rx="5"/>
+    <text x="0" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#e74c3c">20 phút</text>
+    <text x="0" y="62" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Nhịp tim</text>
+    <text x="0" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">bình thường</text>
+  </g>
+  
+  <!-- 12 hours -->
+  <g transform="translate(125, 60)">
+    <circle cx="0" cy="0" r="6" fill="#f39c12"/>
+    <line x1="0" y1="0" x2="0" y2="30" stroke="#f39c12" stroke-width="2"/>
+    <rect x="-25" y="35" width="50" height="40" fill="#fff" stroke="#f39c12" stroke-width="1" rx="5"/>
+    <text x="0" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#f39c12">12 giờ</text>
+    <text x="0" y="62" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">CO trong máu</text>
+    <text x="0" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">giảm xuống</text>
+  </g>
+  
+  <!-- 2 weeks -->
+  <g transform="translate(200, 60)">
+    <circle cx="0" cy="0" r="6" fill="#27ae60"/>
+    <line x1="0" y1="0" x2="0" y2="30" stroke="#27ae60" stroke-width="2"/>
+    <rect x="-25" y="35" width="50" height="40" fill="#fff" stroke="#27ae60" stroke-width="1" rx="5"/>
+    <text x="0" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#27ae60">2 tuần</text>
+    <text x="0" y="62" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Tuần hoàn</text>
+    <text x="0" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">cải thiện</text>
+  </g>
+  
+  <!-- 1 month -->
+  <g transform="translate(275, 60)">
+    <circle cx="0" cy="0" r="6" fill="#9b59b6"/>
+    <line x1="0" y1="0" x2="0" y2="30" stroke="#9b59b6" stroke-width="2"/>
+    <rect x="-25" y="35" width="50" height="40" fill="#fff" stroke="#9b59b6" stroke-width="1" rx="5"/>
+    <text x="0" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#9b59b6">1 tháng</text>
+    <text x="0" y="62" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Phổi bắt đầu</text>
+    <text x="0" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">tự làm sạch</text>
+  </g>
+  
+  <!-- 1 year -->
+  <g transform="translate(350, 60)">
+    <circle cx="0" cy="0" r="6" fill="#1abc9c"/>
+    <line x1="0" y1="0" x2="0" y2="30" stroke="#1abc9c" stroke-width="2"/>
+    <rect x="-25" y="35" width="50" height="40" fill="#fff" stroke="#1abc9c" stroke-width="1" rx="5"/>
+    <text x="0" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#1abc9c">1 năm</text>
+    <text x="0" y="62" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Nguy cơ tim</text>
+    <text x="0" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">giảm 50%</text>
+  </g>
+  
+  <!-- Health icons -->
+  <g transform="translate(50, 150)">
+    <!-- Heart -->
+    <path d="M20 25 C20 20, 30 20, 30 25 C30 20, 40 20, 40 25 C40 35, 30 45, 30 45 C30 45, 20 35, 20 25 Z" fill="#e74c3c"/>
+    <text x="30" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Tim mạch</text>
+    
+    <!-- Lungs -->
+    <ellipse cx="80" cy="30" rx="15" ry="20" fill="#3498db"/>
+    <ellipse cx="110" cy="30" rx="15" ry="20" fill="#3498db"/>
+    <text x="95" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Phổi</text>
+    
+    <!-- Energy -->
+    <polygon points="140,20 150,20 155,30 145,40 135,30" fill="#f1c40f"/>
+    <text x="145" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Năng lượng</text>
+    
+    <!-- Money -->
+    <circle cx="195" cy="30" r="15" fill="#27ae60"/>
+    <text x="195" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">$</text>
+    <text x="195" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Tiết kiệm</text>
+  </g>
+  
+  <!-- Progress bar -->
+  <rect x="50" y="200" width="300" height="20" fill="#ecf0f1" rx="10"/>
+  <rect x="50" y="200" width="240" height="20" fill="#27ae60" rx="10"/>
+  <text x="200" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#27ae60">80% phục hồi hoàn toàn</text>
+  
+  <!-- Motivational message -->
+  <text x="200" y="265" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c3e50">
+    Cơ thể bạn đang tự chữa lành mỗi ngày!
+  </text>
+</svg> 

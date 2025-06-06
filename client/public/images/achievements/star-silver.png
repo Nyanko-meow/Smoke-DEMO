@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="silverGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E6E6FA;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#C0C0C0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A9A9A9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Star shape -->
+  <polygon points="32,8 40,24 58,24 44,36 48,54 32,44 16,54 20,36 6,24 24,24" 
+           fill="url(#silverGradient)" stroke="#808080" stroke-width="2"/>
+  
+  <!-- Inner star -->
+  <polygon points="32,16 36,28 48,28 38,36 42,48 32,42 22,48 26,36 16,28 28,28" 
+           fill="#F5F5F5"/>
+           
+  <!-- Shine effects -->
+  <circle cx="28" cy="20" r="2" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="38" cy="24" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+</svg>
