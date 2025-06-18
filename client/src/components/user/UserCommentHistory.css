@@ -1,0 +1,441 @@
+/* Modern User Comment History Styling */
+.user-comment-history-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating background elements */
+.user-comment-history-layout::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
+  animation: floatBackground 25s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes floatBackground {
+  0%, 100% { transform: rotate(0deg) translateY(0px); }
+  25% { transform: rotate(1deg) translateY(-15px); }
+  50% { transform: rotate(0deg) translateY(-25px); }
+  75% { transform: rotate(-1deg) translateY(-15px); }
+}
+
+/* Content container */
+.comment-history-content {
+  padding: 32px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header section */
+.comment-history-header {
+  margin-bottom: 32px;
+}
+
+.header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-info h2 {
+  margin: 0 !important;
+  color: white !important;
+  font-size: 2.25rem !important;
+  font-weight: 800 !important;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3) !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-info .ant-typography {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2) !important;
+  margin-top: 8px !important;
+}
+
+/* Refresh button */
+.refresh-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 16px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  padding: 12px 24px !important;
+  height: auto !important;
+  font-size: 1rem !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2) !important;
+  color: white !important;
+}
+
+/* Main card */
+.comment-history-card {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 24px !important;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.comment-history-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+}
+
+.comment-history-card .ant-card-body {
+  background: transparent !important;
+  padding: 32px !important;
+}
+
+/* Empty state */
+.empty-state-container {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.empty-state-container .ant-empty {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.empty-state-container .ant-empty-description {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+}
+
+.empty-state-container .ant-alert {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 16px !important;
+  margin: 24px 0 !important;
+}
+
+.empty-state-container .ant-alert-message {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 700 !important;
+}
+
+.empty-state-container .ant-alert-description {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.community-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 16px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  padding: 16px 32px !important;
+  height: auto !important;
+  font-size: 1.1rem !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.community-btn:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25) !important;
+  color: white !important;
+}
+
+/* Comment list */
+.comment-list {
+  background: transparent !important;
+}
+
+.comment-item {
+  padding: 24px 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.3s ease;
+}
+
+.comment-item:last-child {
+  border-bottom: none !important;
+}
+
+.comment-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px 16px !important;
+  margin: 0 -16px;
+}
+
+.comment-item:last-child:hover {
+  border-bottom: none !important;
+}
+
+/* Comment content wrapper */
+.comment-content-wrapper {
+  width: 100%;
+}
+
+/* Comment header */
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.comment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-post-title {
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  margin-right: 8px !important;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3) !important;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.comment-date {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2) !important;
+  margin-top: 4px;
+}
+
+/* Action buttons */
+.comment-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.delete-btn {
+  background: rgba(255, 77, 79, 0.15) !important;
+  border: 2px solid rgba(255, 77, 79, 0.3) !important;
+  border-radius: 12px !important;
+  color: #ff6b6b !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.delete-btn:hover {
+  background: rgba(255, 77, 79, 0.25) !important;
+  border-color: rgba(255, 77, 79, 0.5) !important;
+  color: #ff5252 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px rgba(255, 77, 79, 0.3) !important;
+}
+
+/* Comment content box */
+.comment-content-box {
+  padding: 20px !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  border-left: 4px solid #4a90e2 !important;
+  border-radius: 0 16px 16px 0 !important;
+  margin-top: 12px !important;
+  backdrop-filter: blur(15px) !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.comment-content-box:hover {
+  background: rgba(0, 0, 0, 0.85) !important;
+  border-left-color: #5ba0f2 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateX(4px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+.comment-content-text {
+  color: #ffffff !important;
+  font-size: 1rem !important;
+  line-height: 1.6 !important;
+  font-weight: 500 !important;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5) !important;
+  margin: 0 !important;
+  word-break: break-word;
+}
+
+/* Loading spinner */
+.loading-container {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.loading-container .ant-spin {
+  color: white;
+}
+
+.loading-container .ant-spin-dot-item {
+  background-color: white !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .comment-history-content {
+    padding: 24px 16px;
+  }
+
+  .header-info h2 {
+    font-size: 1.75rem !important;
+  }
+
+  .header-flex {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .refresh-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .comment-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .comment-actions {
+    justify-content: flex-end;
+  }
+
+  .comment-item:hover {
+    margin: 0 -8px;
+    padding: 24px 8px !important;
+  }
+
+  .comment-content-box {
+    padding: 16px !important;
+  }
+
+  .comment-content-box:hover {
+    transform: translateX(2px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .comment-history-content {
+    padding: 20px 12px;
+  }
+
+  .header-info h2 {
+    font-size: 1.5rem !important;
+  }
+
+  .comment-history-card .ant-card-body {
+    padding: 24px 16px !important;
+  }
+
+  .empty-state-container {
+    padding: 32px 16px;
+  }
+
+  .community-btn {
+    padding: 14px 24px !important;
+    font-size: 1rem !important;
+  }
+
+  .comment-post-title {
+    font-size: 1rem !important;
+  }
+
+  .comment-content-box {
+    padding: 14px !important;
+    border-radius: 0 12px 12px 0 !important;
+  }
+}
+
+/* Special effects */
+@keyframes shimmerEffect {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.comment-history-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmerEffect 4s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: 24px;
+}
+
+/* Smooth scroll */
+.comment-list {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+.comment-history-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.comment-history-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.comment-history-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.comment-history-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+} 

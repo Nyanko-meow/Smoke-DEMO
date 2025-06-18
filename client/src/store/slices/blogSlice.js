@@ -9,7 +9,7 @@ export const getBlogPosts = createAsyncThunk(
             const response = await axios.get('/api/blog');
             return response.data.data;
         } catch (error) {
-            return rejectWithValue(error.response.data.message);
+            return rejectWithValue(error.response?.data?.message || 'Error getting blog posts');
         }
     }
 );
@@ -21,7 +21,19 @@ export const getBlogPost = createAsyncThunk(
             const response = await axios.get(`/api/blog/${postId}`);
             return response.data.data;
         } catch (error) {
-            return rejectWithValue(error.response.data.message);
+            return rejectWithValue(error.response?.data?.message || 'Error getting blog post');
+        }
+    }
+);
+
+export const incrementViewCount = createAsyncThunk(
+    'blog/incrementView',
+    async (postId, { rejectWithValue }) => {
+        try {
+            const response = await axios.post(`/api/blog/${postId}/view`);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Error incrementing view count');
         }
     }
 );
@@ -34,9 +46,14 @@ export const createBlogPost = createAsyncThunk(
             const response = await axios.post('/api/blog', postData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            return response.data.data;
+            // Return both the post data and the status/message for notification
+            return {
+                post: response.data.data,
+                status: response.data.status,
+                message: response.data.message
+            };
         } catch (error) {
-            return rejectWithValue(error.response.data.message);
+            return rejectWithValue(error.response?.data?.message || 'Error creating blog post');
         }
     }
 );
@@ -51,7 +68,37 @@ export const updateBlogPost = createAsyncThunk(
             });
             return response.data.data;
         } catch (error) {
-            return rejectWithValue(error.response.data.message);
+            return rejectWithValue(error.response?.data?.message || 'Error updating blog post');
+        }
+    }
+);
+
+export const deleteBlogPost = createAsyncThunk(
+    'blog/deletePost',
+    async (postId, { rejectWithValue }) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(`/api/blog/${postId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return postId;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Error deleting blog post');
+        }
+    }
+);
+
+export const getUserPosts = createAsyncThunk(
+    'blog/getUserPosts',
+    async (_, { rejectWithValue }) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get('/api/blog/my/posts', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Error getting your posts');
         }
     }
 );
@@ -66,7 +113,7 @@ export const addComment = createAsyncThunk(
             });
             return response.data.data;
         } catch (error) {
-            return rejectWithValue(error.response.data.message);
+            return rejectWithValue(error.response?.data?.message || 'Error adding comment');
         }
     }
 );
@@ -78,7 +125,22 @@ export const getComments = createAsyncThunk(
             const response = await axios.get(`/api/blog/${postId}/comments`);
             return response.data.data;
         } catch (error) {
-            return rejectWithValue(error.response.data.message);
+            return rejectWithValue(error.response?.data?.message || 'Error getting comments');
+        }
+    }
+);
+
+export const deleteComment = createAsyncThunk(
+    'blog/deleteComment',
+    async (commentId, { rejectWithValue }) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.delete(`/api/blog/comments/${commentId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return { commentId, message: response.data.message };
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Error deleting comment');
         }
     }
 );
@@ -86,6 +148,7 @@ export const getComments = createAsyncThunk(
 // Initial state
 const initialState = {
     posts: [],
+    userPosts: [],
     currentPost: null,
     comments: [],
     loading: false,
@@ -103,6 +166,9 @@ const blogSlice = createSlice({
         },
         clearSuccess: (state) => {
             state.success = false;
+        },
+        clearCurrentPost: (state) => {
+            state.currentPost = null;
         }
     },
     extraReducers: (builder) => {
@@ -110,6 +176,7 @@ const blogSlice = createSlice({
             // Get posts
             .addCase(getBlogPosts.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(getBlogPosts.fulfilled, (state, action) => {
                 state.loading = false;
@@ -122,6 +189,7 @@ const blogSlice = createSlice({
             // Get single post
             .addCase(getBlogPost.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(getBlogPost.fulfilled, (state, action) => {
                 state.loading = false;
@@ -131,13 +199,22 @@ const blogSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
+            // Increment view count
+            .addCase(incrementViewCount.fulfilled, (state, action) => {
+                // Optimistically update view count in current post
+                if (state.currentPost) {
+                    state.currentPost.Views = (state.currentPost.Views || 0) + 1;
+                }
+            })
             // Create post
             .addCase(createBlogPost.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(createBlogPost.fulfilled, (state, action) => {
                 state.loading = false;
-                state.posts.unshift(action.payload);
+                state.posts.unshift(action.payload.post);
+                state.userPosts.unshift(action.payload.post);
                 state.success = true;
             })
             .addCase(createBlogPost.rejected, (state, action) => {
@@ -147,10 +224,14 @@ const blogSlice = createSlice({
             // Update post
             .addCase(updateBlogPost.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(updateBlogPost.fulfilled, (state, action) => {
                 state.loading = false;
                 state.posts = state.posts.map(post =>
+                    post.PostID === action.payload.PostID ? action.payload : post
+                );
+                state.userPosts = state.userPosts.map(post =>
                     post.PostID === action.payload.PostID ? action.payload : post
                 );
                 state.currentPost = action.payload;
@@ -160,14 +241,42 @@ const blogSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
+            // Delete post
+            .addCase(deleteBlogPost.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(deleteBlogPost.fulfilled, (state, action) => {
+                state.loading = false;
+                state.posts = state.posts.filter(post => post.PostID !== action.payload);
+                state.userPosts = state.userPosts.filter(post => post.PostID !== action.payload);
+                state.success = true;
+            })
+            .addCase(deleteBlogPost.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            // Get user posts
+            .addCase(getUserPosts.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getUserPosts.fulfilled, (state, action) => {
+                state.loading = false;
+                state.userPosts = action.payload;
+            })
+            .addCase(getUserPosts.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
             // Add comment
             .addCase(addComment.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(addComment.fulfilled, (state, action) => {
                 state.loading = false;
                 state.comments.unshift(action.payload);
-                state.success = true;
             })
             .addCase(addComment.rejected, (state, action) => {
                 state.loading = false;
@@ -176,6 +285,7 @@ const blogSlice = createSlice({
             // Get comments
             .addCase(getComments.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(getComments.fulfilled, (state, action) => {
                 state.loading = false;
@@ -184,9 +294,22 @@ const blogSlice = createSlice({
             .addCase(getComments.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
+            })
+            // Delete comment
+            .addCase(deleteComment.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(deleteComment.fulfilled, (state, action) => {
+                state.loading = false;
+                state.comments = state.comments.filter(comment => comment.CommentID !== action.payload.commentId);
+            })
+            .addCase(deleteComment.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     }
 });
 
-export const { clearError, clearSuccess } = blogSlice.actions;
+export const { clearError, clearSuccess, clearCurrentPost } = blogSlice.actions;
 export default blogSlice.reducer; 

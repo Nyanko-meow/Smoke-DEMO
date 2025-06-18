@@ -1,0 +1,2206 @@
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #333;
+  background-color: #f5f7fa;
+}
+
+/* Navbar Styles */
+.navbar-header {
+  background-color: #1e40af !important;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1000;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-brand {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+}
+
+.navbar-menu-desktop {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+}
+
+.navbar-menu {
+  background-color: transparent !important;
+  border-bottom: none !important;
+  margin-right: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.navbar-menu .ant-menu-item {
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 0 12px !important;
+  margin: 0 4px !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+
+.navbar-menu .ant-menu-item a {
+  color: inherit !important;
+  font-weight: 500;
+}
+
+.navbar-menu .ant-menu-item:hover {
+  color: white !important;
+  border-bottom: 2px solid white !important;
+}
+
+.navbar-menu .ant-menu-item-selected {
+  color: white !important;
+  border-bottom: 2px solid white !important;
+  background-color: transparent !important;
+}
+
+.navbar-user {
+  cursor: pointer;
+  margin-left: 16px;
+}
+
+.navbar-username {
+  color: white;
+  margin-right: 8px;
+}
+
+.navbar-auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+}
+
+.navbar-login-btn {
+  color: white !important;
+}
+
+.navbar-login-btn:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-register-btn {
+  background-color: white !important;
+  color: #1e40af !important;
+  border-color: white !important;
+}
+
+.navbar-register-btn:hover {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Appointment button styling */
+.navbar-appointment-btn {
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 6px !important;
+  transition: all 0.3s ease !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-appointment-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Coach button styling */
+.navbar-coach-btn {
+  position: relative !important;
+  overflow: hidden !important;
+  animation: slideIn 0.6s ease-out 0.1s both;
+}
+
+.navbar-coach-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(78, 205, 196, 0.3), transparent);
+  transition: left 0.5s ease;
+  z-index: 0;
+}
+
+.navbar-coach-btn:hover::before {
+  left: 100%;
+}
+
+.navbar-coach-btn:hover {
+  background: linear-gradient(45deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.4)) !important;
+  border-color: #4ecdc4 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3) !important;
+  filter: drop-shadow(0 0 8px rgba(78, 205, 196, 0.6));
+}
+
+.navbar-coach-btn a {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Pulse effect on focus/active */
+.navbar-coach-btn:focus,
+.navbar-coach-btn:active {
+  animation: pulse 1.5s infinite;
+}
+
+/* Admin button styling */
+.navbar-admin-btn {
+  position: relative !important;
+  overflow: hidden !important;
+  animation: slideIn 0.6s ease-out 0.2s both;
+}
+
+.navbar-admin-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.3), transparent);
+  transition: left 0.5s ease;
+  z-index: 0;
+}
+
+.navbar-admin-btn:hover::before {
+  left: 100%;
+}
+
+.navbar-admin-btn:hover {
+  background: linear-gradient(45deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.4)) !important;
+  border-color: #ff6b6b !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3) !important;
+  filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.6));
+}
+
+.navbar-admin-btn a {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Pulse effect on focus/active */
+.navbar-admin-btn:focus,
+.navbar-admin-btn:active {
+  animation: pulseRed 1.5s infinite;
+}
+
+/* Mobile coach button styling */
+.mobile-coach-btn {
+  border: 1px solid #4ecdc4 !important;
+  background: linear-gradient(45deg, rgba(78, 205, 196, 0.1), rgba(78, 205, 196, 0.2)) !important;
+  transition: all 0.3s ease !important;
+}
+
+.mobile-coach-btn:hover {
+  background: linear-gradient(45deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.4)) !important;
+  border-color: #4ecdc4 !important;
+}
+
+/* Mobile admin button styling */
+.mobile-admin-btn {
+  border: 1px solid #ff6b6b !important;
+  background: linear-gradient(45deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.2)) !important;
+  transition: all 0.3s ease !important;
+}
+
+.mobile-admin-btn:hover {
+  background: linear-gradient(45deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.4)) !important;
+  border-color: #ff6b6b !important;
+}
+
+.navbar-mobile-toggle {
+  display: none;
+}
+
+.mobile-menu-btn {
+  color: white !important;
+  font-size: 1.25rem;
+}
+
+.navbar-mobile-menu {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  background-color: #1e40af;
+  padding: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.mobile-nav-menu, 
+.mobile-user-menu {
+  background-color: transparent !important;
+  border-right: none !important;
+}
+
+.mobile-auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.mobile-login-btn {
+  color: white !important;
+}
+
+.mobile-register-btn {
+  background-color: white !important;
+  color: #1e40af !important;
+  border-color: white !important;
+}
+
+/* Media queries for responsive navbar */
+@media (max-width: 1024px) {
+  .navbar-menu-desktop {
+    display: none;
+  }
+  
+  .navbar-mobile-toggle {
+    display: block;
+  }
+}
+
+@media (min-width: 1025px) {
+  .navbar-menu-desktop {
+    display: flex;
+  }
+  
+  .navbar-mobile-toggle {
+    display: none;
+  }
+}
+
+/* Utility classes that mimic some Tailwind functionality */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.py-4 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.text-white {
+  color: white;
+}
+
+.bg-blue-600 {
+  background-color: #2563eb;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+/* Layout utility classes */
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.py-16 {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+/* Hero section */
+.hero-section {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  padding: 4rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-title {
+  font-size: 2.5rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 1.5rem !important;
+  line-height: 1.2 !important;
+  color: white !important;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem !important;
+  margin-bottom: 2rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  line-height: 1.6 !important;
+}
+
+.hero-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.register-btn {
+  background-color: white !important;
+  color: #1e40af !important;
+  border-color: white !important;
+  height: 48px !important;
+  padding: 0 2rem !important;
+  font-size: 1rem !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.register-btn:hover {
+  background-color: #f3f4f6 !important;
+  border-color: #f3f4f6 !important;
+}
+
+.plans-btn {
+  color: white !important;
+  border-color: white !important;
+  height: 48px !important;
+  padding: 0 2rem !important;
+  font-size: 1rem !important;
+  border-radius: 8px !important;
+}
+
+.plans-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.hero-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.hero-image:hover {
+  transform: translateY(-10px);
+}
+
+/* Stats section */
+.stats-section {
+  padding: 5rem 0;
+  background-color: white;
+}
+
+.section-title {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  text-align: center;
+  margin-bottom: 3rem !important;
+  color: #1e3a8a !important;
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background-color: #3b82f6;
+  border-radius: 2px;
+}
+
+.stats-row {
+  margin-top: 1rem;
+}
+
+.stat-card {
+  height: 100%;
+  text-align: center;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  overflow: hidden;
+  border: none !important;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stat-title {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  margin-right: 6px;
+}
+
+.team-icon {
+  color: #3b82f6;
+}
+
+.smile-icon {
+  color: #10b981;
+}
+
+.dollar-icon {
+  color: #f59e0b;
+}
+
+.heart-icon {
+  color: #ef4444;
+}
+
+/* Features section */
+.features-section {
+  padding: 5rem 0;
+  background-color: #f9fafb;
+}
+
+.section-subtitle {
+  text-align: center;
+  color: #6b7280;
+  font-size: 1.125rem !important;
+  margin-bottom: 3rem !important;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.features-row {
+  margin-top: 1rem;
+}
+
+.feature-card {
+  height: 100%;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  overflow: hidden;
+  border: none !important;
+  padding: 2rem 1.5rem !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.feature-icon-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #ebf5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.feature-icon {
+  font-size: 2rem;
+  color: #3b82f6;
+}
+
+.feature-title {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+  color: #1e3a8a !important;
+}
+
+.feature-description {
+  color: #6b7280 !important;
+  line-height: 1.6 !important;
+  font-size: 1rem !important;
+}
+
+/* Testimonials section */
+.testimonials-section {
+  padding: 5rem 0;
+  background-color: white;
+}
+
+.testimonials-row {
+  margin-top: 1rem;
+}
+
+.testimonial-card {
+  height: 100%;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  transition: box-shadow 0.3s ease !important;
+  border: none !important;
+  padding: 2rem !important;
+}
+
+.testimonial-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.testimonial-content {
+  display: flex;
+  align-items: flex-start;
+}
+
+.testimonial-avatar {
+  flex-shrink: 0;
+  border: 4px solid #ebf5ff;
+}
+
+.testimonial-text {
+  margin-left: 1.5rem;
+}
+
+.testimonial-name {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.25rem !important;
+  color: #1e3a8a !important;
+}
+
+.testimonial-info {
+  display: block;
+  margin-bottom: 1rem;
+  color: #6b7280;
+}
+
+.testimonial-quote {
+  font-style: italic;
+  color: #4b5563 !important;
+  line-height: 1.6 !important;
+  position: relative;
+  padding-left: 1rem;
+  border-left: 3px solid #3b82f6;
+}
+
+/* CTA section */
+.cta-section {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+}
+
+.cta-title {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  margin-bottom: 1rem !important;
+}
+
+.cta-subtitle {
+  font-size: 1.25rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin-bottom: 2rem !important;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta-button {
+  background-color: white !important;
+  color: #1e40af !important;
+  border-color: white !important;
+  height: 48px !important;
+  padding: 0 2.5rem !important;
+  font-size: 1rem !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.cta-button:hover {
+  background-color: #f3f4f6 !important;
+  border-color: #f3f4f6 !important;
+}
+
+/* Footer section */
+.footer-section {
+  background-color: #1f2937;
+  color: #e5e7eb;
+  padding: 4rem 0 2rem;
+}
+
+.footer-content {
+  margin-bottom: 2rem;
+}
+
+.footer-title {
+  color: white !important;
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.footer-text {
+  color: #9ca3af !important;
+  line-height: 1.6 !important;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-links li {
+  margin-bottom: 0.75rem;
+}
+
+.footer-link {
+  color: #9ca3af;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: white;
+}
+
+.footer-contact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-contact-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  color: #9ca3af;
+}
+
+.footer-contact-icon {
+  margin-right: 0.75rem;
+}
+
+.footer-divider {
+  background-color: #374151 !important;
+  margin: 2rem 0 !important;
+}
+
+.footer-copyright {
+  text-align: center;
+}
+
+.copyright-text {
+  color: #6b7280 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2rem !important;
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem !important;
+  }
+
+  .section-title {
+    font-size: 1.75rem !important;
+  }
+
+  .section-subtitle {
+    font-size: 1rem !important;
+  }
+
+  .testimonial-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .testimonial-avatar {
+    margin-bottom: 1rem;
+  }
+
+  .testimonial-text {
+    margin-left: 0;
+  }
+
+  .hero-buttons {
+    justify-content: center;
+  }
+}
+
+/* App Layout */
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex-grow: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Animation keyframes */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(78, 205, 196, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
+  }
+}
+
+@keyframes pulseRed {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Glow effects for special buttons */
+@keyframes glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(78, 205, 196, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(78, 205, 196, 0.8));
+  }
+}
+
+@keyframes glowRed {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(255, 107, 107, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 107, 107, 0.8));
+  }
+}
+
+/* Additional hover effects */
+.navbar-coach-btn:hover {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.navbar-admin-btn:hover {
+  animation: glowRed 2s ease-in-out infinite;
+}
+
+/* Badge indicators */
+.navbar-coach-btn::after {
+  content: '🎯';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.navbar-admin-btn::after {
+  content: '👑';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Breathing effect for mobile buttons */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.mobile-coach-btn,
+.mobile-admin-btn {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Global styles */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Fix ResizeObserver error overlays */
+#webpack-dev-server-client-overlay,
+#webpack-dev-server-client-overlay-div {
+  display: none !important;
+}
+
+/* Suppress specific ResizeObserver error messages */
+.webpack-dev-server-client-overlay-error[data-error*="ResizeObserver"] {
+  display: none !important;
+}
+
+/* Optimize Ant Design Table performance */
+.ant-table-wrapper {
+  /* Prevent unnecessary reflows */
+  contain: layout style paint;
+}
+
+.ant-table-tbody > tr > td {
+  /* Optimize cell rendering */
+  contain: layout;
+}
+
+/* Optimize Popconfirm and Tooltip performance */
+.ant-popover,
+.ant-tooltip {
+  /* Improve positioning performance */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Prevent layout thrashing in appointment tables */
+.appointment-table-wrapper {
+  /* Enable GPU acceleration for smooth scrolling */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.appointment-table-wrapper .ant-table {
+  /* Optimize table rendering */
+  contain: layout style;
+}
+
+/* Smooth transitions for appointment status changes */
+.appointment-status-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Optimize card animations */
+.ant-card {
+  /* Enable GPU acceleration */
+  transform: translateZ(0);
+}
+
+/* Fix for appointment action buttons */
+.appointment-actions {
+  /* Prevent layout shift during button state changes */
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Optimize appointment cancellation modal */
+.appointment-cancel-modal .ant-modal-content {
+  /* Improve modal performance */
+  will-change: transform, opacity;
+}
+
+/* Hide any error overlays that might appear */
+[class*="error-overlay"],
+[id*="error-overlay"],
+.error-overlay {
+  display: none !important;
+}
+
+/* Performance improvements for large tables */
+.large-table-optimization {
+  /* Virtual scrolling preparation */
+  overflow: auto;
+  height: 400px;
+}
+
+.large-table-optimization .ant-table-body {
+  /* Optimize scrolling */
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Webkit scrollbar styling */
+.large-table-optimization .ant-table-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.large-table-optimization .ant-table-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.large-table-optimization .ant-table-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.large-table-optimization .ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Additional error suppression */
+.react-error-overlay,
+#react-error-overlay,
+.__react-error-overlay__ {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Error overlay fixes */
+.react-error-overlay,
+[data-error-overlay] {
+  display: none !important;
+}
+
+/* Admin Logo Styles */
+.admin-logo-container {
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.admin-logo-container:hover {
+  transform: scale(1.02);
+}
+
+.admin-logo-icon {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.admin-logo-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.admin-logo-text {
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: visible;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.admin-logo-text:hover {
+  transform: scale(1.01);
+}
+
+.admin-logo-title {
+  color: #ffffff !important;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+  position: relative;
+  overflow: visible;
+  line-height: 1.2;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.admin-logo-subtitle {
+  color: rgba(255,255,255,0.9) !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2) !important;
+  position: relative;
+  overflow: visible;
+  line-height: 1.3;
+  margin: 2px 0 0 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  -webkit-text-fill-color: rgba(255,255,255,0.9) !important;
+}
+
+/* Responsive adjustments for admin logo */
+@media (max-width: 768px) {
+  .admin-logo-title {
+    font-size: 24px !important;
+  }
+  
+  .admin-logo-subtitle {
+    font-size: 11px !important;
+  }
+  
+  .admin-logo-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ant Design Tab Overrides */
+.ant-tabs-nav {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  margin: 0 !important;
+  padding: 16px 24px 0 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.ant-tabs-tab {
+  border-radius: 12px 12px 0 0 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  margin-right: 4px !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-tabs-tab:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ant-tabs-tab-active {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ant-tabs-content-holder {
+  padding: 24px !important;
+}
+
+/* Button Hover Effects */
+.ant-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  transition: all 0.3s ease;
+}
+
+/* Card Hover Effects */
+.hover-card {
+  transition: all 0.3s ease;
+}
+
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* MySurvey Custom Styles */
+.modern-select .ant-select-selector {
+  height: 48px !important;
+  border-radius: 12px !important;
+  border: 1px solid #d9d9d9 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.modern-select.ant-select-focused .ant-select-selector {
+  border: 2px solid #667eea !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
+}
+
+.survey-question-card {
+  transition: all 0.3s ease;
+}
+
+.survey-question-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+.survey-answered-card {
+  background: linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%) !important;
+  border: 2px solid #52c41a !important;
+}
+
+.survey-unanswered-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(217, 217, 217, 0.5) !important;
+}
+
+.survey-edit-unanswered-card {
+  border: 2px dashed #ff7875 !important;
+}
+
+.survey-loading-spinner {
+  animation: spin 2s linear infinite;
+}
+
+.survey-stat-card {
+  transition: all 0.3s ease;
+}
+
+.survey-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15) !important;
+}
+
+.survey-question-number {
+  transition: all 0.3s ease;
+}
+
+.survey-question-number:hover {
+  transform: scale(1.1);
+}
+
+/* Responsive design for survey */
+@media (max-width: 768px) {
+  .survey-header-container {
+    flex-direction: column !important;
+    text-align: center !important;
+  }
+  
+  .survey-header-container > div:first-child {
+    margin-bottom: 20px !important;
+  }
+  
+  .survey-stats-row {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+}
+
+/* Admin Dashboard Layout Improvements */
+.admin-dashboard-layout {
+  position: relative;
+  overflow-x: hidden;
+}
+
+.admin-dashboard-content {
+  transition: margin-left 0.3s ease;
+  min-height: calc(100vh - 85px);
+  background: #f5f5f5;
+  overflow-x: auto;
+}
+
+.admin-dashboard-sidebar {
+  position: fixed !important;
+  left: 0;
+  top: 85px;
+  height: calc(100vh - 85px);
+  z-index: 100;
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d4 transparent;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar-thumb {
+  background-color: #d4d4d4;
+  border-radius: 3px;
+}
+
+.admin-dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: #a8a8a8;
+}
+
+/* Content area adjustments */
+.admin-content-wrapper {
+  max-width: 100%;
+  overflow: visible;
+  position: relative;
+}
+
+.admin-content-card {
+  margin-bottom: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  overflow: visible;
+}
+
+.admin-content-card .ant-card-body {
+  padding: 24px;
+  overflow: visible;
+}
+
+/* Fix for tables */
+.admin-table-container {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.admin-table-container .ant-table-wrapper {
+  overflow: visible;
+}
+
+.admin-table-container .ant-table {
+  min-width: 800px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .admin-dashboard-content {
+    margin-left: 260px !important;
+  }
+  
+  .admin-dashboard-sidebar {
+    width: 260px !important;
+  }
+}
+
+@media (max-width: 992px) {
+  .admin-dashboard-content {
+    margin-left: 0 !important;
+    padding: 16px !important;
+  }
+  
+  .admin-dashboard-sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+    background: white;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  .admin-dashboard-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-dashboard-content {
+    padding: 12px !important;
+  }
+  
+  .admin-content-card {
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+  
+  .admin-content-card .ant-card-body {
+    padding: 16px;
+  }
+}
+
+/* Fix z-index issues */
+.ant-layout-header {
+  z-index: 1000 !important;
+}
+
+.ant-layout-sider {
+  z-index: 100 !important;
+}
+
+.ant-layout-content {
+  z-index: 1 !important;
+}
+
+/* Prevent content overflow */
+.admin-main-layout {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Smooth transitions */
+.admin-layout-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== REGISTER PAGE STYLES ===== */
+
+/* Background with gradient */
+.register-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, 
+    #667eea 0%, 
+    #764ba2 25%, 
+    #f093fb 75%, 
+    #f5576c 100%);
+  background-attachment: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background particles */
+.register-page-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: float 20s linear infinite;
+  z-index: 1;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-20px) translateX(10px); }
+  66% { transform: translateY(10px) translateX(-5px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+
+/* Register card styling */
+.register-card-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 480px;
+}
+
+.register-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 24px !important;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  overflow: visible !important;
+  transition: all 0.3s ease !important;
+}
+
+.register-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 
+    0 35px 60px -12px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+.register-card .ant-card-body {
+  padding: 40px !important;
+}
+
+/* Header styling */
+.register-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.register-title {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2.25rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 8px !important;
+  letter-spacing: -0.02em;
+}
+
+.register-subtitle {
+  color: #6b7280 !important;
+  font-size: 1rem !important;
+  font-weight: 400 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Form styling */
+.register-form {
+  position: relative;
+}
+
+.register-form .ant-form-item {
+  margin-bottom: 20px !important;
+}
+
+.register-form .ant-form-item-label > label {
+  font-weight: 600 !important;
+  color: #374151 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Input styling - Strong overrides for Ant Design */
+.register-form .ant-input,
+.register-form .ant-input-lg,
+.register-form input.ant-input,
+.register-form input.ant-input-lg {
+  height: 48px !important;
+  border-radius: 12px !important;
+  border: 2px solid #e5e7eb !important;
+  font-size: 1rem !important;
+  transition: all 0.3s ease !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  padding: 0 16px !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.register-form .ant-input-affix-wrapper,
+.register-form .ant-input-affix-wrapper-lg,
+.register-form .ant-input-password,
+.register-form .ant-input-password-lg {
+  height: 48px !important;
+  border-radius: 12px !important;
+  border: 2px solid #e5e7eb !important;
+  transition: all 0.3s ease !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.register-form .ant-input-affix-wrapper .ant-input,
+.register-form .ant-input-password .ant-input {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 12px !important;
+  height: 46px !important;
+}
+
+/* Focus and hover states */
+.register-form .ant-input:focus,
+.register-form .ant-input:focus-visible,
+.register-form .ant-input-focused,
+.register-form .ant-input-affix-wrapper:focus,
+.register-form .ant-input-affix-wrapper:focus-within,
+.register-form .ant-input-affix-wrapper-focused,
+.register-form .ant-input-password:focus,
+.register-form .ant-input-password:focus-within,
+.register-form .ant-input-password-focused,
+.register-form input.ant-input:focus {
+  border: 2px solid #667eea !important;
+  border-top: 2px solid #667eea !important;
+  border-right: 2px solid #667eea !important;
+  border-bottom: 2px solid #667eea !important;
+  border-left: 2px solid #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+  background: rgba(255, 255, 255, 1) !important;
+  outline: none !important;
+}
+
+.register-form .ant-input:hover,
+.register-form .ant-input-affix-wrapper:hover,
+.register-form .ant-input-password:hover,
+.register-form input.ant-input:hover {
+  border-color: #9ca3af !important;
+  box-shadow: none !important;
+}
+
+/* Override default Ant Design borders globally for register form */
+.register-form .ant-input,
+.register-form .ant-input-affix-wrapper,
+.register-form .ant-input-password {
+  border: 2px solid #e5e7eb !important;
+  border-top: 2px solid #e5e7eb !important;
+  border-right: 2px solid #e5e7eb !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  border-left: 2px solid #e5e7eb !important;
+}
+
+/* Force remove any pseudo-elements or special borders */
+.register-form .ant-input::before,
+.register-form .ant-input::after,
+.register-form .ant-input-affix-wrapper::before,
+.register-form .ant-input-affix-wrapper::after,
+.register-form .ant-input-password::before,
+.register-form .ant-input-password::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Override any potential border-bottom styles from Ant Design */
+.register-form .ant-input {
+  border-bottom-width: 2px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: #e5e7eb !important;
+}
+
+.register-form .ant-input-affix-wrapper,
+.register-form .ant-input-password {
+  border-bottom-width: 2px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: #e5e7eb !important;
+}
+
+/* Override focus border-bottom */
+.register-form .ant-input:focus,
+.register-form .ant-input-focused,
+.register-form .ant-input-affix-wrapper:focus,
+.register-form .ant-input-affix-wrapper-focused,
+.register-form .ant-input-password:focus,
+.register-form .ant-input-password-focused {
+  border-bottom-width: 2px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: #667eea !important;
+}
+
+.register-form .ant-input-status-error,
+.register-form .ant-input-affix-wrapper-status-error,
+.register-form .ant-input-password-status-error {
+  border: 2px solid #ef4444 !important;
+  border-top: 2px solid #ef4444 !important;
+  border-right: 2px solid #ef4444 !important;
+  border-bottom: 2px solid #ef4444 !important;
+  border-left: 2px solid #ef4444 !important;
+}
+
+/* Icon styling */
+.register-form .anticon {
+  color: #9ca3af !important;
+  font-size: 1.1rem !important;
+}
+
+.register-form .ant-input-prefix .anticon,
+.register-form .ant-input-suffix .anticon {
+  color: #9ca3af !important;
+  font-size: 1.1rem !important;
+  margin: 0 4px !important;
+}
+
+.register-form .ant-input:focus + .anticon,
+.register-form .ant-input-password:focus .anticon,
+.register-form .ant-input-affix-wrapper:focus .anticon,
+.register-form .ant-input-affix-wrapper-focused .anticon {
+  color: #667eea !important;
+}
+
+/* Button styling */
+.register-submit-btn {
+  height: 52px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.register-submit-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.register-submit-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* Grid layout for name fields */
+.register-name-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+  .register-name-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  
+  .register-name-grid .ant-form-item {
+    margin-bottom: 20px !important;
+  }
+}
+
+/* Alert styling */
+.register-form .ant-alert {
+  border-radius: 12px !important;
+  border: none !important;
+  background: rgba(254, 226, 226, 0.8) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Divider styling */
+.register-divider {
+  margin: 24px 0 !important;
+  color: #9ca3af !important;
+  font-size: 0.875rem !important;
+}
+
+.register-divider::before,
+.register-divider::after {
+  border-top-color: #e5e7eb !important;
+}
+
+/* Login link styling */
+.register-login-link {
+  text-align: center;
+  padding: 20px 0 0 0;
+}
+
+.register-login-link .ant-typography {
+  color: #6b7280 !important;
+  font-size: 0.95rem !important;
+}
+
+.register-login-link a {
+  color: #667eea !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.register-login-link a:hover {
+  color: #5a67d8 !important;
+  text-decoration: underline !important;
+}
+
+/* Form validation styling */
+.register-form .ant-form-item-has-error .ant-input,
+.register-form .ant-form-item-has-error .ant-input-affix-wrapper,
+.register-form .ant-form-item-has-error .ant-input-password {
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+  background: rgba(254, 226, 226, 0.3) !important;
+}
+
+.register-form .ant-form-item-has-error .anticon {
+  color: #ef4444 !important;
+}
+
+.register-form .ant-form-item-explain-error {
+  color: #ef4444 !important;
+  font-size: 0.875rem !important;
+  margin-top: 4px !important;
+}
+
+/* Force remove any conflicting styles */
+.register-form * {
+  box-sizing: border-box !important;
+}
+
+.register-form .ant-input::placeholder,
+.register-form .ant-input-affix-wrapper .ant-input::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+/* Loading state */
+.register-form .ant-btn-loading {
+  pointer-events: none;
+}
+
+/* Autocomplete and dropdown styling */
+.register-form .ant-select-dropdown,
+.register-form .ant-dropdown {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.register-form input[type="email"]::-webkit-credentials-auto-fill-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Fix for password managers */
+.register-form .ant-input-affix-wrapper input:-webkit-autofill,
+.register-form .ant-input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.9) inset !important;
+  -webkit-text-fill-color: #374151 !important;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .register-page-wrapper {
+    padding: 10px;
+  }
+  
+  .register-card .ant-card-body {
+    padding: 24px !important;
+  }
+  
+  .register-title {
+    font-size: 1.875rem !important;
+  }
+  
+  .register-form .ant-input,
+  .register-form .ant-input-password {
+    height: 44px !important;
+  }
+  
+  .register-submit-btn {
+    height: 48px !important;
+  }
+}
+
+/* ===== LOGIN PAGE STYLES ===== */
+
+/* Login page uses same background as register */
+.login-page-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, 
+    #667eea 0%, 
+    #764ba2 25%, 
+    #f093fb 75%, 
+    #f5576c 100%);
+  background-attachment: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background particles for login */
+.login-page-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: float 20s linear infinite;
+  z-index: 1;
+}
+
+/* Login card styling */
+.login-card-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 24px !important;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  overflow: visible !important;
+  transition: all 0.3s ease !important;
+  padding: 48px 40px !important;
+}
+
+.login-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 
+    0 35px 60px -12px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Login header */
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+  font-size: 40px;
+  transition: all 0.3s ease;
+}
+
+.login-logo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.5);
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.login-subtitle {
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+/* Login form */
+.login-form {
+  position: relative;
+}
+
+.login-form-group {
+  margin-bottom: 20px;
+}
+
+.login-form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.login-input-wrapper {
+  position: relative;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 18px;
+  z-index: 2;
+}
+
+.login-input {
+  width: 100%;
+  height: 56px;
+  padding-left: 48px;
+  padding-right: 48px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  outline: none;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.login-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 1);
+}
+
+.login-input:hover {
+  border-color: #9ca3af;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.login-password-toggle:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+/* Checkbox styling */
+.login-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.login-checkbox {
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+.login-checkbox-label {
+  color: #6b7280;
+  font-size: 14px;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Submit button */
+.login-submit-btn {
+  width: 100%;
+  height: 56px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  margin-bottom: 24px;
+}
+
+.login-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.login-submit-btn:active {
+  transform: translateY(0);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Divider */
+.login-divider {
+  text-align: center;
+  margin: 24px 0;
+  position: relative;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.login-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+  z-index: 1;
+}
+
+.login-divider span {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0 16px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Links */
+.login-links {
+  text-align: center;
+}
+
+.login-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.login-link:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+/* Alert messages */
+.login-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.login-alert-error {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.login-alert-warning {
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #d97706;
+}
+
+.login-alert-info {
+  background-color: #dbeafe;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .login-page-wrapper {
+    padding: 10px;
+  }
+  
+  .login-card {
+    padding: 32px 24px !important;
+  }
+  
+  .login-title {
+    font-size: 1.75rem;
+  }
+  
+  .login-input {
+    height: 52px;
+  }
+  
+  .login-submit-btn {
+    height: 52px;
+    font-size: 16px;
+  }
+}
