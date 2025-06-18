@@ -1,5 +1,5 @@
 {
-    "name": "smokeking-server",
+    "name": "server",
     "version": "1.0.0",
     "description": "Backend for SmokingKing cessation app",
     "main": "src/index.js",
