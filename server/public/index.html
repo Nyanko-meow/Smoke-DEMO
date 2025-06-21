@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smoking Cessation - Gói Dịch Vụ</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 30px 0;
+            color: #333;
+        }
+
+        .plans-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .plan-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 30%;
+            margin-bottom: 30px;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .plan-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #3366ff;
+        }
+
+        .plan-price {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .plan-duration {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .plan-features {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .plan-features li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .plan-features li:before {
+            content: "✓";
+            color: #3d9970;
+            position: absolute;
+            left: 0;
+        }
+
+        .subscribe-btn {
+            background-color: #3366ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 0;
+            width: 100%;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .subscribe-btn:hover {
+            background-color: #2851cc;
+        }
+
+        .login-status {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        #login-btn,
+        #logout-btn {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        #login-btn:hover,
+        #logout-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 400px;
+            padding: 20px;
+            margin: 100px auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        #login-submit,
+        #register-submit {
+            background-color: #3366ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 0;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Styles for current membership */
+        #current-membership {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #membership-details {
+            margin-top: 20px;
+        }
+
+        .membership-card {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #3d9970;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        .membership-info {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .membership-status {
+            flex: 0 0 200px;
+            text-align: center;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .status-active {
+            color: #3d9970;
+            font-weight: bold;
+        }
+
+        .status-expired {
+            color: #ff4136;
+            font-weight: bold;
+        }
+
+        /* Styles for payment history */
+        #payment-history {
+            margin-top: 30px;
+        }
+
+        #payment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #payment-table th,
+        #payment-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        #payment-table th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+
+        #payment-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .payment-success {
+            color: #3d9970;
+            font-weight: bold;
+        }
+
+        .payment-pending {
+            color: #ff851b;
+            font-weight: bold;
+        }
+
+        .payment-failed {
+            color: #ff4136;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="login-status">
+            <span id="user-info">Bạn chưa đăng nhập</span>
+            <button id="login-btn">Đăng nhập</button>
+            <button id="logout-btn" class="hidden">Đăng xuất</button>
+        </div>
+
+        <h1>Chọn Gói Dịch Vụ</h1>
+
+        <div id="plans-container" class="plans-container">
+            <!-- Dữ liệu gói dịch vụ sẽ được đổ vào đây bằng JavaScript -->
+            <div class="loading">Đang tải dữ liệu...</div>
+        </div>
+
+        <!-- Phần hiển thị thông tin gói dịch vụ hiện tại -->
+        <div id="current-membership" class="hidden">
+            <h2>Gói dịch vụ hiện tại của bạn</h2>
+            <div id="membership-details"></div>
+        </div>
+
+        <!-- Phần hiển thị lịch sử thanh toán -->
+        <div id="payment-history" class="hidden">
+            <h2>Lịch sử thanh toán</h2>
+            <table id="payment-table">
+                <thead>
+                    <tr>
+                        <th>Mã giao dịch</th>
+                        <th>Gói dịch vụ</th>
+                        <th>Số tiền</th>
+                        <th>Phương thức</th>
+                        <th>Ngày thanh toán</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody id="payment-list">
+                    <!-- Dữ liệu lịch sử thanh toán sẽ được đổ vào đây -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Đăng nhập -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Đăng nhập</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email:</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Mật khẩu:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <div class="error-message" id="login-error"></div>
+                <button type="submit" id="login-submit">Đăng nhập</button>
+                <p>Chưa có tài khoản? <a href="#" id="switch-to-register">Đăng ký ngay</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Đăng ký -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Đăng ký</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="register-email">Email:</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Mật khẩu:</label>
+                    <input type="password" id="register-password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="register-firstname">Tên:</label>
+                    <input type="text" id="register-firstname" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-lastname">Họ:</label>
+                    <input type="text" id="register-lastname" required>
+                </div>
+                <div class="error-message" id="register-error"></div>
+                <button type="submit" id="register-submit">Đăng ký</button>
+                <p>Đã có tài khoản? <a href="#" id="switch-to-login">Đăng nhập</a></p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Biến toàn cục để lưu thông tin người dùng và token
+        let currentUser = null;
+        let authToken = localStorage.getItem('token');
+
+        // DOM elements
+        const plansContainer = document.getElementById('plans-container');
+        const userInfo = document.getElementById('user-info');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const loginModal = document.getElementById('login-modal');
+        const registerModal = document.getElementById('register-modal');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const loginError = document.getElementById('login-error');
+        const registerError = document.getElementById('register-error');
+        const switchToRegister = document.getElementById('switch-to-register');
+        const switchToLogin = document.getElementById('switch-to-login');
+
+        // Hàm fetch API với xử lý lỗi
+        async function fetchAPI(url, options = {}) {
+            try {
+                if (authToken) {
+                    if (!options.headers) options.headers = {};
+                    options.headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const response = await fetch(url, options);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Có lỗi xảy ra');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // Lấy danh sách gói dịch vụ
+        async function getPlans() {
+            try {
+                plansContainer.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
+                const data = await fetchAPI('/api/membership/plans');
+
+                if (data.success && data.data.length > 0) {
+                    displayPlans(data.data);
+                } else {
+                    plansContainer.innerHTML = '<p>Không có gói dịch vụ nào.</p>';
+                }
+            } catch (error) {
+                plansContainer.innerHTML = `<p>Lỗi: ${error.message}</p>`;
+            }
+        }
+
+        // Hiển thị danh sách gói dịch vụ
+        function displayPlans(plans) {
+            plansContainer.innerHTML = '';
+
+            plans.forEach(plan => {
+                const features = plan.Features ? plan.Features.split(',').map(feature =>
+                    `<li>${feature.trim()}</li>`).join('') : '';
+
+                const planCard = document.createElement('div');
+                planCard.className = 'plan-card';
+                planCard.innerHTML = `
+                    <div class="plan-name">${plan.Name}</div>
+                    <div class="plan-duration">${plan.Duration} ngày</div>
+                    <div class="plan-price">$${plan.Price}</div>
+                    <ul class="plan-features">
+                        ${features}
+                    </ul>
+                    <button class="subscribe-btn" data-plan-id="${plan.PlanID}">Đăng ký ngay</button>
+                `;
+
+                plansContainer.appendChild(planCard);
+            });
+
+            // Thêm event listener cho các nút đăng ký
+            document.querySelectorAll('.subscribe-btn').forEach(button => {
+                button.addEventListener('click', handleSubscribe);
+            });
+        }
+
+        // Xử lý đăng ký gói
+        async function handleSubscribe(event) {
+            if (!currentUser) {
+                showModal(loginModal);
+                return;
+            }
+
+            const planId = event.target.getAttribute('data-plan-id');
+
+            try {
+                const data = await fetchAPI('/api/membership/purchase', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        planId: parseInt(planId),
+                        paymentMethod: 'BankTransfer'
+                    })
+                });
+
+                if (data.success) {
+                    alert(`Đăng ký thành công gói ${data.plan}! 
+                    Mã giao dịch: ${data.transactionId}
+                    Mã xác nhận: ${data.confirmationCode}
+                    Có hiệu lực đến ${new Date(data.validUntil).toLocaleDateString()}`);
+
+                    // Cập nhật thông tin gói dịch vụ và lịch sử thanh toán
+                    getCurrentMembership();
+                }
+            } catch (error) {
+                alert(`Lỗi: ${error.message}`);
+            }
+        }
+
+        // Kiểm tra gói dịch vụ hiện tại của người dùng
+        async function getCurrentMembership() {
+            if (!authToken) return;
+
+            try {
+                const data = await fetchAPI('/api/membership/current');
+
+                if (data.success && data.hasMembership) {
+                    // Hiển thị thông tin ở phần login status
+                    userInfo.innerHTML = `
+                        Xin chào, ${currentUser.firstName} ${currentUser.lastName} | 
+                        <span style="color: #3d9970;">Gói ${data.membership.Name} (còn ${data.membership.Status === 'active' ? 'đang hoạt động' : 'đã hết hạn'})</span>
+                    `;
+
+                    // Hiển thị chi tiết gói dịch vụ
+                    const membershipDetails = document.getElementById('membership-details');
+                    const currentMembershipSection = document.getElementById('current-membership');
+
+                    const daysRemaining = Math.max(0, Math.floor((new Date(data.membership.EndDate) - new Date()) / (1000 * 60 * 60 * 24)));
+
+                    membershipDetails.innerHTML = `
+                        <div class="membership-card">
+                            <div class="membership-info">
+                                <h3>${data.membership.Name}</h3>
+                                <p>${data.membership.Description || 'Không có mô tả'}</p>
+                                <p><strong>Ngày bắt đầu:</strong> ${new Date(data.membership.StartDate).toLocaleDateString()}</p>
+                                <p><strong>Ngày kết thúc:</strong> ${new Date(data.membership.EndDate).toLocaleDateString()}</p>
+                                <p><strong>Phương thức thanh toán:</strong> ${data.membership.PaymentMethod || 'Không có thông tin'}</p>
+                                ${data.membership.TransactionID ? `<p><strong>Mã giao dịch:</strong> ${data.membership.TransactionID}</p>` : ''}
+                                ${data.membership.ConfirmationCode ? `<p><strong>Mã xác nhận:</strong> ${data.membership.ConfirmationCode}</p>` : ''}
+                                <p><strong>Trạng thái thanh toán:</strong> <span class="payment-${data.membership.PaymentStatus === 'confirmed' ? 'success' : data.membership.PaymentStatus === 'pending' ? 'pending' : 'failed'}">${data.membership.PaymentStatus === 'confirmed' ? 'Đã xác nhận' : data.membership.PaymentStatus === 'pending' ? 'Đang chờ xác nhận' : 'Bị từ chối'}</span></p>
+                            </div>
+                            <div class="membership-status">
+                                <div class="status-${data.membership.Status === 'active' ? 'active' : 'expired'}">
+                                    ${data.membership.Status === 'active' ? 'ĐANG HOẠT ĐỘNG' : 'ĐÃ HẾT HẠN'}
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    ${daysRemaining} ngày còn lại
+                                </div>
+                                <div style="margin-top: 20px;">
+                                    <button class="subscribe-btn" onclick="showPlans()">Gia hạn gói</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    currentMembershipSection.classList.remove('hidden');
+
+                    // Lấy lịch sử thanh toán
+                    getPaymentHistory();
+                } else {
+                    userInfo.innerHTML = `Xin chào, ${currentUser.firstName} ${currentUser.lastName} | <span style="color: #888;">Chưa đăng ký gói nào</span>`;
+                    document.getElementById('current-membership').classList.add('hidden');
+                    document.getElementById('payment-history').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error getting membership:', error);
+            }
+        }
+
+        // Lấy lịch sử thanh toán
+        async function getPaymentHistory() {
+            if (!authToken) return;
+
+            try {
+                const data = await fetchAPI('/api/membership/payment-history');
+
+                if (data.success && data.data.length > 0) {
+                    const paymentList = document.getElementById('payment-list');
+                    const paymentHistory = document.getElementById('payment-history');
+
+                    paymentList.innerHTML = '';
+
+                    data.data.forEach(payment => {
+                        const row = document.createElement('tr');
+                        const paymentStatus = payment.PaymentStatus === 'confirmed' ? 'Đã xác nhận' :
+                            payment.PaymentStatus === 'pending' ? 'Đang chờ xác nhận' : 'Bị từ chối';
+
+                        row.innerHTML = `
+                            <td>${payment.TransactionID || 'N/A'}</td>
+                            <td>${payment.PlanName || 'N/A'}</td>
+                            <td>$${payment.Amount}</td>
+                            <td>${payment.PaymentMethod}</td>
+                            <td>${new Date(payment.PaymentDate).toLocaleDateString()}</td>
+                            <td class="payment-${payment.PaymentStatus === 'confirmed' ? 'success' : payment.PaymentStatus === 'pending' ? 'pending' : 'failed'}">
+                                ${paymentStatus}
+                            </td>
+                        `;
+
+                        paymentList.appendChild(row);
+                    });
+
+                    paymentHistory.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error getting payment history:', error);
+            }
+        }
+
+        // Hiển thị lại các gói dịch vụ
+        function showPlans() {
+            plansContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Hàm đăng nhập
+        async function login(email, password) {
+            try {
+                const data = await fetchAPI('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (data.success) {
+                    authToken = data.token;
+                    currentUser = data.user;
+
+                    // Lưu token vào localStorage
+                    localStorage.setItem('token', authToken);
+
+                    // Cập nhật UI
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                    userInfo.innerHTML = `Xin chào, ${currentUser.firstName} ${currentUser.lastName}`;
+
+                    // Đóng modal
+                    hideModal(loginModal);
+
+                    // Kiểm tra gói hiện tại
+                    getCurrentMembership();
+                }
+            } catch (error) {
+                loginError.textContent = error.message;
+            }
+        }
+
+        // Hàm đăng ký
+        async function register(email, password, firstName, lastName) {
+            try {
+                const data = await fetchAPI('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        firstName,
+                        lastName
+                    })
+                });
+
+                if (data.success) {
+                    if (data.token) {
+                        // Nếu đăng ký tự động đăng nhập
+                        authToken = data.token;
+                        currentUser = data.user;
+
+                        // Lưu token vào localStorage
+                        localStorage.setItem('token', authToken);
+
+                        // Cập nhật UI
+                        loginBtn.classList.add('hidden');
+                        logoutBtn.classList.remove('hidden');
+                        userInfo.innerHTML = `Xin chào, ${currentUser.firstName} ${currentUser.lastName}`;
+
+                        // Kiểm tra gói hiện tại
+                        getCurrentMembership();
+                    } else {
+                        // Nếu cần xác thực email
+                        alert('Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.');
+                    }
+
+                    // Đóng modal
+                    hideModal(registerModal);
+                }
+            } catch (error) {
+                registerError.textContent = error.message;
+            }
+        }
+
+        // Hàm đăng xuất
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('token');
+
+            // Cập nhật UI
+            loginBtn.classList.remove('hidden');
+            logoutBtn.classList.add('hidden');
+            userInfo.innerHTML = 'Bạn chưa đăng nhập';
+        }
+
+        // Kiểm tra trạng thái đăng nhập khi tải trang
+        async function checkAuthStatus() {
+            if (!authToken) return;
+
+            try {
+                const data = await fetchAPI('/api/auth/me');
+
+                if (data.success) {
+                    currentUser = data.user;
+
+                    // Cập nhật UI
+                    loginBtn.classList.add('hidden');
+                    logoutBtn.classList.remove('hidden');
+                    userInfo.innerHTML = `Xin chào, ${currentUser.firstName} ${currentUser.lastName}`;
+
+                    // Kiểm tra gói hiện tại
+                    getCurrentMembership();
+                }
+            } catch (error) {
+                // Token hết hạn hoặc không hợp lệ
+                logout();
+            }
+        }
+
+        // Utility functions
+        function showModal(modal) {
+            modal.style.display = 'block';
+        }
+
+        function hideModal(modal) {
+            modal.style.display = 'none';
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Lấy danh sách gói dịch vụ
+            getPlans();
+
+            // Kiểm tra trạng thái đăng nhập
+            checkAuthStatus();
+
+            // Đăng nhập và đăng xuất
+            loginBtn.addEventListener('click', () => showModal(loginModal));
+            logoutBtn.addEventListener('click', logout);
+
+            // Đóng modal khi click vào nút đóng
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', () => {
+                    hideModal(loginModal);
+                    hideModal(registerModal);
+                });
+            });
+
+            // Chuyển đổi giữa modal đăng nhập và đăng ký
+            switchToRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                hideModal(loginModal);
+                showModal(registerModal);
+            });
+
+            switchToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                hideModal(registerModal);
+                showModal(loginModal);
+            });
+
+            // Xử lý form đăng nhập
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                login(email, password);
+            });
+
+            // Xử lý form đăng ký
+            registerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const firstName = document.getElementById('register-firstname').value;
+                const lastName = document.getElementById('register-lastname').value;
+                register(email, password, firstName, lastName);
+            });
+
+            // Đóng modal khi click ra ngoài
+            window.addEventListener('click', (e) => {
+                if (e.target === loginModal) hideModal(loginModal);
+                if (e.target === registerModal) hideModal(registerModal);
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,384 @@
+/* Member Appointments Styling */
+
+.member-appointments {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.appointments-header {
+    margin-bottom: 24px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+}
+
+.appointments-header .ant-card-body {
+    background: transparent;
+}
+
+.appointments-header h3 {
+    color: white !important;
+    margin-bottom: 8px;
+}
+
+.appointments-header .ant-typography {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Appointment Cards */
+.appointment-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid #e8e8e8;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.appointment-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: #667eea;
+}
+
+.appointment-card.cancelled {
+    opacity: 0.7;
+    background-color: #f9f9f9;
+}
+
+.appointment-card.cancelled:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.appointment-content {
+    padding: 4px;
+}
+
+/* Coach Info */
+.coach-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.coach-avatar {
+    flex-shrink: 0;
+}
+
+.coach-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.coach-name .ant-typography {
+    margin-bottom: 0;
+}
+
+/* Appointment Time */
+.appointment-time {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.date-time,
+.time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.date-time .anticon,
+.time .anticon {
+    color: #667eea;
+    font-size: 14px;
+}
+
+/* Appointment Type */
+.appointment-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.appointment-type .anticon {
+    font-size: 16px;
+}
+
+/* Status Tag */
+.status-tag {
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: none;
+}
+
+/* Appointment Actions */
+.appointment-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Upcoming and Past Appointments */
+.upcoming-appointments,
+.past-appointments {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.upcoming-appointments .ant-card-head {
+    background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+}
+
+.upcoming-appointments .ant-card-head-title {
+    color: white;
+    font-weight: 600;
+}
+
+.past-appointments .ant-card-head {
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+/* List Items */
+.appointment-item {
+    border: none !important;
+    padding: 12px 0 !important;
+}
+
+.appointment-item:last-child {
+    border-bottom: none !important;
+}
+
+/* Detail Modal */
+.appointment-detail-modal .ant-modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.appointment-detail-modal .ant-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: none;
+    padding: 20px 24px;
+}
+
+.appointment-detail-modal .ant-modal-title {
+    color: white;
+    font-weight: 600;
+}
+
+.appointment-detail-modal .ant-modal-close {
+    color: white;
+}
+
+.appointment-detail-modal .ant-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Coach Section in Modal */
+.coach-section {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.coach-section .ant-typography h4 {
+    margin-bottom: 4px;
+    color: #262626;
+}
+
+/* Appointment Info */
+.appointment-info {
+    padding: 16px 0;
+}
+
+.info-item {
+    margin-bottom: 16px;
+}
+
+.info-label {
+    display: block;
+    color: #595959;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.info-value {
+    font-size: 16px;
+    color: #262626;
+    font-weight: 500;
+}
+
+/* Notes Section */
+.notes-section {
+    background: #f6f6f6;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.notes-content {
+    margin-top: 8px;
+}
+
+/* Meeting Link Section */
+.meeting-link-section .ant-alert {
+    border-radius: 8px;
+}
+
+.meeting-link {
+    font-weight: 500;
+    color: #1890ff;
+    word-break: break-all;
+}
+
+.meeting-link:hover {
+    color: #40a9ff;
+    text-decoration: underline;
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .member-appointments {
+        padding: 16px;
+    }
+    
+    .coach-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+    
+    .appointment-time {
+        text-align: center;
+    }
+    
+    .appointment-type {
+        justify-content: center;
+    }
+    
+    .appointment-actions {
+        justify-content: center;
+        margin-top: 12px;
+    }
+    
+    .appointment-content .ant-row {
+        gap: 12px;
+    }
+    
+    .appointment-detail-modal {
+        margin: 0;
+        max-width: 100vw;
+        top: 0;
+    }
+    
+    .coach-section {
+        padding: 16px;
+    }
+    
+    .info-item {
+        margin-bottom: 12px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .modal-actions .ant-space {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .appointment-card .ant-card-body {
+        padding: 16px;
+    }
+    
+    .coach-info {
+        gap: 6px;
+    }
+    
+    .appointment-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .appointment-actions .ant-btn {
+        width: 100%;
+    }
+}
+
+/* Animation */
+.appointment-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Status specific styling */
+.appointment-card.status-scheduled {
+    border-left: 4px solid #1890ff;
+}
+
+.appointment-card.status-confirmed {
+    border-left: 4px solid #52c41a;
+}
+
+.appointment-card.status-completed {
+    border-left: 4px solid #8c8c8c;
+}
+
+.appointment-card.status-cancelled {
+    border-left: 4px solid #ff4d4f;
+}
+
+/* Badge styling */
+.appointments-header .ant-badge {
+    margin-left: auto;
+}
+
+.appointments-header .ant-badge .ant-badge-count {
+    font-weight: 600;
+}
+
+/* Loading states */
+.appointment-card.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Empty state */
+.ant-empty {
+    padding: 40px 20px;
+}
+
+.ant-empty-description {
+    color: #8c8c8c;
+    font-size: 14px;
+} 

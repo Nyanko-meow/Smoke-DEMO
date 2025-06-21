@@ -1,0 +1,43 @@
+<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="calmGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8F5E8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C8E6C9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="400" fill="url(#calmGradient)"/>
+  
+  <!-- Central meditation figure -->
+  <ellipse cx="300" cy="320" rx="80" ry="20" fill="#4CAF50" opacity="0.2"/>
+  <ellipse cx="300" cy="250" rx="40" ry="50" fill="#FFE0B2"/>
+  <circle cx="300" cy="200" r="30" fill="#FFCC80"/>
+  
+  <!-- Breathing waves -->
+  <path d="M150 200 Q200 180 250 200 Q300 220 350 200 Q400 180 450 200" stroke="#4CAF50" stroke-width="3" fill="none" opacity="0.6"/>
+  <path d="M170 180 Q220 160 270 180 Q320 200 370 180" stroke="#4CAF50" stroke-width="2" fill="none" opacity="0.4"/>
+  <path d="M130 220 Q180 200 230 220 Q280 240 330 220 Q380 200 430 220" stroke="#4CAF50" stroke-width="2" fill="none" opacity="0.4"/>
+  
+  <!-- Tips bubbles -->
+  <circle cx="120" cy="120" r="35" fill="#FFFFFF" stroke="#4CAF50" stroke-width="2"/>
+  <text x="120" y="115" text-anchor="middle" font-size="10" fill="#2E7D32">Hít thở</text>
+  <text x="120" y="128" text-anchor="middle" font-size="10" fill="#2E7D32">sâu</text>
+  
+  <circle cx="480" cy="140" r="35" fill="#FFFFFF" stroke="#2196F3" stroke-width="2"/>
+  <text x="480" y="135" text-anchor="middle" font-size="10" fill="#1565C0">Uống</text>
+  <text x="480" y="148" text-anchor="middle" font-size="10" fill="#1565C0">nước</text>
+  
+  <circle cx="100" cy="300" r="35" fill="#FFFFFF" stroke="#FF9800" stroke-width="2"/>
+  <text x="100" y="295" text-anchor="middle" font-size="10" fill="#E65100">Tập</text>
+  <text x="100" y="308" text-anchor="middle" font-size="10" fill="#E65100">thể dục</text>
+  
+  <circle cx="500" cy="280" r="35" fill="#FFFFFF" stroke="#9C27B0" stroke-width="2"/>
+  <text x="500" y="275" text-anchor="middle" font-size="10" fill="#6A1B9A">Ăn trái</text>
+  <text x="500" y="288" text-anchor="middle" font-size="10" fill="#6A1B9A">cây</text>
+  
+  <!-- Title -->
+  <text x="300" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#2E7D32">
+    5 Mẹo Vượt Qua Cơn Thèm
+  </text>
+</svg> 

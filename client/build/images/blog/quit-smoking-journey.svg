@@ -1,0 +1,44 @@
+<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0F6FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="400" fill="url(#skyGradient)"/>
+  
+  <!-- Ground -->
+  <rect x="0" y="320" width="600" height="80" fill="#90EE90"/>
+  
+  <!-- Path/Road -->
+  <path d="M50 350 Q300 320 550 350" stroke="#FFD700" stroke-width="20" fill="none" opacity="0.8"/>
+  <path d="M50 350 Q300 320 550 350" stroke="#FFA500" stroke-width="15" fill="none"/>
+  
+  <!-- Milestones -->
+  <circle cx="150" cy="340" r="15" fill="#FF6B6B"/>
+  <text x="150" y="370" text-anchor="middle" font-size="12" fill="#333">Ngày 1</text>
+  
+  <circle cx="300" cy="315" r="15" fill="#4ECDC4"/>
+  <text x="300" y="345" text-anchor="middle" font-size="12" fill="#333">Tuần 1</text>
+  
+  <circle cx="450" cy="340" r="15" fill="#45B7D1"/>
+  <text x="450" y="370" text-anchor="middle" font-size="12" fill="#333">Tháng 1</text>
+  
+  <!-- Success flag -->
+  <rect x="540" y="300" width="3" height="50" fill="#8B4513"/>
+  <polygon points="543,300 543,320 570,310" fill="#32CD32"/>
+  
+  <!-- Clouds -->
+  <ellipse cx="120" cy="80" rx="30" ry="20" fill="#FFFFFF" opacity="0.8"/>
+  <ellipse cx="480" cy="60" rx="40" ry="25" fill="#FFFFFF" opacity="0.8"/>
+  
+  <!-- Sun -->
+  <circle cx="500" cy="100" r="30" fill="#FFD700" opacity="0.9"/>
+  
+  <!-- Title -->
+  <text x="300" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2C3E50">
+    Hành Trình Cai Thuốc
+  </text>
+</svg> 

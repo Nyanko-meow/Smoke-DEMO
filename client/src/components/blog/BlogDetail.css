@@ -1,0 +1,286 @@
+/* BlogDetail.css */
+.blog-detail-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+    overflow-x: hidden;
+}
+
+.blog-detail-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.blog-content-wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .blog-content-wrapper {
+        padding: 0 16px;
+    }
+    
+    .blog-post-paper {
+        padding: 24px 20px !important;
+        margin-bottom: 24px !important;
+    }
+    
+    .blog-title {
+        font-size: 2rem !important;
+        line-height: 1.3 !important;
+    }
+    
+    .blog-meta-description {
+        padding: 12px 16px !important;
+        font-size: 1rem !important;
+    }
+    
+    .blog-author-stats {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+    }
+    
+    .blog-stats-chips {
+        align-self: flex-start !important;
+    }
+    
+    .blog-content-text {
+        padding: 16px !important;
+        font-size: 1rem !important;
+    }
+    
+    .comment-form-container {
+        padding: 16px !important;
+    }
+    
+    .comment-item {
+        padding: 16px 12px !important;
+        margin: 0 -12px !important;
+    }
+    
+    .comment-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+    
+    .comment-delete-btn {
+        align-self: flex-end !important;
+        margin-top: -8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .blog-content-wrapper {
+        padding: 0 12px;
+    }
+    
+    .blog-post-paper {
+        padding: 20px 16px !important;
+        border-radius: 16px !important;
+    }
+    
+    .blog-title {
+        font-size: 1.75rem !important;
+    }
+    
+    .blog-action-buttons {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    
+    .blog-author-info {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+    
+    .blog-stats-chips {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+}
+
+/* Animation classes */
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+.slide-up {
+    animation: slideUp 0.8s ease-out;
+}
+
+.scale-in {
+    animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Hover effects */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Custom scrollbar */
+.blog-content-text::-webkit-scrollbar {
+    width: 6px;
+}
+
+.blog-content-text::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.blog-content-text::-webkit-scrollbar-thumb {
+    background: rgba(103, 126, 234, 0.5);
+    border-radius: 3px;
+}
+
+.blog-content-text::-webkit-scrollbar-thumb:hover {
+    background: rgba(103, 126, 234, 0.7);
+}
+
+/* Loading skeleton */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Focus styles for accessibility */
+.blog-detail-container *:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Print styles */
+@media print {
+    .blog-detail-container {
+        background: white !important;
+    }
+    
+    .blog-detail-container::before {
+        display: none;
+    }
+    
+    .blog-action-buttons,
+    .comment-form-container,
+    .back-button {
+        display: none !important;
+    }
+    
+    .blog-post-paper,
+    .comments-paper {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .blog-detail-container {
+        background: #000 !important;
+        color: #fff !important;
+    }
+    
+    .blog-post-paper,
+    .comments-paper {
+        background: #fff !important;
+        color: #000 !important;
+        border: 2px solid #000 !important;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .fade-in,
+    .slide-up,
+    .scale-in,
+    .hover-lift {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .blog-detail-container {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+    
+    .blog-post-paper,
+    .comments-paper {
+        background: rgba(30, 30, 30, 0.95) !important;
+        color: #e5e5e5 !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    .blog-title {
+        background: linear-gradient(45deg, #8b5cf6 30%, #06b6d4 90%) !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+    }
+} 

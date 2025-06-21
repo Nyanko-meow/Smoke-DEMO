@@ -1,0 +1,59 @@
+<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="healthGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E3F2FD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#BBDEFB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="400" fill="url(#healthGradient)"/>
+  
+  <!-- Heart icon -->
+  <path d="M300 180 C280 160, 240 160, 240 200 C240 240, 300 280, 300 280 C300 280, 360 240, 360 200 C360 160, 320 160, 300 180 Z" fill="#E91E63"/>
+  
+  <!-- Health improvement timeline -->
+  <line x1="100" y1="320" x2="500" y2="320" stroke="#4CAF50" stroke-width="4"/>
+  
+  <!-- Timeline points -->
+  <circle cx="150" cy="320" r="8" fill="#FF5722"/>
+  <text x="150" y="310" text-anchor="middle" font-size="10" fill="#333">20 phút</text>
+  <text x="150" y="340" text-anchor="middle" font-size="8" fill="#666">Nhịp tim bình thường</text>
+  
+  <circle cx="250" cy="320" r="8" fill="#FF9800"/>
+  <text x="250" y="310" text-anchor="middle" font-size="10" fill="#333">24 giờ</text>
+  <text x="250" y="340" text-anchor="middle" font-size="8" fill="#666">Giảm CO trong máu</text>
+  
+  <circle cx="350" cy="320" r="8" fill="#2196F3"/>
+  <text x="350" y="310" text-anchor="middle" font-size="10" fill="#333">1 tuần</text>
+  <text x="350" y="340" text-anchor="middle" font-size="8" fill="#666">Vị giác cải thiện</text>
+  
+  <circle cx="450" cy="320" r="8" fill="#4CAF50"/>
+  <text x="450" y="310" text-anchor="middle" font-size="10" fill="#333">1 năm</text>
+  <text x="450" y="340" text-anchor="middle" font-size="8" fill="#666">Giảm 50% nguy cơ tim</text>
+  
+  <!-- Lungs illustration -->
+  <ellipse cx="200" cy="140" rx="25" ry="40" fill="#FF9CAF" opacity="0.7"/>
+  <ellipse cx="250" cy="140" rx="25" ry="40" fill="#FF9CAF" opacity="0.7"/>
+  <path d="M225 100 L225 120" stroke="#8BC34A" stroke-width="3"/>
+  
+  <!-- Progress arrows -->
+  <path d="M180 140 L320 140" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Healthy lungs -->
+  <ellipse cx="380" cy="140" rx="25" ry="40" fill="#81C784"/>
+  <ellipse cx="430" cy="140" rx="25" ry="40" fill="#81C784"/>
+  <path d="M405 100 L405 120" stroke="#4CAF50" stroke-width="3"/>
+  
+  <!-- Title -->
+  <text x="300" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#1976D2">
+    Lợi Ích Sức Khỏe Khi Cai Thuốc
+  </text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50"/>
+    </marker>
+  </defs>
+</svg> 

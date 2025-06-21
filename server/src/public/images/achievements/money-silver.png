@@ -1,0 +1,28 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="silverMoneyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E6E6FA;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#C0C0C0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A9A9A9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Coin base -->
+  <circle cx="32" cy="32" r="28" fill="url(#silverMoneyGradient)" stroke="#808080" stroke-width="2"/>
+  <circle cx="32" cy="32" r="24" fill="#F5F5F5"/>
+  <circle cx="32" cy="32" r="20" fill="url(#silverMoneyGradient)"/>
+  
+  <!-- Dollar sign -->
+  <text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFD700">
+    ₫
+  </text>
+  
+  <!-- Shine effects -->
+  <circle cx="25" cy="25" r="3" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="40" cy="20" r="2" fill="#FFFFFF" opacity="0.6"/>
+  
+  <!-- 500K text -->
+  <text x="32" y="55" text-anchor="middle" font-size="8" fill="#808080" font-weight="bold">
+    500K
+  </text>
+</svg> 

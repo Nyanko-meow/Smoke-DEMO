@@ -1,0 +1,445 @@
+/* Chat Box Animations and Styles */
+
+/* Message animations */
+.message-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.message-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+/* Typing indicator animation */
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+.typing-dot {
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Message bubble hover effects */
+.message-bubble {
+  transition: all 0.2s ease-in-out;
+}
+
+.message-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Scroll bar styling */
+.chat-messages {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Input focus effects */
+.chat-input {
+  transition: all 0.2s ease;
+}
+
+.chat-input:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+/* Send button pulse effect */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+  }
+}
+
+.send-button-active {
+  animation: pulse 2s infinite;
+}
+
+/* Input with embedded send button */
+.chat-input-container {
+  position: relative;
+}
+
+/* Member chat input container - sticky positioning */
+.member-chat-input-container {
+  background: white;
+  border-top: 1px solid #e8e8e8;
+  padding: 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.member-chat-input-container:hover {
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.chat-input-container .ant-input {
+  padding-right: 50px !important;
+  padding-left: 70px !important;
+}
+
+/* Left side input icons */
+.input-left-icons {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-icon-button {
+  transition: all 0.2s ease;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.input-icon-button:hover {
+  transform: scale(1.1);
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.embedded-send-button {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+
+.embedded-send-button:hover {
+  transform: translateY(-50%) scale(1.1);
+}
+
+.embedded-send-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4) !important;
+}
+
+.embedded-send-button.inactive {
+  background: #f0f0f0 !important;
+  color: #bfbfbf !important;
+  box-shadow: none !important;
+}
+
+/* Online status pulse */
+@keyframes online-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.online-indicator {
+  animation: online-pulse 2s infinite;
+}
+
+/* Message time fade in */
+.message-time {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.message-container:hover .message-time {
+  opacity: 1;
+}
+
+/* Gradient text effect */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover effect */
+.chat-card {
+  transition: all 0.3s ease-in-out;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+.chat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+.chat-card .ant-card-body {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Button hover effects */
+.action-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.action-button:hover {
+  transform: scale(1.05);
+}
+
+/* Modal entrance animation */
+.ant-modal {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Form field focus effects */
+.ant-input:focus,
+.ant-input-focused,
+.ant-picker:focus,
+.ant-picker-focused,
+.ant-select:focus,
+.ant-select-focused {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Custom scrollbar for modal */
+.ant-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ant-modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.ant-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* Message status indicators */
+.message-status {
+  transition: all 0.2s ease-in-out;
+}
+
+.message-read {
+  color: #1890ff;
+}
+
+.message-sent {
+  color: #8c8c8c;
+}
+
+/* Responsive adjustments */
+/* Coach chat input with bottom send button */
+.coach-chat-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-top: 1px solid #e8e8e8;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.coach-chat-input-container:hover {
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.coach-input-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.coach-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.coach-input-icons {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coach-textarea {
+  padding-left: 70px !important;
+  border-radius: 12px !important;
+  border: 1px solid #e8e8e8 !important;
+  resize: none !important;
+  min-height: 44px !important;
+  transition: all 0.2s ease;
+}
+
+.coach-textarea:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+.coach-send-button-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.coach-send-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  height: 40px !important;
+  padding: 0 24px !important;
+  color: white !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+}
+
+.coach-send-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+  background: linear-gradient(135deg, #5a6fd8 0%, #6b4190 100%) !important;
+}
+
+.coach-send-button:disabled {
+  background: #f0f0f0 !important;
+  color: #bfbfbf !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed !important;
+}
+
+.coach-send-button.loading {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  opacity: 0.8 !important;
+}
+
+/* File upload styling for coach */
+.coach-file-upload {
+  transition: all 0.2s ease;
+}
+
+.coach-file-upload:hover {
+  transform: scale(1.1);
+  background: rgba(102, 126, 234, 0.1) !important;
+}
+
+@media (max-width: 768px) {
+  .message-bubble {
+    max-width: 85% !important;
+  }
+  
+  .chat-header {
+    padding: 12px 16px !important;
+  }
+  
+  .member-chat-input-container {
+    padding: 12px !important;
+  }
+  
+  .coach-chat-input-container {
+    padding: 12px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+  
+  .coach-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .coach-send-button-row {
+    justify-content: stretch;
+  }
+  
+  .coach-send-button {
+    width: 100% !important;
+  }
+  
+  .chat-card {
+    border-radius: 8px !important;
+  }
+  
+  .chat-messages {
+    padding-bottom: 8px !important;
+  }
+} 

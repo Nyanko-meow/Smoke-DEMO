@@ -149,6 +149,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Disable caching for all API routes to ensure fresh responses
 app.use('/api', (req, res, next) => {
     res.set({
         'Cache-Control': 'no-cache, no-store, must-revalidate',
