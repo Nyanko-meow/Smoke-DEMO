@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from 'antd';
 import { useDispatch } from 'react-redux';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/layout/Navbar';
 import Home from './components/Home';
 import Login from './components/auth/Login';
@@ -214,8 +216,29 @@ function App() {
                     <Route path="/test" element={<TestPage />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/failed" element={<PaymentFailed />} />
+                    
+                    {/* Additional PayOS callback routes */}
+                    <Route path="/payment/cancelled" element={<PaymentFailed />} />
+                    <Route path="/payment/error" element={<PaymentFailed />} />
+                    
+                    {/* PayOS direct callback routes for better handling */}
+                    <Route path="/payos/success" element={<PaymentSuccess />} />
+                    <Route path="/payos/failed" element={<PaymentFailed />} />
+                    <Route path="/payos/cancelled" element={<PaymentFailed />} />
                 </Routes>
             </Content>
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="colored"
+            />
         </Layout>
     );
 }

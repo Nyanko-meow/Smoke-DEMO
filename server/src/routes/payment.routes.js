@@ -82,13 +82,13 @@ router.post('/', protect, async (req, res) => {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + plan.Duration);
 
-            // Create membership record with pending status (waiting for admin approval)
+            // Create membership record with active status (immediate activation)
             const membershipResult = await transaction.request()
                 .input('UserID', req.user.id)
                 .input('PlanID', planId)
                 .input('StartDate', startDate)
                 .input('EndDate', endDate)
-                .input('Status', 'pending')
+                .input('Status', 'active')
                 .query(`
                     MERGE INTO UserMemberships AS target
                     USING (SELECT @UserID AS UserID) AS source
@@ -98,18 +98,18 @@ router.post('/', protect, async (req, res) => {
                             PlanID = @PlanID,
                             StartDate = @StartDate,
                             EndDate = @EndDate,
-                            Status = 'pending'
+                            Status = 'active'
                     WHEN NOT MATCHED THEN
                         INSERT (UserID, PlanID, StartDate, EndDate, Status)
-                        VALUES (@UserID, @PlanID, @StartDate, @EndDate, 'pending')
+                        VALUES (@UserID, @PlanID, @StartDate, @EndDate, 'active')
                     OUTPUT INSERTED.*;
                 `);
 
-            // Create notification for user
+            // Create notification for user about successful activation
             await transaction.request()
                 .input('UserID', req.user.id)
-                .input('Title', 'Đơn hàng đang chờ xác nhận')
-                .input('Message', `Đơn hàng gói ${plan.Name} đã được tạo và đang chờ admin xác nhận thanh toán. Chúng tôi sẽ thông báo khi đơn hàng được duyệt.`)
+                .input('Title', 'Gói dịch vụ đã được kích hoạt')
+                .input('Message', `Gói ${plan.Name} đã được kích hoạt thành công. Chào mừng bạn đến với dịch vụ của chúng tôi!`)
                 .input('Type', 'payment')
                 .query(`
                     INSERT INTO Notifications (UserID, Title, Message, Type)
@@ -127,32 +127,8 @@ router.post('/', protect, async (req, res) => {
 
             await transaction.commit();
 
-            // Notify all admins about new payment (outside transaction)
-            try {
-                // Get all admin users
-                const adminResult = await pool.request().query(`
-                    SELECT UserID FROM Users WHERE Role = 'admin'
-                `);
-
-                // Create notifications for all admins
-                for (const admin of adminResult.recordset) {
-                    await pool.request()
-                        .input('UserID', admin.UserID)
-                        .input('Title', '💳 Thanh toán mới cần xác nhận')
-                        .input('Message', `${user.FirstName} ${user.LastName} (${user.Email}) đã tạo đơn hàng mới cho gói ${plan.Name} với số tiền ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(plan.Price)}. Vui lòng kiểm tra và xác nhận thanh toán.`)
-                        .input('Type', 'payment_new')
-                        .input('RelatedID', payment.PaymentID)
-                        .query(`
-                            INSERT INTO Notifications (UserID, Title, Message, Type, RelatedID)
-                            VALUES (@UserID, @Title, @Message, @Type, @RelatedID)
-                        `);
-                }
-
-                console.log(`📢 Notified ${adminResult.recordset.length} admins about new payment from ${user.FirstName} ${user.LastName}`);
-            } catch (notificationError) {
-                console.error('Error notifying admins about new payment:', notificationError);
-                // Don't fail the main operation if notification fails
-            }
+            // PayOS auto-activation: No admin notifications needed for PayOS payments
+            // (Admin notifications are only for manual payment methods like bank transfer)
 
             // Return success
             res.status(201).json({
@@ -162,7 +138,7 @@ router.post('/', protect, async (req, res) => {
                     membership: membershipResult.recordset[0],
                     plan: plan
                 },
-                message: 'Đơn hàng đã được tạo và đang chờ admin xác nhận thanh toán'
+                message: 'Gói dịch vụ đã được kích hoạt thành công'
             });
 
         } catch (error) {
@@ -388,13 +364,13 @@ router.post('/process', protect, async (req, res) => {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + plan.Duration);
 
-            // Create membership record with PENDING status (waiting for payment confirmation)
+            // Create membership record with ACTIVE status (immediate activation)
             const membershipResult = await transaction.request()
                 .input('UserID', req.user.UserID || req.user.id)
                 .input('PlanID', planId)
                 .input('StartDate', startDate)
                 .input('EndDate', endDate)
-                .input('Status', 'pending') // PENDING - waiting for payment confirmation
+                .input('Status', 'active') // ACTIVE - immediate activation
                 .query(`
                     MERGE INTO UserMemberships AS target
                     USING (SELECT @UserID AS UserID) AS source
@@ -404,18 +380,18 @@ router.post('/process', protect, async (req, res) => {
                             PlanID = @PlanID,
                             StartDate = @StartDate,
                             EndDate = @EndDate,
-                            Status = 'pending'
+                            Status = 'active'
                     WHEN NOT MATCHED THEN
                         INSERT (UserID, PlanID, StartDate, EndDate, Status)
-                        VALUES (@UserID, @PlanID, @StartDate, @EndDate, 'pending')
+                        VALUES (@UserID, @PlanID, @StartDate, @EndDate, 'active')
                     OUTPUT INSERTED.*;
                 `);
 
-            // Create notification for user about pending payment
+            // Create notification for user about successful activation
             await transaction.request()
                 .input('UserID', req.user.UserID || req.user.id)
-                .input('Title', 'Đơn hàng đang chờ xác nhận')
-                .input('Message', `Đơn hàng gói ${plan.Name} của bạn đã được tạo thành công và đang chờ admin xác nhận thanh toán. Chúng tôi sẽ thông báo khi đơn hàng được duyệt.`)
+                .input('Title', 'Gói dịch vụ đã được kích hoạt')
+                .input('Message', `Gói ${plan.Name} đã được kích hoạt thành công. Chào mừng bạn đến với dịch vụ của chúng tôi!`)
                 .input('Type', 'payment')
                 .query(`
                     INSERT INTO Notifications (UserID, Title, Message, Type)
@@ -465,7 +441,7 @@ router.post('/process', protect, async (req, res) => {
 
             res.status(200).json({
                 success: true,
-                message: 'Đơn hàng đã được tạo thành công và đang chờ admin xác nhận thanh toán',
+                message: 'Gói dịch vụ đã được kích hoạt thành công',
                 data: {
                     payment: {
                         ...paymentResult.recordset[0],
@@ -477,7 +453,7 @@ router.post('/process', protect, async (req, res) => {
                     },
                     membership: membershipResult.recordset[0],
                     plan: plan,
-                    status: 'pending_approval'
+                    status: 'active'
                 }
             });
         } catch (error) {
@@ -557,10 +533,15 @@ router.get('/pending', protect, async (req, res) => {
 // Create PayOS payment link
 router.post('/payos/create', protect, async (req, res) => {
     try {
+        console.log('🚀 PayOS create payment request received:');
+        console.log('  - User:', req.user.Email);
+        console.log('  - Body:', req.body);
+        
         const { planId, amount, description } = req.body;
 
         // Validate input
         if (!planId || !amount) {
+            console.log('❌ Validation failed: missing planId or amount');
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields: planId, amount'
@@ -569,13 +550,16 @@ router.post('/payos/create', protect, async (req, res) => {
 
         // Generate unique order code
         const orderCode = Date.now();
+        console.log('📝 Generated orderCode:', orderCode);
         
         // Get plan details
+        console.log('🔍 Getting plan details for planId:', planId);
         const planResult = await pool.request()
             .input('PlanID', planId)
             .query('SELECT * FROM MembershipPlans WHERE PlanID = @PlanID');
 
         if (planResult.recordset.length === 0) {
+            console.log('❌ Plan not found for planId:', planId);
             return res.status(404).json({
                 success: false,
                 message: 'Plan not found'
@@ -583,13 +567,15 @@ router.post('/payos/create', protect, async (req, res) => {
         }
 
         const plan = planResult.recordset[0];
+        console.log('✅ Plan found:', plan.Name);
 
-        // Create payment record first
+        // Create payment record with 'pending' status (will be auto-activated by webhook within seconds)
+        console.log('💾 Creating PayOS payment record (auto-activate on webhook success)...');
         const paymentResult = await pool.request()
             .input('UserID', req.user.id)
             .input('PlanID', planId)
             .input('Amount', amount)
-            .input('PaymentMethod', 'PayOS')
+            .input('PaymentMethod', 'BankTransfer')
             .input('TransactionID', orderCode.toString())
             .input('Status', 'pending')
             .query(`
@@ -597,12 +583,15 @@ router.post('/payos/create', protect, async (req, res) => {
                 OUTPUT INSERTED.*
                 VALUES (@UserID, @PlanID, @Amount, @PaymentMethod, @Status, @TransactionID)
             `);
+        console.log('✅ PayOS payment record created:', paymentResult.recordset[0].PaymentID, '(will auto-activate on webhook success)');
 
         // Prepare PayOS order data
+        const { PAYOS_CONFIG } = require('../config/payos.config');
+        const buyerName = `${req.user.FirstName || 'User'} ${req.user.LastName || 'Unknown'}`;
         const orderData = {
             orderCode: orderCode,
             amount: amount,
-            description: description || `Thanh toán gói ${plan.Name}`,
+            description: `${plan.Name.toString().trim().slice(0, 25)}`,
             items: [
                 {
                     name: plan.Name,
@@ -610,15 +599,19 @@ router.post('/payos/create', protect, async (req, res) => {
                     price: amount
                 }
             ],
-            returnUrl: process.env.PAYOS_RETURN_URL,
-            cancelUrl: process.env.PAYOS_CANCEL_URL,
-            buyerName: req.user.FirstName + ' ' + req.user.LastName,
+            returnUrl: PAYOS_CONFIG.RETURN_URL,
+            cancelUrl: PAYOS_CONFIG.CANCEL_URL,
+            buyerName: buyerName,
             buyerEmail: req.user.Email,
-            buyerPhone: req.user.Phone
+            buyerPhone: req.user.Phone || 'N/A'
         };
 
+        console.log('📦 PayOS order data prepared:', JSON.stringify(orderData, null, 2));
+
         // Create PayOS payment link
+        console.log('🔗 Creating PayOS payment link...');
         const paymentLink = await payOSService.createPaymentLink(orderData);
+        console.log('✅ PayOS payment link created successfully:', paymentLink?.checkoutUrl);
 
         res.json({
             success: true,
@@ -631,7 +624,8 @@ router.post('/payos/create', protect, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating PayOS payment:', error);
+        console.error('❌ Error creating PayOS payment:', error);
+        console.error('Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Error creating payment link',
@@ -710,7 +704,24 @@ router.get('/payos/status/:orderCode', protect, async (req, res) => {
         const { orderCode } = req.params;
         
         const paymentInfo = await payOSService.getPaymentInfo(parseInt(orderCode));
-        
+
+        if(paymentInfo != null && paymentInfo.status == "PAID"){
+            const paymentResult = await pool.request()
+                .input('OrderCode', orderCode)
+                .query('SELECT TOP(1) * FROM [Payments] WHERE [TransactionID] = @OrderCode');
+            if(paymentResult != null && paymentResult.recordset[0]){
+                const payment = paymentResult.recordset[0];
+                const transactionDateStr = paymentInfo.transactions[0].transactionDateTime;
+                const paymentDate = new Date(payment.PaymentDate);
+                const transactionDate = new Date(transactionDateStr);
+                if(payment.Status == "pending") {
+                    const result  = await pool.request()
+                        .input('Status', "confirmed")
+                        .input('OrderCode', orderCode)
+                        .query('UPDATE [Payments] SET Status = @Status WHERE [TransactionID] = @OrderCode');
+                }
+            }
+        }
         res.json({
             success: true,
             data: paymentInfo
@@ -723,5 +734,7 @@ router.get('/payos/status/:orderCode', protect, async (req, res) => {
         });
     }
 });
+
+
 
 module.exports = router; 

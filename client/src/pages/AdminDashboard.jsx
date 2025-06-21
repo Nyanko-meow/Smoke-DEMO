@@ -448,11 +448,7 @@ const AdminDashboard = () => {
             icon: <CommentOutlined />,
             label: 'Quản lý Phản hồi',
         },
-        {
-            key: 'payments',
-            icon: <CreditCardOutlined />,
-            label: 'Xác nhận Thanh toán',
-        },
+
         {
             key: 'cancellations',
             icon: <CloseCircleOutlined />,
@@ -1012,8 +1008,7 @@ const AdminDashboard = () => {
                 return <CommunityModeration />;
             case 'feedbacks':
                 return <FeedbackManagement />;
-            case 'payments':
-                return <PaymentsManagement />;
+
             case 'achievements':
                 return <AchievementManagementSimple />;
             case 'cancellations':

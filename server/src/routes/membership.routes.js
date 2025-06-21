@@ -147,10 +147,10 @@ router.post('/purchase', protect, async (req, res) => {
         }
 
         // Validate payment method
-        if (!['BankTransfer', 'Cash'].includes(paymentMethod)) {
+        if (!['BankTransfer', 'Cash', 'PayOS'].includes(paymentMethod)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid payment method. Must be BankTransfer or Cash'
+                message: 'Invalid payment method. Must be BankTransfer, Cash, or PayOS'
             });
         }
 
@@ -202,7 +202,7 @@ router.post('/purchase', protect, async (req, res) => {
                 const daysRemaining = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
                 errorMessage = `Bạn đã có gói "${existing.PlanName}" đang hoạt động (còn ${daysRemaining} ngày). Bạn cần đợi gói hiện tại hết hạn hoặc hủy gói hiện tại trước khi mua gói mới.`;
             } else if (existing.MembershipStatus === 'pending') {
-                errorMessage = `Bạn đã có gói "${existing.PlanName}" đang chờ xác nhận thanh toán. Vui lòng chờ admin xác nhận trước khi mua gói mới.`;
+                errorMessage = `Bạn đã có gói "${existing.PlanName}" đang được xử lý. Vui lòng chờ trong giây lát.`;
             } else if (existing.MembershipStatus === 'pending_cancellation') {
                 errorMessage = `Bạn đã có yêu cầu hủy gói "${existing.PlanName}" đang chờ xử lý. Vui lòng chờ hoàn tất việc hủy gói trước khi mua gói mới.`;
             }
@@ -236,7 +236,7 @@ router.post('/purchase', protect, async (req, res) => {
                 .input('PlanID', planId)
                 .input('Amount', plan.Price)
                 .input('PaymentMethod', paymentMethod)
-                .input('Status', 'pending')
+                .input('Status', 'active')
                 .input('TransactionID', 'TRX-' + Date.now())
                 .input('StartDate', startDate)
                 .input('EndDate', endDate)
@@ -257,14 +257,14 @@ router.post('/purchase', protect, async (req, res) => {
 
             console.log('🏷️ Creating membership record...');
 
-            // Create membership record with pending status - use a new request
+            // Create membership record with active status - immediate activation (no admin approval needed)
             const membershipTransaction = pool.request();
             const membershipResult = await membershipTransaction
                 .input('UserID', req.user.id)
                 .input('PlanID', planId)
                 .input('StartDate', startDate)
                 .input('EndDate', endDate)
-                .input('Status', 'pending')
+                .input('Status', 'active')
                 .query(`
                     INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status, CreatedAt)
                     OUTPUT INSERTED.*
@@ -283,9 +283,9 @@ router.post('/purchase', protect, async (req, res) => {
             const notificationTransaction = pool.request();
             await notificationTransaction
                 .input('UserID', req.user.id)
-                .input('Title', 'Payment Submitted')
-                .input('Message', `Your payment for the ${plan.Name} plan is pending confirmation.`)
-                .input('Type', 'payment')
+                .input('Title', '🎉 Gói dịch vụ đã được kích hoạt!')
+                .input('Message', `Chúc mừng! Gói ${plan.Name} của bạn đã được kích hoạt thành công. Hãy bắt đầu hành trình cai thuốc của bạn!`)
+                .input('Type', 'membership_activated')
                 .query(`
                     INSERT INTO Notifications (UserID, Title, Message, Type, CreatedAt)
                     VALUES (@UserID, @Title, @Message, @Type, GETDATE())
@@ -296,7 +296,7 @@ router.post('/purchase', protect, async (req, res) => {
             // Return success response with properly formatted data
             res.status(201).json({
                 success: true,
-                message: 'Payment submitted and pending confirmation',
+                message: 'Gói dịch vụ đã được kích hoạt thành công!',
                 data: {
                     membership: {
                         ...membership,
@@ -309,7 +309,7 @@ router.post('/purchase', protect, async (req, res) => {
                         StartDate: startDate.toISOString(),
                         EndDate: endDate.toISOString(),
                         PaymentMethod: paymentMethod,
-                        Status: 'pending'
+                        Status: 'active'
                     },
                     payment: {
                         ...payment,
@@ -1143,14 +1143,14 @@ router.post('/debug-purchase', protect, async (req, res) => {
         console.log('✅ Plan found:', plan);
 
         // Test 4: Validate payment method
-        if (!['BankTransfer', 'Cash'].includes(paymentMethod)) {
+        if (!['BankTransfer', 'Cash', 'PayOS'].includes(paymentMethod)) {
             console.log('❌ Invalid payment method:', paymentMethod);
             return res.status(400).json({
                 success: false,
-                message: 'Invalid payment method. Must be BankTransfer or Cash',
+                message: 'Invalid payment method. Must be BankTransfer, Cash, or PayOS',
                 debug: {
                     receivedPaymentMethod: paymentMethod,
-                    allowedMethods: ['BankTransfer', 'Cash']
+                    allowedMethods: ['BankTransfer', 'Cash', 'PayOS']
                 }
             });
         }
@@ -2312,6 +2312,184 @@ router.get('/debug/:userId', protect, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error debugging membership'
+        });
+    }
+});
+
+// Cancel request endpoint - Save to PaymentConfirmations table
+router.post('/request-cancel', protect, async (req, res) => {
+    try {
+        console.log('🔍 Cancel request from user:', req.user.id);
+        console.log('📝 Request body:', req.body);
+
+        const { reason, accountHolderName, bankAccountNumber, bankName } = req.body;
+
+        // Basic validation
+        if (!reason || reason.trim().length < 10) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập lí do hủy gói (ít nhất 10 ký tự)'
+            });
+        }
+
+        // Validate bank information
+        if (!accountHolderName || !bankAccountNumber || !bankName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng cung cấp đầy đủ thông tin ngân hàng'
+            });
+        }
+
+        if (bankAccountNumber.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Số tài khoản ngân hàng không hợp lệ (phải có ít nhất 8 chữ số)'
+            });
+        }
+
+        // Find user's active membership
+        const membershipResult = await pool.request()
+            .input('UserID', req.user.id)
+            .query(`
+                SELECT TOP 1 
+                    um.*,
+                    mp.Name as PlanName,
+                    mp.Price as PlanPrice,
+                    p.PaymentID
+                FROM UserMemberships um
+                JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                LEFT JOIN Payments p ON um.UserID = p.UserID AND um.PlanID = p.PlanID
+                WHERE um.UserID = @UserID AND um.Status = 'active'
+                ORDER BY um.CreatedAt DESC
+            `);
+
+        if (membershipResult.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy gói dịch vụ đang hoạt động'
+            });
+        }
+
+        const membership = membershipResult.recordset[0];
+        console.log('✅ Found membership to cancel:', membership);
+
+        // Check if there's already a pending cancellation request for this membership
+        const existingRequestResult = await pool.request()
+            .input('MembershipID', membership.MembershipID)
+            .input('UserID', req.user.id)
+            .query(`
+                SELECT * FROM PaymentConfirmations 
+                WHERE MembershipID = @MembershipID 
+                AND UserID = @UserID 
+                AND RequestType = 'cancellation' 
+                AND Status = 'pending'
+            `);
+
+        if (existingRequestResult.recordset.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Bạn đã có yêu cầu hủy gói đang chờ xử lý cho gói dịch vụ này'
+            });
+        }
+
+        // Start transaction
+        const transaction = pool.transaction();
+        await transaction.begin();
+
+        try {
+            // Create cancellation request in PaymentConfirmations table
+            const cancellationResult = await transaction.request()
+                .input('PaymentID', membership.PaymentID)
+                .input('UserID', req.user.id)
+                .input('MembershipID', membership.MembershipID)
+                .input('RequestType', 'cancellation')
+                .input('CancellationReason', reason.trim())
+                .input('BankAccountNumber', bankAccountNumber.trim())
+                .input('BankName', bankName.trim())
+                .input('AccountHolderName', accountHolderName.trim())
+                .input('Status', 'pending')
+                .input('Notes', `Yêu cầu hủy gói ${membership.PlanName} - Lý do: ${reason.trim()}`)
+                .query(`
+                    INSERT INTO PaymentConfirmations (
+                        PaymentID, UserID, MembershipID, RequestType, 
+                        CancellationReason, BankAccountNumber, BankName, AccountHolderName,
+                        Status, Notes, ConfirmationDate
+                    )
+                    OUTPUT INSERTED.*
+                    VALUES (
+                        @PaymentID, @UserID, @MembershipID, @RequestType,
+                        @CancellationReason, @BankAccountNumber, @BankName, @AccountHolderName,
+                        @Status, @Notes, GETDATE()
+                    )
+                `);
+
+            const cancellationRequest = cancellationResult.recordset[0];
+            console.log('✅ Created cancellation request:', cancellationRequest.ConfirmationID);
+
+            // Update membership status to pending_cancellation
+            await transaction.request()
+                .input('MembershipID', membership.MembershipID)
+                .query(`
+                    UPDATE UserMemberships 
+                    SET Status = 'pending_cancellation'
+                    WHERE MembershipID = @MembershipID
+                `);
+
+            console.log('✅ Updated membership status to pending_cancellation');
+
+            // Create notification for user
+            await transaction.request()
+                .input('UserID', req.user.id)
+                .input('Title', 'Yêu cầu hủy gói dịch vụ đã được gửi')
+                .input('Message', `Yêu cầu hủy gói ${membership.PlanName} của bạn đã được gửi. Admin sẽ xem xét và xử lý.`)
+                .input('Type', 'cancellation_request')
+                .query(`
+                    INSERT INTO Notifications (UserID, Title, Message, Type, CreatedAt)
+                    VALUES (@UserID, @Title, @Message, @Type, GETDATE())
+                `);
+
+            // Create notification for admin
+            const adminResult = await transaction.request()
+                .query(`SELECT UserID FROM Users WHERE Role = 'admin' AND IsActive = 1`);
+
+            if (adminResult.recordset.length > 0) {
+                for (const admin of adminResult.recordset) {
+                    await transaction.request()
+                        .input('UserID', admin.UserID)
+                        .input('Title', 'Yêu cầu hủy gói dịch vụ mới')
+                        .input('Message', `Có yêu cầu hủy gói ${membership.PlanName} từ user. Lí do: ${reason.trim()}`)
+                        .input('Type', 'admin_cancellation_request')
+                        .query(`
+                            INSERT INTO Notifications (UserID, Title, Message, Type, CreatedAt)
+                            VALUES (@UserID, @Title, @Message, @Type, GETDATE())
+                        `);
+                }
+            }
+
+            await transaction.commit();
+
+            res.json({
+                success: true,
+                message: 'Yêu cầu hủy gói dịch vụ đã được gửi thành công. Admin sẽ xem xét và xử lý.',
+                data: {
+                    cancellationId: cancellationRequest.ConfirmationID,
+                    membershipId: membership.MembershipID,
+                    planName: membership.PlanName,
+                    status: 'pending_cancellation'
+                }
+            });
+
+        } catch (transactionError) {
+            await transaction.rollback();
+            throw transactionError;
+        }
+
+    } catch (error) {
+        console.error('❌ Cancel request error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xử lý yêu cầu hủy gói',
+            error: error.message
         });
     }
 });

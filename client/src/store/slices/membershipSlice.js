@@ -150,25 +150,26 @@ export const getMembershipHistory = createAsyncThunk(
 
 export const cancelMembership = createAsyncThunk(
     'membership/cancel',
-    async ({ reason, bankAccount, membershipId }, { rejectWithValue }) => {
+    async ({ reason, accountHolderName, bankAccountNumber, bankName }, { rejectWithValue }) => {
         try {
             console.log('🔄 Sending cancel request with data:', {
                 reason,
-                bankAccount,
-                membershipId
+                accountHolderName,
+                bankAccountNumber,
+                bankName
             });
 
-            // Prepare the request payload
+            // Prepare the request payload with bank info
             const payload = {
                 reason: reason || 'Hủy gói dịch vụ theo yêu cầu của khách hàng',
-                bankAccountNumber: bankAccount?.bankAccountNumber,
-                bankName: bankAccount?.bankName,
-                accountHolderName: bankAccount?.accountHolderName
+                accountHolderName: accountHolderName,
+                bankAccountNumber: bankAccountNumber,
+                bankName: bankName
             };
 
-            console.log('📤 Sending request to /membership/simple-cancel with payload:', payload);
+            console.log('📤 Sending request to /membership/request-cancel with payload:', payload);
 
-            const response = await axiosInstance.post('/membership/simple-cancel', payload, {
+            const response = await axiosInstance.post('/membership/request-cancel', payload, {
                 timeout: 15000, // 15 second timeout
                 headers: {
                     'Content-Type': 'application/json'

@@ -1,5 +1,5 @@
 {
-    "name": "server",
+    "name": "smokeking-server",
     "version": "1.0.0",
     "description": "Backend for SmokingKing cessation app",
     "main": "src/index.js",
@@ -15,6 +15,7 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "@payos/node": "^1.0.10",
         "axios": "^1.9.0",
         "bcryptjs": "^2.4.3",
         "cookie-parser": "^1.4.6",

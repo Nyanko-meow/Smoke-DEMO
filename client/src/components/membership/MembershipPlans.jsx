@@ -26,8 +26,10 @@ import {
     Popconfirm,
     Input
 } from 'antd';
-import { notification } from 'antd';
+import { notification, Select } from 'antd';
+import { toast } from 'react-toastify';
 import axiosInstance from '../../utils/axiosConfig';
+import { usePayOS } from '@payos/payos-checkout';
 import { logout, login } from '../../store/slices/authSlice';
 import ProgressResetNotification from '../member/ProgressResetNotification';
 
@@ -35,8 +37,7 @@ const { Title, Text, Paragraph } = Typography;
 const { Step } = Steps;
 
 const PaymentMethodOptions = [
-    { label: 'Chuyển khoản ngân hàng', value: 'BankTransfer' },
-    { label: 'Thanh toán tại quầy', value: 'Cash' },
+    { label: 'PayOS - Thanh toán online', value: 'PayOS' },
 ];
 
 // Dữ liệu mẫu khi API không hoạt động
@@ -61,7 +62,7 @@ const SAMPLE_PLANS = [
         PlanID: 2,
         Name: 'Gói Cao Cấp',
         Description: 'Hỗ trợ nâng cao cho hành trình cai thuốc của bạn.',
-        Price: 199000,
+        Price: 10000,
         Duration: 60,
         Features: 'Theo dõi tiến trình\nPhân tích nâng cao\nChiến lược cai thuốc cao cấp\nTruy cập cộng đồng\nĐộng lực hàng tuần'
     },
@@ -75,6 +76,70 @@ const SAMPLE_PLANS = [
     }
 ];
 
+// Add bank options at the top of the component
+const VIETNAM_BANKS = [
+    {
+        name: 'Vietcombank',
+        fullName: 'Ngân hàng TMCP Ngoại thương Việt Nam',
+        icon: '🏦',
+        color: '#007bff'
+    },
+    {
+        name: 'BIDV',
+        fullName: 'Ngân hàng TMCP Đầu tư và Phát triển Việt Nam',
+        icon: '🏛️',
+        color: '#28a745'
+    },
+    {
+        name: 'Vietinbank',
+        fullName: 'Ngân hàng TMCP Công thương Việt Nam',
+        icon: '🏢',
+        color: '#dc3545'
+    },
+    {
+        name: 'Agribank',
+        fullName: 'Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam',
+        icon: '🌾',
+        color: '#ffc107'
+    },
+    {
+        name: 'Techcombank',
+        fullName: 'Ngân hàng TMCP Kỹ thương Việt Nam',
+        icon: '💎',
+        color: '#6f42c1'
+    },
+    {
+        name: 'MBBank',
+        fullName: 'Ngân hàng TMCP Quân đội',
+        icon: '⭐',
+        color: '#fd7e14'
+    },
+    {
+        name: 'VPBank',
+        fullName: 'Ngân hàng TMCP Việt Nam Thịnh vượng',
+        icon: '🚀',
+        color: '#20c997'
+    },
+    {
+        name: 'ACB',
+        fullName: 'Ngân hàng TMCP Á Châu',
+        icon: '🔥',
+        color: '#e83e8c'
+    },
+    {
+        name: 'SHB',
+        fullName: 'Ngân hàng TMCP Sài Gòn - Hà Nội',
+        icon: '🏙️',
+        color: '#17a2b8'
+    },
+    {
+        name: 'TPBank',
+        fullName: 'Ngân hàng TMCP Tiên Phong',
+        icon: '🎯',
+        color: '#6c757d'
+    }
+];
+
 const MembershipPlans = () => {
     const dispatch = useDispatch();
     const { plans, currentMembership, loading, error, success, message, refundRequests } = useSelector(
@@ -83,7 +148,7 @@ const MembershipPlans = () => {
     const { user } = useSelector((state) => state.auth);
 
     const [selectedPlan, setSelectedPlan] = useState(null);
-    const [paymentMethod, setPaymentMethod] = useState('BankTransfer');
+    const [paymentMethod, setPaymentMethod] = useState('PayOS');
     const [paymentModalVisible, setPaymentModalVisible] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
     const [useSampleData, setUseSampleData] = useState(false);
@@ -97,10 +162,49 @@ const MembershipPlans = () => {
         bankName: '',
         accountHolderName: ''
     });
+    const [cancellationReason, setCancellationReason] = useState('');
 
     // Progress reset notification state
     const [progressResetModalVisible, setProgressResetModalVisible] = useState(false);
     const [pendingPurchase, setPendingPurchase] = useState(null);
+
+    const [payosLoading, setPayosLoading] = useState(false);
+
+    const [payOSConfig, setPayOSConfig] = useState({
+        RETURN_URL: window.location.href,
+        ELEMENT_ID: 'payos-embedded',
+        CHECKOUT_URL: null,
+        embedded: true,
+        onSuccess: async (event) => {
+            console.log('🎉 PayOS payment successful:', event);
+            setPaymentModalVisible(false);
+            const request = await axiosInstance.get('/payments/payos/status/' + event.orderCode);
+            refreshMembershipData();
+            notification.success({
+                message: 'Thanh toán thành công!',
+                description: 'Gói thành viên của bạn đã được kích hoạt.',
+            });
+        },
+        onExit: (event) => {
+            console.log('🏃‍♂️ PayOS checkout exited:', event);
+            setPaymentModalVisible(false);
+        },
+        onError: (error) => {
+            console.error('❌ PayOS error:', error);
+            notification.error({
+                message: 'Lỗi Thanh Toán',
+                description: 'Đã có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại.',
+            });
+        }
+    });
+
+    const { open, exit } = usePayOS(payOSConfig);
+
+    useEffect(() => {
+        if (payOSConfig.CHECKOUT_URL) {
+            open();
+        }
+    }, [payOSConfig.CHECKOUT_URL]);
 
     // Debug effect to monitor selectedPlan changes
     useEffect(() => {
@@ -314,6 +418,29 @@ const MembershipPlans = () => {
             delete window.refreshMembershipData;
         };
     }, []);
+
+    // Function to generate QR code image from PayOS data string
+    const generateQRCodeImage = async (qrData) => {
+        try {
+            console.log('🔄 Generating QR code image from data:', qrData);
+            
+            // Generate QR code as data URL
+            const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            });
+            
+            console.log('✅ QR code image generated successfully');
+            return qrCodeDataURL;
+        } catch (error) {
+            console.error('❌ Error generating QR code:', error);
+            return null;
+        }
+    };
 
     // Don't show API errors in demo mode
     useEffect(() => {
@@ -715,10 +842,10 @@ const MembershipPlans = () => {
                     console.log('🚫 Filtering out cancelled payment:', payment);
                     return false;
                 }
-                // Also exclude pending_cancellation
+                // Keep pending_cancellation to show "Đang chờ hủy gói" status
                 if (payment.MembershipStatus === 'pending_cancellation') {
-                    console.log('🚫 Filtering out pending_cancellation payment:', payment);
-                    return false;
+                    console.log('⏳ Keeping pending_cancellation payment for display:', payment);
+                    return true;
                 }
                 return true;
             });
@@ -880,16 +1007,24 @@ const MembershipPlans = () => {
                 }
             }
 
-            // Determine alert type and status text based on payment status
+            // Determine alert type and status text based on payment status and method
             let alertType = 'info';
             let statusText = 'Không xác định';
 
-            if (correctedStatus === 'confirmed') {
-                alertType = 'success';
-                statusText = '✅ Đã xác nhận';
-            } else if (correctedStatus === 'pending') {
+            // Check membership status first for cancellation
+            if (latestPayment.MembershipStatus === 'pending_cancellation') {
                 alertType = 'warning';
-                statusText = '⏳ Đang chờ admin xác nhận thanh toán';
+                statusText = '🕒 Đang chờ hủy gói - Yêu cầu hủy đã được gửi';
+            } else if (correctedStatus === 'confirmed') {
+                alertType = 'success';
+                if (latestPayment.PaymentMethod === 'PayOS') {
+                    statusText = '🎉 Đã kích hoạt tự động qua PayOS';
+                } else {
+                    statusText = '✅ Đã xác nhận';
+                }
+            } else if (correctedStatus === 'pending') {
+                alertType = 'success';
+                statusText = '⚡ Đang xử lý thanh toán PayOS...';
             } else if (correctedStatus === 'rejected' || correctedStatus === 'cancelled') {
                 alertType = 'error';
                 statusText = correctedStatus === 'cancelled' ? '🚫 Đã hủy' : '❌ Đã từ chối';
@@ -898,13 +1033,16 @@ const MembershipPlans = () => {
             return (
                 <div
                     style={{
-                        background: correctedStatus === 'confirmed'
-                            ? 'linear-gradient(135deg, #f0fdf9 0%, #ecfdf5 50%, #f0fdf4 100%)'
-                            : correctedStatus === 'pending'
-                                ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fef7cd 100%)'
-                                : 'linear-gradient(135deg, #fef2f2 0%, #fecaca 50%, #fed7d7 100%)',
-                        border: `1px solid ${correctedStatus === 'confirmed' ? '#86efac' :
-                            correctedStatus === 'pending' ? '#fcd34d' : '#fca5a5'}`,
+                        background: latestPayment.MembershipStatus === 'pending_cancellation'
+                            ? 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 25%, #f59e0b 75%, #d97706 100%)'
+                            : correctedStatus === 'confirmed'
+                                ? 'linear-gradient(135deg, #f0fdf9 0%, #ecfdf5 50%, #f0fdf4 100%)'
+                                : correctedStatus === 'pending'
+                                    ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fef7cd 100%)'
+                                    : 'linear-gradient(135deg, #fef2f2 0%, #fecaca 50%, #fed7d7 100%)',
+                        border: `1px solid ${latestPayment.MembershipStatus === 'pending_cancellation' ? '#f59e0b' :
+                            correctedStatus === 'confirmed' ? '#86efac' :
+                                correctedStatus === 'pending' ? '#fcd34d' : '#fca5a5'}`,
                         borderRadius: '12px',
                         padding: '16px',
                         marginBottom: '16px',
@@ -919,11 +1057,13 @@ const MembershipPlans = () => {
                         top: '0',
                         left: '0',
                         right: '0',
-                        background: correctedStatus === 'confirmed'
-                            ? 'linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%)'
-                            : correctedStatus === 'pending'
-                                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)'
-                                : 'linear-gradient(135deg, #f87171 0%, #ef4444 50%, #dc2626 100%)',
+                        background: latestPayment.MembershipStatus === 'pending_cancellation'
+                            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)'
+                            : correctedStatus === 'confirmed'
+                                ? 'linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%)'
+                                : correctedStatus === 'pending'
+                                    ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)'
+                                    : 'linear-gradient(135deg, #f87171 0%, #ef4444 50%, #dc2626 100%)',
                         color: 'white',
                         textAlign: 'center',
                         padding: '8px 12px',
@@ -932,10 +1072,14 @@ const MembershipPlans = () => {
                         borderRadius: '12px 12px 0 0',
                         letterSpacing: '0.3px'
                     }}>
-                        {correctedStatus === 'pending' ? "🔄 ĐANG CHỜ XÁC NHẬN" :
-                            correctedStatus === 'confirmed' ? "✅ GÓI DỊCH VỤ HIỆN TẠI" :
-                                correctedStatus === 'cancelled' ? "🚫 ĐÃ HỦY GÓI DỊCH VỤ" :
-                                    "📋 THÔNG TIN ĐƠN HÀNG"}
+                        {latestPayment.MembershipStatus === 'pending_cancellation' ? 
+                            "🕒 ĐANG CHỜ HỦY GÓI" :
+                            correctedStatus === 'pending' ? 
+                                "⚡ ĐANG XỬ LÝ PAYOS" :
+                                correctedStatus === 'confirmed' ? 
+                                    (latestPayment.PaymentMethod === 'PayOS' ? "🎉 KÍCH HOẠT TỰ ĐỘNG" : "✅ GÓI DỊCH VỤ HIỆN TẠI") :
+                                    correctedStatus === 'cancelled' ? "🚫 ĐÃ HỦY GÓI DỊCH VỤ" :
+                                        "📋 THÔNG TIN ĐƠN HÀNG"}
                     </div>
 
                     {/* Content */}
@@ -1044,7 +1188,8 @@ const MembershipPlans = () => {
                                 }}>
                                     {latestPayment.PaymentMethod === 'BankTransfer' ? 'Chuyển khoản' :
                                         latestPayment.PaymentMethod === 'Cash' ? 'Tiền mặt' :
-                                            latestPayment.PaymentMethod || 'Chuyển khoản'}
+                                            latestPayment.PaymentMethod === 'PayOS' ? 'PayOS - Thanh toán online' :
+                                                latestPayment.PaymentMethod || 'Chuyển khoản'}
                                 </div>
                             </div>
 
@@ -1220,43 +1365,7 @@ const MembershipPlans = () => {
                             </div>
                         )}
 
-                        {correctedStatus === 'pending' && (
-                            <div style={{
-                                background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fef7cd 100%)',
-                                border: '1px solid #fcd34d',
-                                borderRadius: '10px',
-                                padding: '14px',
-                                marginTop: '12px',
-                                textAlign: 'center'
-                            }}>
-                                <div style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    margin: '0 auto 12px auto'
-                                }}>
-                                    <span style={{ fontSize: '18px' }}>⏳</span>
-                                </div>
-                                <div style={{
-                                    fontSize: '14px',
-                                    fontWeight: 700,
-                                    color: '#92400e',
-                                    marginBottom: '6px'
-                                }}>
-                                    Đang chờ admin xác nhận thanh toán
-                                </div>
-                                <div style={{
-                                    fontSize: '12px',
-                                    color: '#a16207'
-                                }}>
-                                    Đơn hàng sẽ được kích hoạt sau khi admin xác nhận thanh toán của bạn
-                                </div>
-                            </div>
-                        )}
+
 
                         {correctedStatus === 'cancelled' && (
                             <div style={{
@@ -1367,6 +1476,106 @@ const MembershipPlans = () => {
         }, 100);
     };
 
+    // Enhanced PayOS payment handling
+    const handlePayOSPayment = async (plan) => {
+        try {
+            console.log('💳 Starting PayOS payment for plan:', plan);
+            setPayosLoading(true);
+            
+            const response = await axiosInstance.post('/payments/payos/create', {
+                planId: plan.PlanID,
+                amount: plan.Price,
+                description: `Thanh toán gói ${plan.Name}`
+            });
+
+            if (response.data.success) {
+                console.log('✅ PayOS payment created successfully:', response.data.data);
+                
+                // Store payment data for QR display
+                setPayosPaymentData(response.data.data.paymentLink);
+                
+                // Show success message
+                notification.success({
+                    message: '🎉 Tạo thanh toán PayOS thành công!',
+                    description: 'Hãy quét mã QR để thanh toán hoặc nhấn nút "Thanh toán PayOS" để chuyển đến trang thanh toán.',
+                    duration: 5
+                });
+
+                // Auto redirect to PayOS after 3 seconds (optional)
+                setTimeout(() => {
+                    if (response.data.data.checkoutUrl) {
+                        window.open(response.data.data.checkoutUrl, '_blank');
+                    }
+                }, 3000);
+                
+            } else {
+                throw new Error(response.data.message || 'Không thể tạo thanh toán PayOS');
+            }
+        } catch (error) {
+            console.error('❌ PayOS payment error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Lỗi không xác định';
+            notification.error({
+                message: '❌ Lỗi thanh toán PayOS',
+                description: errorMessage,
+                duration: 5
+            });
+        } finally {
+            setPayosLoading(false);
+        }
+    };
+
+    // Enhanced PayOS payment processing in modal
+    const processPayOSPayment = async () => {
+        if (!selectedPlan) {
+            notification.error({
+                message: 'Lỗi',
+                description: 'Vui lòng chọn gói dịch vụ'
+            });
+            return;
+        }
+
+        try {
+            setPayosLoading(true);
+            console.log('🚀 Processing PayOS payment for plan:', selectedPlan);
+
+            const response = await axiosInstance.post('/payments/payos/create', {
+                planId: selectedPlan.PlanID,
+                amount: selectedPlan.Price,
+                description: `Thanh toán gói ${selectedPlan.Name}`
+            });
+
+            if (response.data.success) {
+                console.log('✅ PayOS payment link created:', response.data.data);
+                
+                // Store the complete payment data
+                setPayosPaymentData(response.data.data.paymentLink);
+                
+                // Show success notification
+                notification.success({
+                    message: '🎉 PayOS Payment Created!',
+                    description: 'Quét mã QR bên dưới hoặc nhấn nút để chuyển đến trang thanh toán PayOS',
+                    duration: 6
+                });
+
+                // Force re-render to show QR code
+                setCurrentStep(2); 
+                
+            } else {
+                throw new Error(response.data.message || 'Failed to create PayOS payment');
+            }
+        } catch (error) {
+            console.error('❌ PayOS payment processing error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+            notification.error({
+                message: '❌ PayOS Payment Failed',
+                description: errorMessage,
+                duration: 5
+            });
+        } finally {
+            setPayosLoading(false);
+        }
+    };
+
     const handlePayment = () => {
         // Add comprehensive debugging
         console.log('🔥 handlePayment called with full context:', {
@@ -1434,6 +1643,13 @@ const MembershipPlans = () => {
         });
 
         if (currentStep === 1) {
+            // Handle PayOS payment method
+            if (paymentMethod === 'PayOS') {
+                console.log('💳 PayOS payment method selected - processing...');
+                processPayOSPayment();
+                return;
+            }
+
             // Filter payment history first (same logic as other functions)
             const activePayments = paymentHistory ? paymentHistory.filter(payment => {
                 if (payment.MembershipStatus === 'cancelled' ||
@@ -1451,9 +1667,9 @@ const MembershipPlans = () => {
                 p.PaymentStatus !== 'rejected' && p.Status !== 'rejected'
             )) {
                 console.warn('⚠️ User has active pending payment');
-                notification.warning({
-                    message: 'Đã có thanh toán đang chờ',
-                    description: 'Bạn đã có một thanh toán đang chờ xác nhận. Vui lòng chờ admin xác nhận trước khi đặt mua gói mới.',
+                notification.info({
+                    message: 'Đang xử lý thanh toán',
+                    description: 'Bạn đã có một thanh toán đang được xử lý. Vui lòng chờ trong giây lát.',
                     duration: 5
                 });
                 setPaymentModalVisible(false);
@@ -1603,7 +1819,7 @@ const MembershipPlans = () => {
         console.log('🚫 Modal cancelled, selectedPlan preserved for potential retry');
     };
 
-    const proceedWithPayment = () => {
+    const proceedWithPayment = async () => {
         try {
             // Set to confirmation step
             setCurrentStep(2);
@@ -1614,7 +1830,43 @@ const MembershipPlans = () => {
             // Clear any previous success state to prevent notification loops
             dispatch(clearSuccess());
 
-            // Validate data before sending
+            // Check if PayOS payment method is selected
+            if (paymentMethod === 'PayOS') {
+                try {
+                    console.log('💳 Creating PayOS payment...');
+                    const response = await axiosInstance.post('/payments/payos/create', {
+                        planId: selectedPlan.PlanID,
+                        amount: selectedPlan.Price,
+                        description: `Thanh toán gói ${selectedPlan.Name}`
+                    });
+
+                    if (response.data.success) {
+                        // Close modal and redirect to PayOS checkout
+                        setPaymentModalVisible(false);
+                        setCurrentStep(0);
+                        
+                        toast.success('Đang chuyển hướng đến trang thanh toán PayOS...');
+                        
+                        // Redirect to PayOS checkout
+                        window.location.href = response.data.data.checkoutUrl;
+                        return;
+                    } else {
+                        throw new Error('Không thể tạo link thanh toán PayOS');
+                    }
+                } catch (error) {
+                    console.error('❌ PayOS payment error:', error);
+                    setCurrentStep(1);
+                    
+                    notification.error({
+                        message: '❌ Lỗi thanh toán PayOS',
+                        description: error.message || 'Không thể tạo thanh toán PayOS. Vui lòng thử lại.',
+                        duration: 5
+                    });
+                    return;
+                }
+            }
+
+            // For other payment methods (BankTransfer, Cash)
             const paymentData = {
                 planId: selectedPlan.PlanID,
                 paymentMethod: paymentMethod
@@ -1633,9 +1885,13 @@ const MembershipPlans = () => {
                     setCurrentStep(0);
 
                     // Show success notification
+                    const notificationMessage = paymentMethod === 'PayOS' ? 
+                        'Đơn hàng PayOS đã được tạo và sẽ được kích hoạt tự động khi thanh toán thành công!' :
+                        'Đơn hàng của bạn đã được tạo và đang chờ admin xác nhận thanh toán. Khi thanh toán được xác nhận, tất cả tiến trình cũ sẽ được reset để bạn bắt đầu fresh với gói mới!';
+                    
                     notification.success({
                         message: '🎉 Đơn hàng đã được tạo thành công!',
-                        description: 'Đơn hàng của bạn đã được tạo và đang chờ admin xác nhận thanh toán. Khi thanh toán được xác nhận, tất cả tiến trình cũ sẽ được reset để bạn bắt đầu fresh với gói mới!',
+                        description: notificationMessage,
                         duration: 8
                     });
 
@@ -1684,65 +1940,62 @@ const MembershipPlans = () => {
         try {
             console.log("🚀 Starting cancel membership process...");
 
+            // Validate cancellation reason
+            if (!cancellationReason.trim()) {
+                notification.error({
+                    message: 'Lỗi',
+                    description: 'Vui lòng nhập lí do hủy gói dịch vụ'
+                });
+                return;
+            }
+
+            if (cancellationReason.trim().length < 10) {
+                notification.error({
+                    message: 'Lỗi',
+                    description: 'Lí do hủy gói phải có ít nhất 10 ký tự'
+                });
+                return;
+            }
+
             // Validate bank information
-            if (!bankInfo.bankAccountNumber || !bankInfo.bankName || !bankInfo.accountHolderName) {
+            if (!bankInfo.accountHolderName.trim()) {
                 notification.error({
                     message: 'Lỗi',
-                    description: 'Vui lòng cung cấp đầy đủ thông tin ngân hàng để hoàn tiền'
+                    description: 'Vui lòng nhập tên chủ tài khoản'
                 });
                 return;
             }
 
-            // Validate bank account number (basic validation)
-            if (bankInfo.bankAccountNumber.length < 8) {
+            if (!bankInfo.bankAccountNumber.trim()) {
                 notification.error({
                     message: 'Lỗi',
-                    description: 'Số tài khoản ngân hàng không hợp lệ (phải có ít nhất 8 chữ số)'
+                    description: 'Vui lòng nhập số tài khoản ngân hàng'
                 });
                 return;
             }
 
-            // Validate account holder name
-            if (bankInfo.accountHolderName.trim().length < 2) {
+            if (bankInfo.bankAccountNumber.trim().length < 8) {
                 notification.error({
                     message: 'Lỗi',
-                    description: 'Tên chủ tài khoản phải có ít nhất 2 ký tự'
+                    description: 'Số tài khoản ngân hàng phải có ít nhất 8 chữ số'
                 });
                 return;
             }
 
-            // Check if user has payment history
-            if (!paymentHistory || paymentHistory.length === 0) {
+            if (!bankInfo.bankName.trim()) {
                 notification.error({
                     message: 'Lỗi',
-                    description: 'Không tìm thấy thông tin gói dịch vụ để hủy'
+                    description: 'Vui lòng chọn ngân hàng'
                 });
                 return;
             }
 
-            // Find the active confirmed payment
-            const latestPayment = paymentHistory.find(payment =>
-                (payment.PaymentStatus === 'confirmed' || payment.Status === 'confirmed')
-            );
-
-            if (!latestPayment) {
-                notification.error({
-                    message: 'Lỗi',
-                    description: 'Không tìm thấy gói dịch vụ đã xác nhận để hủy'
-                });
-                return;
-            }
-
-            console.log("✅ Latest payment data for cancellation:", latestPayment);
-
-            // Prepare the cancellation request
+            // Prepare the cancellation request with bank info
             const cancellationData = {
-                reason: 'Hủy gói dịch vụ theo yêu cầu của khách hàng',
-                bankAccount: {
-                    bankAccountNumber: bankInfo.bankAccountNumber.trim(),
-                    bankName: bankInfo.bankName.trim(),
-                    accountHolderName: bankInfo.accountHolderName.trim()
-                }
+                reason: cancellationReason.trim(),
+                accountHolderName: bankInfo.accountHolderName.trim(),
+                bankAccountNumber: bankInfo.bankAccountNumber.trim(),
+                bankName: bankInfo.bankName.trim()
             };
 
             console.log("📤 Sending cancellation request with data:", cancellationData);
@@ -1758,12 +2011,13 @@ const MembershipPlans = () => {
             // Show success notification
             notification.success({
                 message: 'Thành công',
-                description: result.message || 'Yêu cầu hủy gói dịch vụ đã được gửi. Admin sẽ xem xét và xử lý trong vòng 3-5 ngày làm việc.',
+                description: result.message || 'Yêu cầu hủy gói dịch vụ đã được gửi. Admin sẽ xem xét và xử lý.',
                 duration: 6
             });
 
             // Close modal and reset form
             setCancelModalVisible(false);
+            setCancellationReason('');
             setBankInfo({
                 bankAccountNumber: '',
                 bankName: '',
@@ -2009,29 +2263,111 @@ const MembershipPlans = () => {
         message
     });
 
-    const handlePayOSPayment = async (plan) => {
-        try {
-            setLoading(true);
-            
-            const response = await axiosInstance.post('/payment/payos/create', {
-                planId: plan.PlanID,
-                amount: plan.Price,
-                description: `Thanh toán gói ${plan.Name}`
-            });
+    // Khi chọn phương thức thanh toán PayOS
+    useEffect(() => {
+        // Create the payment link for the embedded form when modal is open and plan is selected
+        if (selectedPlan && paymentModalVisible) {
+            console.log('🔄 Creating PayOS payment link for embedded form...');
+            setPayosLoading(true);
+            exit(); // Close any existing instance
 
-            if (response.data.success) {
-                // Redirect to PayOS checkout
-                window.location.href = response.data.data.checkoutUrl;
-            } else {
-                toast.error('Không thể tạo link thanh toán');
-            }
-        } catch (error) {
-            console.error('PayOS payment error:', error);
-            toast.error('Lỗi khi tạo thanh toán PayOS');
-        } finally {
-            setLoading(false);
+            axiosInstance.post('/payments/payos/create', {
+                planId: selectedPlan.PlanID,
+                amount: selectedPlan.Price,
+                description: `Thanh toán gói ${selectedPlan.Name}`
+            })
+            .then(res => {
+                if (res.data.success && res.data.data.checkoutUrl) {
+                    console.log('✅ PayOS payment link created:', res.data.data.checkoutUrl);
+                    setPayOSConfig(prevConfig => ({
+                        ...prevConfig,
+                        CHECKOUT_URL: res.data.data.checkoutUrl
+                    }));
+                } else {
+                    console.error('❌ PayOS payment creation failed:', res.data.message);
+                    notification.error({
+                        message: 'Lỗi PayOS',
+                        description: res.data.message || 'Không thể tạo thanh toán PayOS'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('❌ PayOS payment creation error:', error);
+                notification.error({
+                    message: 'Lỗi PayOS',
+                    description: error.response?.data?.message || 'Không thể kết nối PayOS'
+                });
+            })
+            .finally(() => {
+                setPayosLoading(false);
+            });
+        } else {
+            // If modal is closed, clean up
+            exit();
+            setPayOSConfig(prev => ({ ...prev, CHECKOUT_URL: null }));
         }
-    };
+    }, [selectedPlan, paymentModalVisible]);
+
+    // Don't show API errors in demo mode
+    useEffect(() => {
+        const originalError = console.error;
+        console.error = (...args) => {
+            if (!useSampleData) {
+                originalError(...args);
+            }
+        };
+        return () => {
+            console.error = originalError;
+        };
+    }, [useSampleData]);
+
+    // Effect to inject CSS for PayOS QR styling
+    useEffect(() => {
+        // Inject CSS to remove padding and make QR code fill container
+        const style = document.createElement('style');
+        style.textContent = `
+            #payos-embedded iframe {
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+            
+            /* Remove default PayOS padding */
+            #payos-embedded .payos-checkout-container {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Make QR code fill container */
+            #payos-embedded .qr-container,
+            #payos-embedded .qr-code-wrapper,
+            #payos-embedded .qr-code {
+                width: 100% !important;
+                height: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
+            
+            #payos-embedded img[alt*="QR"],
+            #payos-embedded canvas {
+                max-width: 100% !important;
+                max-height: 100% !important;
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
 
     return (
         <div className="membership-plans-container">
@@ -2423,16 +2759,17 @@ const MembershipPlans = () => {
                             </div>
                         </Card>
 
-                        {/* Payment Method Selection */}
+                        {/* PayOS Payment Method - Only Option */}
                         <Card
                             style={{
                                 marginBottom: '24px',
                                 borderRadius: '12px',
-                                border: '1px solid #e2e8f0'
+                                border: '2px solid #10b981',
+                                background: 'linear-gradient(135deg, #f0fdf9 0%, #ecfdf5 100%)'
                             }}
                             bodyStyle={{ padding: '20px' }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <div style={{
                                     width: '48px',
                                     height: '48px',
@@ -2445,45 +2782,28 @@ const MembershipPlans = () => {
                                     fontSize: '20px',
                                     marginRight: '16px'
                                 }}>
-                                    💳
+                                    ⚡
                                 </div>
-                                <Title level={4} style={{ margin: 0, color: '#1e293b' }}>
-                                    Phương thức thanh toán
-                                </Title>
+                                <div>
+                                    <Title level={4} style={{ margin: 0, color: '#065f46' }}>
+                                        PayOS - Thanh toán online
+                                    </Title>
+                                    <div style={{ color: '#047857', fontSize: '14px', marginTop: '4px' }}>
+                                        Phương thức thanh toán duy nhất - An toàn & Nhanh chóng
+                                    </div>
+                                </div>
+                                <div style={{
+                                    marginLeft: 'auto',
+                                    background: '#10b981',
+                                    color: 'white',
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '12px',
+                                    fontWeight: 600
+                                }}>
+                                    ✓ ĐƯỢC CHỌN
+                                </div>
                             </div>
-
-                            <Radio.Group
-                                onChange={(e) => setPaymentMethod(e.target.value)}
-                                value={paymentMethod}
-                                style={{ width: '100%' }}
-                            >
-                                {PaymentMethodOptions.map(option => (
-                                    <Radio
-                                        key={option.value}
-                                        value={option.value}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            height: '50px',
-                                            padding: '0 16px',
-                                            margin: '8px 0',
-                                            borderRadius: '8px',
-                                            border: '2px solid #e2e8f0',
-                                            background: '#f8fafc',
-                                            width: '100%'
-                                        }}
-                                    >
-                                        <span style={{
-                                            marginLeft: '8px',
-                                            fontSize: '15px',
-                                            fontWeight: 500,
-                                            color: '#374151'
-                                        }}>
-                                            {option.label}
-                                        </span>
-                                    </Radio>
-                                ))}
-                            </Radio.Group>
                         </Card>
 
                         {/* Payment Information Card */}
@@ -2515,110 +2835,186 @@ const MembershipPlans = () => {
                                 </Title>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '24px', alignItems: 'start' }}>
-                                {/* QR Code Section */}
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{
-                                        background: 'white',
-                                        borderRadius: '16px',
-                                        padding: '20px',
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'start' }}>
+                                {/* Payment form container */}
+                                <div style={{ textAlign: 'center', width: '100%' }}>
+                                    <div style={{ 
+                                        width: '100%',
                                         border: '2px solid #e5e7eb',
-                                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+                                        borderRadius: '12px',
+                                        overflow: 'hidden',
+                                        backgroundColor: '#ffffff',
+                                        position: 'relative'
                                     }}>
-                                        <img
-                                            src="/api/images/payment-qr.svg"
-                                            alt="Mã QR thanh toán"
-                                            style={{
-                                                width: '180px',
-                                                height: '180px',
-                                                borderRadius: '12px'
+                                        {payosLoading && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+                                                <Spin size="large" />
+                                                <p style={{ marginTop: '20px' }}>Đang chuẩn bị thanh toán...</p>
+                                            </div>
+                                        )}
+                                        <div 
+                                            id="payos-embedded" 
+                                            style={{ 
+                                                height: '400px', 
+                                                display: payosLoading ? 'none' : 'block',
+                                                width: '100%',
+                                                border: 'none',
+                                                padding: '0',
+                                                margin: '0',
+                                                overflow: 'hidden'
                                             }}
-                                        />
-                                        <div style={{
-                                            marginTop: '12px',
-                                            fontWeight: 600,
-                                            color: '#374151',
-                                            fontSize: '16px'
-                                        }}>
-                                            📱 Quét mã QR
-                                        </div>
-                                        <div style={{
-                                            fontSize: '14px',
-                                            color: '#6b7280',
-                                            marginTop: '4px'
-                                        }}>
-                                            để thanh toán nhanh chóng
-                                        </div>
+                                        ></div>
+                                        <style dangerouslySetInnerHTML={{
+                                            __html: `
+                                                #payos-embedded iframe {
+                                                    border: none !important;
+                                                    padding: 0 !important;
+                                                    margin: 0 !important;
+                                                    width: 100% !important;
+                                                    height: 100% !important;
+                                                }
+                                                
+                                                #payos-embedded .payos-checkout-container {
+                                                    padding: 0 !important;
+                                                    margin: 0 !important;
+                                                }
+                                                
+                                                #payos-embedded .qr-container,
+                                                #payos-embedded .qr-code-wrapper,
+                                                #payos-embedded .qr-code {
+                                                    width: 100% !important;
+                                                    height: 100% !important;
+                                                    padding: 0 !important;
+                                                    margin: 0 !important;
+                                                    display: flex !important;
+                                                    justify-content: center !important;
+                                                    align-items: center !important;
+                                                }
+                                                
+                                                #payos-embedded img[alt*="QR"],
+                                                #payos-embedded canvas {
+                                                    max-width: calc(100% - 20px) !important;
+                                                    max-height: calc(100% - 20px) !important;
+                                                    width: auto !important;
+                                                    height: auto !important;
+                                                    object-fit: contain !important;
+                                                }
+                                            `
+                                        }} />
                                     </div>
                                 </div>
 
                                 {/* Instructions Section */}
                                 <div>
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <div style={{
-                                            display: 'inline-block',
-                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                            color: 'white',
-                                            padding: '8px 16px',
-                                            borderRadius: '20px',
-                                            fontSize: '14px',
-                                            fontWeight: 600,
-                                            marginBottom: '12px'
+                                    <div style={{ 
+                                        background: 'linear-gradient(135deg, #f0fdf9 0%, #ecfdf5 100%)',
+                                        borderRadius: '12px',
+                                        padding: '24px',
+                                        border: '1px solid #10b981'
+                                    }}>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            marginBottom: '20px'
                                         }}>
-                                            Ghi chú chuyển khoản: <Text code style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>ADMIN PREMIUM</Text>
-                                        </div>
-                                    </div>
-
-                                    <div className="payment-steps">
-                                        {[
-                                            {
-                                                icon: '🏦',
-                                                title: 'Chuyển khoản ngân hàng',
-                                                desc: 'Bạn sẽ nhận được thông tin tài khoản để chuyển tiền'
-                                            },
-                                            {
-                                                icon: '🏪',
-                                                title: 'Thanh toán tại quầy',
-                                                desc: 'Bạn sẽ đến địa điểm vật lý để thanh toán trực tiếp'
-                                            },
-                                            {
-                                                icon: '✅',
-                                                title: 'Xác nhận thanh toán',
-                                                desc: 'Admin sẽ xác nhận và nâng cấp tài khoản trong 5-10 phút'
-                                            }
-                                        ].map((step, index) => (
-                                            <div key={index} style={{
+                                            <div style={{
+                                                width: '48px',
+                                                height: '48px',
+                                                borderRadius: '12px',
+                                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                marginBottom: '16px',
-                                                padding: '16px',
-                                                background: 'white',
-                                                borderRadius: '12px',
-                                                border: '1px solid #e5e7eb'
+                                                justifyContent: 'center',
+                                                color: 'white',
+                                                fontSize: '20px',
+                                                marginRight: '16px'
                                             }}>
+                                                ⚡
+                                            </div>
+                                            <div>
                                                 <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '50%',
-                                                    background: '#f3f4f6',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
                                                     fontSize: '18px',
-                                                    marginRight: '16px'
+                                                    fontWeight: 700,
+                                                    color: '#065f46',
+                                                    marginBottom: '4px'
                                                 }}>
-                                                    {step.icon}
+                                                    PayOS - Thanh toán tức thì
                                                 </div>
-                                                <div>
-                                                    <div style={{ fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
-                                                        {step.title}
-                                                    </div>
-                                                    <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                                                        {step.desc}
-                                                    </div>
+                                                <div style={{ fontSize: '14px', color: '#047857' }}>
+                                                    Kích hoạt tự động sau khi thanh toán thành công
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        <div className="payos-steps">
+                                            {[
+                                                {
+                                                    icon: '📱',
+                                                    title: 'Quét mã QR hoặc nhấn nút PayOS',
+                                                    desc: 'Sử dụng app ngân hàng để quét mã QR hoặc nhấn nút "Thanh toán PayOS"'
+                                                },
+                                                {
+                                                    icon: '💳',
+                                                    title: 'Thanh toán trực tuyến',
+                                                    desc: 'Thực hiện thanh toán an toàn qua PayOS gateway'
+                                                },
+                                                {
+                                                    icon: '🎉',
+                                                    title: 'Kích hoạt tức thì',
+                                                    desc: 'Gói dịch vụ được kích hoạt ngay lập tức, không cần chờ admin'
+                                                }
+                                            ].map((step, index) => (
+                                                <div key={index} style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    marginBottom: '16px',
+                                                    padding: '16px',
+                                                    background: 'rgba(255, 255, 255, 0.7)',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid rgba(16, 185, 129, 0.2)'
+                                                }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '50%',
+                                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '18px',
+                                                        marginRight: '16px',
+                                                        color: 'white'
+                                                    }}>
+                                                        {step.icon}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: '#065f46', marginBottom: '4px' }}>
+                                                            {step.title}
+                                                        </div>
+                                                        <div style={{ fontSize: '14px', color: '#047857' }}>
+                                                            {step.desc}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div style={{
+                                            background: 'rgba(16, 185, 129, 0.1)',
+                                            borderRadius: '8px',
+                                            padding: '16px',
+                                            marginTop: '16px',
+                                            border: '1px solid rgba(16, 185, 129, 0.3)'
+                                        }}>
+                                            <div style={{ 
+                                                fontSize: '14px', 
+                                                color: '#065f46', 
+                                                fontWeight: 600,
+                                                textAlign: 'center'
+                                            }}>
+                                                ✨ Ưu điểm PayOS: Thanh toán nhanh • Kích hoạt tức thì • An toàn bảo mật
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2630,13 +3026,29 @@ const MembershipPlans = () => {
             <Modal
                 title="Hủy gói thành viên"
                 open={cancelModalVisible}
-                onCancel={() => setCancelModalVisible(false)}
+                onCancel={() => {
+                    setCancelModalVisible(false);
+                    setCancellationReason('');
+                    setBankInfo({
+                        bankAccountNumber: '',
+                        bankName: '',
+                        accountHolderName: ''
+                    });
+                }}
                 footer={[
-                    <Button key="back" onClick={() => setCancelModalVisible(false)}>
+                    <Button key="back" onClick={() => {
+                        setCancelModalVisible(false);
+                        setCancellationReason('');
+                        setBankInfo({
+                            bankAccountNumber: '',
+                            bankName: '',
+                            accountHolderName: ''
+                        });
+                    }}>
                         Không, giữ gói thành viên
                     </Button>,
                     <Button key="submit" type="primary" danger onClick={handleCancelMembership}>
-                        Có, hủy và nhận 50% hoàn tiền
+                        Có, gửi yêu cầu hủy gói
                     </Button>,
                 ]}
                 width={600}
@@ -2645,23 +3057,30 @@ const MembershipPlans = () => {
                     message="Cảnh báo"
                     description={
                         <div>
-                            <p>Bạn có chắc chắn muốn hủy gói thành viên không?</p>
-                            <p><strong>Quan trọng:</strong> Bạn chỉ nhận được hoàn tiền 50% số tiền đã thanh toán.</p>
-                            {paymentHistory && paymentHistory.length > 0 && paymentHistory[0].PaymentStatus === 'confirmed' && (
-                                <p>Số tiền hoàn lại: {calculateRefundAmount(paymentHistory[0]).toLocaleString()} VNĐ</p>
-                            )}
-                            <p>Trạng thái tài khoản của bạn sẽ trở về Guest ngay lập tức.</p>
-                            <p style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
-                                ⚠️ Lưu ý: Gói dịch vụ chỉ có thể hủy trong vòng 7 ngày đầu tiên kể từ ngày mua.
+                            <p>Bạn có chắc chắn muốn gửi yêu cầu hủy gói thành viên không?</p>
+                            <p><strong>Quan trọng:</strong> Yêu cầu sẽ được gửi đến admin để xem xét.</p>
+                            <p>Admin sẽ xác nhận hủy gói và bạn có thể đặt mua gói dịch vụ mới sau đó.</p>
+                            <p style={{ color: '#1890ff', fontWeight: 'bold' }}>
+                                ℹ️ Lưu ý: Vui lòng nhập lí do chi tiết để admin hiểu rõ tình况 của bạn.
                             </p>
                         </div>
                     }
-                    type="warning"
+                    type="info"
                     showIcon
                     style={{ marginBottom: '20px' }}
                 />
 
                 <Divider>Thông tin hoàn tiền</Divider>
+
+                <div style={{ marginBottom: '16px' }}>
+                    <Text strong>Tên chủ tài khoản *</Text>
+                    <Input
+                        placeholder="Nhập tên chủ tài khoản (theo đúng tên trên ngân hàng)"
+                        value={bankInfo.accountHolderName}
+                        onChange={(e) => setBankInfo({ ...bankInfo, accountHolderName: e.target.value })}
+                        style={{ marginTop: '8px' }}
+                    />
+                </div>
 
                 <div style={{ marginBottom: '16px' }}>
                     <Text strong>Số tài khoản ngân hàng *</Text>
@@ -2674,34 +3093,54 @@ const MembershipPlans = () => {
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                    <Text strong>Tên ngân hàng *</Text>
-                    <Input
-                        placeholder="Ví dụ: Vietcombank, BIDV, Techcombank..."
+                    <Text strong>Ngân hàng *</Text>
+                    <Select
+                        placeholder="Chọn ngân hàng"
                         value={bankInfo.bankName}
-                        onChange={(e) => setBankInfo({ ...bankInfo, bankName: e.target.value })}
-                        style={{ marginTop: '8px' }}
-                    />
+                        onChange={(value) => setBankInfo({ ...bankInfo, bankName: value })}
+                        style={{ width: '100%', marginTop: '8px' }}
+                        showSearch
+                        filterOption={(input, option) =>
+                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                        }
+                    >
+                        {VIETNAM_BANKS.map((bank) => (
+                            <Select.Option key={bank.name} value={bank.name}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '16px' }}>{bank.icon}</span>
+                                    <span>{bank.name}</span>
+                                    <span style={{ color: '#666', fontSize: '12px' }}>
+                                        - {bank.fullName}
+                                    </span>
+                                </div>
+                            </Select.Option>
+                        ))}
+                    </Select>
                 </div>
 
+                <Divider>Lí do hủy gói dịch vụ</Divider>
+
                 <div style={{ marginBottom: '16px' }}>
-                    <Text strong>Tên chủ tài khoản *</Text>
-                    <Input
-                        placeholder="Nhập tên chủ tài khoản (theo đúng tên trên ngân hàng)"
-                        value={bankInfo.accountHolderName}
-                        onChange={(e) => setBankInfo({ ...bankInfo, accountHolderName: e.target.value })}
+                    <Text strong>Lí do muốn hủy gói dịch vụ *</Text>
+                    <Input.TextArea
+                        placeholder="Vui lòng cho biết lí do bạn muốn hủy gói dịch vụ (ít nhất 10 ký tự)..."
+                        value={cancellationReason}
+                        onChange={(e) => setCancellationReason(e.target.value)}
+                        rows={3}
+                        maxLength={500}
+                        showCount
                         style={{ marginTop: '8px' }}
                     />
                 </div>
 
                 <Alert
-                    message="Lưu ý quan trọng"
+                    message="Thông tin quan trọng"
                     description={
                         <div>
-                            <p>• Thông tin ngân hàng phải chính xác để đảm bảo hoàn tiền thành công</p>
-                            <p>• Thời gian xử lý hoàn tiền là 3-5 ngày làm việc</p>
-                            <p>• Gói dịch vụ chỉ có thể hủy trong vòng 7 ngày đầu tiên</p>
-                            <p>• Bạn sẽ chỉ nhận được 50% số tiền đã thanh toán</p>
-                            <p>• Mọi thông tin ADMIN Trung Tâm chuyển khoản cho bạn sẽ được hệ thống thông báo qua SMS,SĐT của người dùng</p>
+                            <p>• Yêu cầu hủy gói sẽ được gửi đến admin để xem xét</p>
+                            <p>• Admin sẽ liên hệ với bạn để xác nhận và xử lý</p>
+                            <p>• Sau khi admin xác nhận, bạn có thể đặt mua gói dịch vụ mới</p>
+                            <p>• Vui lòng cung cấp lí do chi tiết để admin hiểu rõ tình huống</p>
                         </div>
                     }
                     type="info"

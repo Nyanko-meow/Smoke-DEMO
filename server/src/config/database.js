@@ -6,10 +6,10 @@ const path = require('path');
 dotenv.config();
 
 const dbConfig = {
-    user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || '12345',
-    server: process.env.DB_SERVER || 'localhost',
-    database: process.env.DB_DATABASE || 'SMOKEKING',
+    server: process.env.DB_SERVER ?? 'localhost',
+    database: process.env.DB_DATABASE ?? 'SMOKEKING',
+    user: process.env.DB_USER ?? 'sa',
+    password: process.env.DB_PASSWORD ?? '12345',
     port: parseInt(process.env.DB_PORT || '1433'),
     options: {
         encrypt: process.env.DB_ENCRYPT === 'true' || false,
@@ -34,13 +34,7 @@ const connectDB = async () => {
         // After successful connection, run seed data
         // await seedSubscriptionPlans(); // Commented out to avoid seed errors
     } catch (error) {
-        console.error('Database connection failed:', error);
-        console.log('Please check your database connection settings in .env file or create one with the following variables:');
-        console.log('DB_USER=sa');
-        console.log('DB_PASSWORD=your_password');
-        console.log('DB_SERVER=localhost');
-        console.log('DB_DATABASE=SMOKEKING');
-        console.log('DB_PORT=1433');
+        console.error('Database connection failed:', dbConfig.user, dbConfig.password, dbConfig.server, dbConfig.database   );
         process.exit(1);
     }
 };

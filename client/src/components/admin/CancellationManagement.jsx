@@ -48,7 +48,7 @@ const CancellationManagement = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://localhost:4000/api/admin/pending-cancellations', {
+            const response = await axios.get('http://localhost:4000/api/admin/pending-membership-cancellations', {
                 headers: { 'Authorization': `Bearer ${token}` },
                 withCredentials: true
             });
@@ -74,8 +74,6 @@ const CancellationManagement = () => {
     const handleApprove = (record) => {
         setSelectedRequest(record);
         approveForm.setFieldsValue({
-            approveRefund: record.RequestedRefundAmount > 0,
-            refundAmount: record.RequestedRefundAmount || 0,
             adminNotes: ''
         });
         setApproveModalVisible(true);
@@ -86,16 +84,16 @@ const CancellationManagement = () => {
     const submitApproval = async (values) => {
         try {
             console.log('🔍 Submitting approval for request:', selectedRequest);
-            console.log('🔍 RequestID:', selectedRequest?.RequestID);
+            console.log('🔍 MembershipID:', selectedRequest?.MembershipID);
 
-            if (!selectedRequest?.RequestID) {
-                message.error('Không tìm thấy ID yêu cầu hủy gói');
+            if (!selectedRequest?.MembershipID) {
+                message.error('Không tìm thấy ID membership');
                 return;
             }
 
             const token = localStorage.getItem('adminToken');
             const response = await axios.post(
-                `http://localhost:4000/api/admin/debug-approve/${selectedRequest.RequestID}`,
+                `http://localhost:4000/api/admin/confirm-membership-cancellation/${selectedRequest.MembershipID}`,
                 values,
                 {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -104,14 +102,14 @@ const CancellationManagement = () => {
             );
 
             if (response.data.success) {
-                message.success('Đã chấp nhận yêu cầu hủy gói');
+                message.success('Đã xác nhận hủy gói thành công! User có thể đặt mua gói mới.');
                 setApproveModalVisible(false);
                 approveForm.resetFields();
                 loadPendingRequests();
             }
         } catch (error) {
             console.error('Error approving cancellation:', error);
-            message.error('Lỗi khi chấp nhận yêu cầu hủy gói');
+            message.error('Lỗi khi xác nhận hủy gói');
         }
     };
 
@@ -185,6 +183,7 @@ const CancellationManagement = () => {
         {
             title: 'Khách hàng',
             key: 'customer',
+            width: 300,
             render: (record) => (
                 <div className="flex items-center space-x-3">
                     <Avatar icon={<UserOutlined />} />
@@ -192,8 +191,14 @@ const CancellationManagement = () => {
                         <div className="font-medium">{`${record.FirstName} ${record.LastName}`}</div>
                         <div className="text-sm text-gray-500">{record.Email}</div>
                         {record.PhoneNumber && (
-                            <div className="text-sm text-gray-500">{record.PhoneNumber}</div>
+                            <div className="text-sm text-gray-500">📞 {record.PhoneNumber}</div>
                         )}
+                        <div className="text-sm text-blue-600 font-medium">
+                            👤 {record.AccountHolderName || 'Chưa cập nhật'}
+                        </div>
+                        <div className="text-sm text-green-600 font-medium">
+                            💳 {record.BankAccountNumber || 'Chưa cập nhật'}
+                        </div>
                     </div>
                 </div>
             ),
@@ -226,27 +231,38 @@ const CancellationManagement = () => {
             ),
         },
         {
-            title: 'Yêu cầu hoàn tiền',
-            key: 'refund',
-            align: 'center',
+            title: 'Ngân hàng',
+            key: 'bankName',
+            width: 150,
             render: (record) => (
-                <div>
-                    {record.RequestedRefundAmount > 0 ? (
-                        <div>
-                            <Tag color="orange">Có yêu cầu</Tag>
-                            <div className="text-sm font-medium text-orange-600">
-                                {formatCurrency(record.RequestedRefundAmount)}
-                            </div>
+                <div className="text-sm">
+                    <div className="font-medium text-purple-600">
+                        🏦 {record.BankName || 'Chưa cập nhật'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: 'Lí do hủy gói',
+            key: 'cancellationReason',
+            width: 200,
+            render: (record) => (
+                <div className="text-sm">
+                    <Tooltip title={record.CancellationReason}>
+                        <div style={{ 
+                            maxHeight: '60px', 
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {record.CancellationReason || 'Chưa cập nhật'}
                         </div>
-                    ) : (
-                        <Tag color="gray">Không yêu cầu</Tag>
-                    )}
+                    </Tooltip>
                 </div>
             ),
         },
         {
             title: 'Ngày yêu cầu',
-            dataIndex: 'RequestedAt',
+            dataIndex: 'CancellationRequestedAt',
             key: 'requestedAt',
             render: (date) => formatDate(date),
         },

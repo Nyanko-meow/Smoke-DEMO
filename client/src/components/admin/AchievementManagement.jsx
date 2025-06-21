@@ -41,7 +41,6 @@ import {
     CalendarOutlined,
     DollarOutlined,
     TeamOutlined,
-    ResetOutlined,
     CheckCircleOutlined,
     CloseCircleOutlined
 } from '@ant-design/icons';
@@ -1012,7 +1011,7 @@ const AchievementManagement = () => {
                                 Làm mới
                             </Button>
                             <Button
-                                icon={<ResetOutlined />}
+                                icon={<ReloadOutlined />}
                                 onClick={() => setResetModalVisible(true)}
                                 className="achievement-btn achievement-btn-danger"
                             >

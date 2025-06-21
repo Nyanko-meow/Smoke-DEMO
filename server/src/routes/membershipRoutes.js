@@ -63,7 +63,7 @@ router.post('/purchase', auth, async (req, res) => {
         if (existingPendingResult.recordset[0].pendingCount > 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Bạn đã có thanh toán đang chờ xác nhận. Vui lòng chờ admin xử lý trước khi đặt mua gói mới.'
+                message: 'Bạn đã có thanh toán đang được xử lý. Vui lòng chờ trong giây lát.'
             });
         }
 
@@ -118,7 +118,7 @@ router.post('/purchase', auth, async (req, res) => {
                 .input('planId', planId)
                 .input('amount', plan.Price)
                 .input('paymentMethod', paymentMethod)
-                .input('status', 'pending')
+                .input('status', 'active')
                 .input('transactionId', transactionId)
                 .input('startDate', startDate)
                 .input('endDate', endDate)
@@ -139,7 +139,7 @@ router.post('/purchase', auth, async (req, res) => {
 
             console.log('Payment created with ID:', paymentId);
 
-            // Create membership record with PENDING status (not active)
+            // Create membership record with ACTIVE status (immediate activation)
             const membershipResult = await transaction.request()
                 .input('userId', userId)
                 .input('planId', planId)
@@ -148,12 +148,12 @@ router.post('/purchase', auth, async (req, res) => {
                 .query(`
                     INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status)
                     OUTPUT INSERTED.MembershipID
-                    VALUES (@userId, @planId, @startDate, @endDate, 'pending')
+                    VALUES (@userId, @planId, @startDate, @endDate, 'active')
                 `);
 
             const membershipId = membershipResult.recordset[0].MembershipID;
 
-            console.log('Membership created with ID (pending status):', membershipId);
+            console.log('Membership created with ID (active status):', membershipId);
 
             // DO NOT create payment confirmation record automatically
             // Admin will create this when they confirm the payment
@@ -166,7 +166,7 @@ router.post('/purchase', auth, async (req, res) => {
 
             res.json({
                 success: true,
-                message: 'Payment submitted and pending admin confirmation',
+                message: 'Gói dịch vụ đã được kích hoạt thành công!',
                 plan: plan.Name,
                 validUntil: endDate,
                 transactionId: transactionId,
@@ -177,13 +177,13 @@ router.post('/purchase', auth, async (req, res) => {
                         planName: plan.Name,
                         startDate: startDate,
                         endDate: endDate,
-                        status: 'pending'
+                        status: 'active'
                     },
                     paymentDetails: {
                         id: paymentId,
                         amount: plan.Price,
                         method: paymentMethod,
-                        status: 'pending'
+                        status: 'active'
                     }
                 }
             });

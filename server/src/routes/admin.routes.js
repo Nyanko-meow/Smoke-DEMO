@@ -1785,7 +1785,8 @@ router.get('/pending-payments', protect, authorize('admin'), async (req, res) =>
     }
 });
 
-// Confirm payment by admin
+// Payment confirmation routes removed - payments are now auto-activated
+/* REMOVED: Confirm payment by admin
 router.post('/confirm-payment/:paymentId', protect, authorize('admin'), async (req, res) => {
     try {
         const { paymentId } = req.params;
@@ -1944,9 +1945,9 @@ router.post('/confirm-payment/:paymentId', protect, authorize('admin'), async (r
             message: 'Lỗi khi xác nhận thanh toán'
         });
     }
-});
+}); */
 
-// Reject payment by admin
+/* REMOVED: Reject payment by admin
 router.post('/reject-payment/:paymentId', protect, authorize('admin'), async (req, res) => {
     try {
         const { paymentId } = req.params;
@@ -2025,7 +2026,7 @@ router.post('/reject-payment/:paymentId', protect, authorize('admin'), async (re
             message: 'Lỗi khi từ chối thanh toán'
         });
     }
-});
+}); */
 
 // Get payment confirmations history
 router.get('/payment-confirmations', protect, authorize('admin'), async (req, res) => {
@@ -2115,24 +2116,71 @@ router.get('/payment-confirmations', protect, authorize('admin'), async (req, re
     }
 });
 
-// Get pending cancellation requests for admin approval
+// Get pending membership cancellations for admin approval  
+router.get('/pending-membership-cancellations', protect, authorize('admin'), async (req, res) => {
+    try {
+        console.log('🔍 Admin fetching pending membership cancellations...');
+
+        const result = await pool.request()
+            .query(`
+                SELECT 
+                    um.MembershipID,
+                    um.UserID,
+                    um.Status,
+                    um.CancellationReason,
+                    um.CancellationRequestedAt,
+                    um.StartDate,
+                    um.EndDate,
+                    mp.Name as PlanName,
+                    mp.Price as PlanPrice,
+                    mp.Duration,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.PhoneNumber
+                FROM UserMemberships um
+                JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                JOIN Users u ON um.UserID = u.UserID
+                WHERE um.Status = 'pending_cancellation'
+                ORDER BY um.CancellationRequestedAt DESC
+            `);
+
+        console.log('✅ Found pending membership cancellations:', result.recordset.length);
+
+        res.json({
+            success: true,
+            data: result.recordset,
+            message: `Found ${result.recordset.length} pending membership cancellations`
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching pending membership cancellations:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tải danh sách yêu cầu hủy gói',
+            error: error.message
+        });
+    }
+});
+
+// Get pending cancellation requests for admin approval (using PaymentConfirmations)
 router.get('/pending-cancellations', protect, authorize('admin'), async (req, res) => {
     try {
         console.log('🔍 Admin pending-cancellations endpoint called');
 
-        // Get pending cancellation requests ONLY
+        // Get pending cancellation requests from PaymentConfirmations
         const cancellationsResult = await pool.request().query(`
             SELECT 
-                cr.CancellationRequestID as RequestID,
-                cr.UserID,
+                pc.ConfirmationID as RequestID,
+                pc.UserID,
                 um.PlanID,
-                cr.RequestedRefundAmount,
-                cr.Status,
-                cr.RequestedAt,
-                cr.CancellationReason,
-                cr.BankAccountNumber,
-                cr.BankName,
-                cr.AccountHolderName,
+                mp.Price as RequestedRefundAmount,
+                pc.Status,
+                pc.ConfirmationDate as RequestedAt,
+                pc.CancellationReason,
+                pc.BankAccountNumber,
+                pc.BankName,
+                pc.AccountHolderName,
                 u.FirstName,
                 u.LastName,
                 u.Email,
@@ -2145,12 +2193,12 @@ router.get('/pending-cancellations', protect, authorize('admin'), async (req, re
                 um.EndDate as MembershipEndDate,
                 um.Status as MembershipStatus,
                 'cancellation' as RequestType
-            FROM CancellationRequests cr
-            JOIN Users u ON cr.UserID = u.UserID
-            JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+            FROM PaymentConfirmations pc
+            JOIN Users u ON pc.UserID = u.UserID
+            JOIN UserMemberships um ON pc.MembershipID = um.MembershipID
             JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-            WHERE cr.Status = 'pending'
-            ORDER BY cr.RequestedAt DESC
+            WHERE pc.RequestType = 'cancellation' AND pc.Status = 'pending'
+            ORDER BY pc.ConfirmationDate DESC
         `);
 
         console.log(`📊 Found ${cancellationsResult.recordset.length} pending cancellation requests`);
@@ -2168,7 +2216,7 @@ router.get('/pending-cancellations', protect, authorize('admin'), async (req, re
     }
 });
 
-// Approve cancellation request
+// Approve cancellation request (using PaymentConfirmations)
 router.post('/approve-cancellation/:cancellationId', protect, authorize('admin'), async (req, res) => {
     try {
         const { cancellationId } = req.params;
@@ -2187,19 +2235,20 @@ router.post('/approve-cancellation/:cancellationId', protect, authorize('admin')
         await transaction.begin();
 
         try {
-            // Check if cancellation request exists and is pending
+            // Check if cancellation request exists and is pending in PaymentConfirmations
             const cancellationResult = await transaction.request()
-                .input('CancellationRequestID', cancellationId)
+                .input('ConfirmationID', cancellationId)
                 .query(`
-                    SELECT cr.*, um.*, mp.Name as PlanName, u.FirstName, u.LastName, u.Email,
-                           p.PaymentID, pc.ConfirmationID
-                    FROM CancellationRequests cr
-                    JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+                    SELECT pc.*, um.*, mp.Name as PlanName, u.FirstName, u.LastName, u.Email,
+                           p.PaymentID
+                    FROM PaymentConfirmations pc
+                    JOIN UserMemberships um ON pc.MembershipID = um.MembershipID
                     JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-                    JOIN Users u ON cr.UserID = u.UserID
-                    LEFT JOIN Payments p ON cr.PaymentID = p.PaymentID
-                    LEFT JOIN PaymentConfirmations pc ON p.PaymentID = pc.PaymentID
-                    WHERE cr.CancellationRequestID = @CancellationRequestID AND cr.Status = 'pending'
+                    JOIN Users u ON pc.UserID = u.UserID
+                    LEFT JOIN Payments p ON pc.PaymentID = p.PaymentID
+                    WHERE pc.ConfirmationID = @ConfirmationID 
+                    AND pc.RequestType = 'cancellation' 
+                    AND pc.Status = 'pending'
                 `);
 
             if (cancellationResult.recordset.length === 0) {
@@ -2212,20 +2261,18 @@ router.post('/approve-cancellation/:cancellationId', protect, authorize('admin')
 
             const cancellation = cancellationResult.recordset[0];
 
-            // 1. Update cancellation request status 
+            // 1. Update PaymentConfirmations status 
             await transaction.request()
-                .input('CancellationRequestID', cancellationId)
+                .input('ConfirmationID', cancellationId)
                 .input('AdminNotes', adminNotes || 'Yêu cầu hủy gói được chấp nhận')
-                .input('RefundApproved', approveRefund ? 1 : 0)
-                .input('RefundAmount', approveRefund ? refundAmount : 0)
+                .input('ConfirmedByUserID', req.user.id)
                 .query(`
-                    UPDATE CancellationRequests
+                    UPDATE PaymentConfirmations
                     SET Status = 'approved',
                         ProcessedAt = GETDATE(),
-                        AdminNotes = @AdminNotes,
-                        RefundApproved = @RefundApproved,
-                        RefundAmount = @RefundAmount
-                    WHERE CancellationRequestID = @CancellationRequestID
+                        Notes = @AdminNotes,
+                        ConfirmedByUserID = @ConfirmedByUserID
+                    WHERE ConfirmationID = @ConfirmationID
                 `);
 
             // 2. XÓA HOÀN TOÀN - Delete PaymentConfirmation first (foreign key constraint)
@@ -2311,7 +2358,7 @@ router.post('/approve-cancellation/:cancellationId', protect, authorize('admin')
     }
 });
 
-// Reject cancellation request
+// Reject cancellation request (using PaymentConfirmations)
 router.post('/reject-cancellation/:cancellationId', protect, authorize('admin'), async (req, res) => {
     try {
         const { cancellationId } = req.params;
@@ -2324,15 +2371,16 @@ router.post('/reject-cancellation/:cancellationId', protect, authorize('admin'),
         await transaction.begin();
 
         try {
-            // First, get the cancellation request details
+            // First, get the cancellation request details from PaymentConfirmations
             const cancellationResult = await transaction.request()
-                .input('CancellationRequestID', cancellationId)
+                .input('ConfirmationID', cancellationId)
                 .query(`
-                    SELECT cr.*, um.MembershipID, um.UserID, mp.Name as PlanName
-                    FROM CancellationRequests cr
-                    JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+                    SELECT pc.*, um.MembershipID, um.UserID, mp.Name as PlanName
+                    FROM PaymentConfirmations pc
+                    JOIN UserMemberships um ON pc.MembershipID = um.MembershipID
                     JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-                    WHERE cr.CancellationRequestID = @CancellationRequestID
+                    WHERE pc.ConfirmationID = @ConfirmationID
+                    AND pc.RequestType = 'cancellation'
                 `);
 
             if (cancellationResult.recordset.length === 0) {
@@ -2345,18 +2393,18 @@ router.post('/reject-cancellation/:cancellationId', protect, authorize('admin'),
 
             const cancellation = cancellationResult.recordset[0];
 
-            // Update cancellation request status to rejected
+            // Update PaymentConfirmations status to rejected
             await transaction.request()
-                .input('RequestId', cancellationId)
+                .input('ConfirmationID', cancellationId)
                 .input('AdminNotes', adminNotes || '')
-                .input('ProcessedByUserID', req.user.UserID || req.user.id)
+                .input('ConfirmedByUserID', req.user.UserID || req.user.id)
                 .query(`
-                    UPDATE CancellationRequests 
+                    UPDATE PaymentConfirmations 
                     SET Status = 'rejected',
-                        AdminNotes = @AdminNotes,
-                        ProcessedByUserID = @ProcessedByUserID,
+                        Notes = @AdminNotes,
+                        ConfirmedByUserID = @ConfirmedByUserID,
                         ProcessedAt = GETDATE()
-                    WHERE CancellationRequestID = @RequestId
+                    WHERE ConfirmationID = @ConfirmationID
                 `);
 
             // Restore membership status to active
@@ -2417,27 +2465,27 @@ router.post('/reject-cancellation/:cancellationId', protect, authorize('admin'),
     }
 });
 
-// Get cancellation history
+// Get cancellation history (using PaymentConfirmations)
 router.get('/cancellation-history', protect, authorize('admin'), async (req, res) => {
     try {
         console.log('🔍 Admin cancellation-history endpoint called');
 
         const historyResult = await pool.request().query(`
             SELECT 
-                cr.CancellationRequestID as RequestID,
-                cr.UserID,
+                pc.ConfirmationID as RequestID,
+                pc.UserID,
                 um.PlanID,
-                COALESCE(cr.ApprovedRefundAmount, cr.RequestedRefundAmount, 0) as RefundAmount,
-                cr.ApprovedRefundAmount,
-                cr.RefundApproved,
-                cr.Status,
-                cr.RequestedAt,
-                cr.ProcessedAt,
-                cr.CancellationReason,
-                cr.AdminNotes,
-                cr.BankAccountNumber,
-                cr.BankName,
-                cr.AccountHolderName,
+                mp.Price as RefundAmount,
+                mp.Price as ApprovedRefundAmount,
+                CASE WHEN pc.Status = 'approved' THEN 1 ELSE 0 END as RefundApproved,
+                pc.Status,
+                pc.ConfirmationDate as RequestedAt,
+                pc.ProcessedAt,
+                pc.CancellationReason,
+                pc.Notes as AdminNotes,
+                pc.BankAccountNumber,
+                pc.BankName,
+                pc.AccountHolderName,
                 u.FirstName,
                 u.LastName,
                 u.Email,
@@ -2451,13 +2499,13 @@ router.get('/cancellation-history', protect, authorize('admin'), async (req, res
                 um.Status as MembershipStatus,
                 COALESCE(au.FirstName + ' ' + au.LastName, 'System') as AdminName,
                 'cancellation' as RequestType
-            FROM CancellationRequests cr
-            INNER JOIN Users u ON cr.UserID = u.UserID
-            INNER JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+            FROM PaymentConfirmations pc
+            INNER JOIN Users u ON pc.UserID = u.UserID
+            INNER JOIN UserMemberships um ON pc.MembershipID = um.MembershipID
             INNER JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-            LEFT JOIN Users au ON cr.ProcessedByUserID = au.UserID
-            WHERE cr.Status IN ('approved', 'rejected')
-            ORDER BY COALESCE(cr.ProcessedAt, cr.RequestedAt) DESC
+            LEFT JOIN Users au ON pc.ConfirmedByUserID = au.UserID
+            WHERE pc.RequestType = 'cancellation' AND pc.Status IN ('approved', 'rejected')
+            ORDER BY COALESCE(pc.ProcessedAt, pc.ConfirmationDate) DESC
         `);
 
         console.log(`📊 Found ${historyResult.recordset.length} processed cancellation requests`);
@@ -5019,6 +5067,112 @@ router.post('/debug-approve/:cancellationId', protect, authorize('admin'), async
         res.status(500).json({
             success: false,
             message: 'Debug error',
+            error: error.message
+        });
+    }
+});
+
+// Admin confirm cancellation and delete membership
+router.post('/confirm-membership-cancellation/:membershipId', protect, authorize('admin'), async (req, res) => {
+    try {
+        const { membershipId } = req.params;
+        const { adminNotes } = req.body;
+
+        console.log('🔍 Admin confirming cancellation for membership:', membershipId);
+
+        // Start transaction
+        const transaction = pool.transaction();
+        await transaction.begin();
+
+        try {
+            // Get membership info
+            const membershipResult = await transaction.request()
+                .input('MembershipID', membershipId)
+                .query(`
+                    SELECT um.*, mp.Name as PlanName, u.FirstName, u.LastName, u.Email
+                    FROM UserMemberships um
+                    JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                    JOIN Users u ON um.UserID = u.UserID
+                    WHERE um.MembershipID = @MembershipID AND um.Status = 'pending_cancellation'
+                `);
+
+            if (membershipResult.recordset.length === 0) {
+                await transaction.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy yêu cầu hủy gói hoặc gói đã được xử lý'
+                });
+            }
+
+            const membership = membershipResult.recordset[0];
+            console.log('✅ Found membership to confirm cancellation:', membership);
+
+            // Delete the membership completely so user can purchase new plans
+            await transaction.request()
+                .input('MembershipID', membershipId)
+                .query(`
+                    DELETE FROM UserMemberships 
+                    WHERE MembershipID = @MembershipID
+                `);
+
+            console.log('✅ Deleted membership data completely');
+
+            // Update user role back to guest if they have no other active memberships
+            const otherMembershipsResult = await transaction.request()
+                .input('UserID', membership.UserID)
+                .query(`
+                    SELECT COUNT(*) as activeCount 
+                    FROM UserMemberships 
+                    WHERE UserID = @UserID AND Status = 'active'
+                `);
+
+            if (otherMembershipsResult.recordset[0].activeCount === 0) {
+                await transaction.request()
+                    .input('UserID', membership.UserID)
+                    .query(`
+                        UPDATE Users 
+                        SET Role = 'guest' 
+                        WHERE UserID = @UserID
+                    `);
+                console.log('✅ Updated user role back to guest');
+            }
+
+            // Create notification for user
+            await transaction.request()
+                .input('UserID', membership.UserID)
+                .input('Title', 'Yêu cầu hủy gói đã được xác nhận')
+                .input('Message', `Gói ${membership.PlanName} của bạn đã được hủy thành công. Bạn có thể đặt mua gói dịch vụ mới. ${adminNotes ? 'Ghi chú từ admin: ' + adminNotes : ''}`)
+                .input('Type', 'cancellation_confirmed')
+                .query(`
+                    INSERT INTO Notifications (UserID, Title, Message, Type, CreatedAt)
+                    VALUES (@UserID, @Title, @Message, @Type, GETDATE())
+                `);
+
+            console.log('✅ Created user notification');
+
+            await transaction.commit();
+
+            res.json({
+                success: true,
+                message: 'Đã xác nhận hủy gói thành công. User có thể đặt mua gói mới.',
+                data: {
+                    membershipId: membershipId,
+                    planName: membership.PlanName,
+                    userName: `${membership.FirstName} ${membership.LastName}`,
+                    userEmail: membership.Email
+                }
+            });
+
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+
+    } catch (error) {
+        console.error('❌ Error confirming membership cancellation:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xác nhận hủy gói',
             error: error.message
         });
     }
