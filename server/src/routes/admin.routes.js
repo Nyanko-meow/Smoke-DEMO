@@ -2163,24 +2163,23 @@ router.get('/pending-membership-cancellations', protect, authorize('admin'), asy
     }
 });
 
-// Get pending cancellation requests for admin approval (using PaymentConfirmations)
 router.get('/pending-cancellations', protect, authorize('admin'), async (req, res) => {
     try {
         console.log('🔍 Admin pending-cancellations endpoint called');
 
-        // Get pending cancellation requests from PaymentConfirmations
+        // Truy vấn từ bảng CancellationRequests
         const cancellationsResult = await pool.request().query(`
             SELECT 
-                pc.ConfirmationID as RequestID,
-                pc.UserID,
+                cr.CancellationRequestID as RequestID,
+                cr.UserID,
                 um.PlanID,
-                mp.Price as RequestedRefundAmount,
-                pc.Status,
-                pc.ConfirmationDate as RequestedAt,
-                pc.CancellationReason,
-                pc.BankAccountNumber,
-                pc.BankName,
-                pc.AccountHolderName,
+                cr.RequestedRefundAmount,
+                cr.Status,
+                cr.RequestedAt,
+                cr.CancellationReason,
+                cr.BankAccountNumber,
+                cr.BankName,
+                cr.AccountHolderName,
                 u.FirstName,
                 u.LastName,
                 u.Email,
@@ -2193,12 +2192,12 @@ router.get('/pending-cancellations', protect, authorize('admin'), async (req, re
                 um.EndDate as MembershipEndDate,
                 um.Status as MembershipStatus,
                 'cancellation' as RequestType
-            FROM PaymentConfirmations pc
-            JOIN Users u ON pc.UserID = u.UserID
-            JOIN UserMemberships um ON pc.MembershipID = um.MembershipID
+            FROM CancellationRequests cr
+            JOIN Users u ON cr.UserID = u.UserID
+            JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
             JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-            WHERE pc.RequestType = 'cancellation' AND pc.Status = 'pending'
-            ORDER BY pc.ConfirmationDate DESC
+            WHERE cr.Status = 'pending'
+            ORDER BY cr.RequestedAt DESC
         `);
 
         console.log(`📊 Found ${cancellationsResult.recordset.length} pending cancellation requests`);
