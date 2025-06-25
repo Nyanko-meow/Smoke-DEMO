@@ -39,11 +39,12 @@ import {
     SaveOutlined,
     LineChartOutlined,
     FormOutlined,
-    CopyOutlined
+    CopyOutlined,
+    EyeOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 // Remove date-fns as it conflicts with dayjs
 import AccessGuard from '../components/common/AccessGuard';
 
@@ -99,6 +100,7 @@ api.interceptors.response.use(
 
 const QuitPlanPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -239,44 +241,81 @@ const QuitPlanPage = () => {
     const getAvailableTemplates = () => {
         console.log('🔍 Filtering templates based on payment info:', paymentInfo);
 
+        // Always show all templates for user to see
+        // But add indication if template requires membership
+        let availableTemplates = [...allTemplateOptions];
+
         if (!paymentInfo) {
-            // No payment - only show custom template
-            console.log('🔍 No payment found - showing only custom template');
-            return allTemplateOptions.filter(template => template.id === 'custom');
-        }
-
-        const userPlanName = paymentInfo.PlanName;
-        console.log('🔍 User plan name:', userPlanName);
-
-        // Filter based on plan name or duration
-        let availableTemplates = [];
-
-        if (userPlanName) {
-            if (userPlanName.toLowerCase().includes('basic') || userPlanName.toLowerCase().includes('cơ bản')) {
-                // Basic plan user - show only basic templates (2 tuần) and custom
-                availableTemplates = allTemplateOptions.filter(template =>
-                    template.id === 'basic' || template.id === 'basic-gentle' || template.id === 'custom'
-                );
-                console.log('🔍 Basic plan detected - showing basic templates (2 tuần) and custom');
-            } else if (userPlanName.toLowerCase().includes('premium') || userPlanName.toLowerCase().includes('cao cấp')) {
-                // Premium plan user - show only premium templates (8 tuần) and custom
-                availableTemplates = allTemplateOptions.filter(template =>
-                    template.id === 'premium' || template.id === 'premium-intensive' || template.id === 'custom'
-                );
-                console.log('🔍 Premium plan detected - showing premium templates (8 tuần) and custom');
-            } else {
-                // Fallback: allow custom at minimum
-                availableTemplates = allTemplateOptions.filter(template => template.id === 'custom');
-                console.log('🔍 Unknown plan - showing only custom template');
-            }
+            // No payment - show all templates but mark which ones require membership
+            console.log('🔍 No payment found - showing all templates with membership indicators');
         } else {
-            // No plan name - allow custom
-            availableTemplates = allTemplateOptions.filter(template => template.id === 'custom');
-            console.log('🔍 No plan name - showing only custom template');
+            const userPlanName = paymentInfo.PlanName;
+            console.log('🔍 User plan name:', userPlanName);
+
+            if (userPlanName) {
+                if (userPlanName.toLowerCase().includes('basic') || userPlanName.toLowerCase().includes('cơ bản')) {
+                    console.log('🔍 Basic plan detected - user can access basic templates');
+                } else if (userPlanName.toLowerCase().includes('premium') || userPlanName.toLowerCase().includes('cao cấp')) {
+                    console.log('🔍 Premium plan detected - user can access all templates');
+                }
+            }
         }
 
         console.log('✅ Available templates:', availableTemplates.map(t => t.id));
         return availableTemplates;
+    };
+
+    // Check if user can access a specific template
+    const canAccessTemplate = (template) => {
+        console.log('🔍 Checking access for template:', template.id, {
+            paymentInfo,
+            planName: paymentInfo?.PlanName,
+            templateId: template.id
+        });
+
+        if (template.id === 'custom') {
+            console.log('✅ Custom template - access granted');
+            return true; // Everyone can access custom template
+        }
+
+        // Temporary fix: Check user role from localStorage
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userRole = user.role || 'guest';
+        
+        console.log('👤 User role:', userRole);
+
+        // If user is not guest (meaning they have some membership), allow access
+        if (userRole !== 'guest') {
+            console.log('✅ User has membership role - access granted');
+            return true;
+        }
+
+        if (!paymentInfo) {
+            console.log('❌ No payment info - access denied');
+            return false; // No payment - can't access premium templates
+        }
+
+        const userPlanName = paymentInfo.PlanName;
+        if (!userPlanName) {
+            console.log('❌ No plan name - access denied');
+            return false;
+        }
+
+        console.log('🔍 Checking plan name:', userPlanName);
+
+        if (userPlanName.toLowerCase().includes('basic') || userPlanName.toLowerCase().includes('cơ bản')) {
+            // Basic plan can access basic templates
+            const hasAccess = template.id === 'basic' || template.id === 'basic-gentle';
+            console.log('📦 Basic plan - access:', hasAccess, 'for template:', template.id);
+            return hasAccess;
+        } else if (userPlanName.toLowerCase().includes('premium') || userPlanName.toLowerCase().includes('cao cấp')) {
+            // Premium plan can access all templates
+            console.log('💎 Premium plan - full access granted');
+            return true;
+        }
+
+        console.log('❌ Unknown plan type - access denied');
+        return false;
     };
 
     useEffect(() => {
@@ -352,7 +391,32 @@ const QuitPlanPage = () => {
     // New workflow functions
     const handleTemplateSelect = (template) => {
         console.log('🎯 Template selected:', template);
-        // Navigate to template detail page instead of setting local state
+        
+        // Check if user can access this template
+        if (!canAccessTemplate(template)) {
+            // Show message about needing membership
+            message.warning({
+                content: (
+                    <div>
+                        <div>🔒 Template này yêu cầu gói membership!</div>
+                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                            {template.id.includes('premium') ? 
+                                'Cần gói Premium để sử dụng template này' : 
+                                'Cần gói Basic hoặc Premium để sử dụng template này'
+                            }
+                        </div>
+                    </div>
+                ),
+                duration: 4
+            });
+            // Navigate to membership page
+            setTimeout(() => {
+                navigate('/membership');
+            }, 1000);
+            return;
+        }
+
+        // Navigate to template detail page if user has access
         navigate(`/quit-plan/template/${template.id}`, {
             state: { template: template }
         });
@@ -792,6 +856,51 @@ const QuitPlanPage = () => {
         );
     };
 
+    // Responsive styles for current plan display
+    const currentPlanStyles = {
+        container: {
+            background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+            borderRadius: '20px',
+            padding: window.innerWidth <= 768 ? '16px' : '24px',
+            border: '2px solid #10b981',
+            marginBottom: '24px',
+            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.2)'
+        },
+        header: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '20px',
+            flexWrap: window.innerWidth <= 480 ? 'wrap' : 'nowrap',
+            gap: window.innerWidth <= 480 ? '12px' : '0'
+        },
+        progressCard: {
+            background: 'rgba(255, 255, 255, 0.8)',
+            borderRadius: '12px',
+            padding: window.innerWidth <= 768 ? '12px' : '16px',
+            marginBottom: '20px'
+        },
+        statCard: {
+            background: 'rgba(255, 255, 255, 0.8)',
+            borderRadius: '12px',
+            padding: window.innerWidth <= 768 ? '8px' : '12px',
+            textAlign: 'center'
+        },
+        actionButtons: {
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap'
+        },
+        primaryButton: {
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            border: 'none',
+            borderRadius: '12px',
+            fontWeight: 600,
+            flex: window.innerWidth <= 768 ? '1 1 100%' : '1',
+            minWidth: window.innerWidth <= 768 ? 'auto' : '150px'
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -916,7 +1025,9 @@ const QuitPlanPage = () => {
                                                                     ? `0 8px 32px ${template.color}30`
                                                                     : '0 4px 16px rgba(0, 0, 0, 0.1)',
                                                                 transition: 'all 0.3s ease',
-                                                                textAlign: 'center'
+                                                                textAlign: 'center',
+                                                                position: 'relative',
+                                                                opacity: canAccessTemplate(template) ? 1 : 0.75
                                                             }}
                                                             onClick={() => handleTemplateSelect(template)}
                                                             onMouseEnter={(e) => {
@@ -930,6 +1041,27 @@ const QuitPlanPage = () => {
                                                                     : '0 4px 16px rgba(0, 0, 0, 0.1)';
                                                             }}
                                                         >
+                                                            {/* Membership indicator */}
+                                                            {!canAccessTemplate(template) && (
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    top: '12px',
+                                                                    right: '12px',
+                                                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                                                    color: 'white',
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '20px',
+                                                                    fontSize: '10px',
+                                                                    fontWeight: 600,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                                                                }}>
+                                                                    🔒
+                                                                    {template.id.includes('premium') ? 'PREMIUM' : 'MEMBERSHIP'}
+                                                                </div>
+                                                            )}
                                                             <div style={{
                                                                 width: '60px',
                                                                 height: '60px',
@@ -991,7 +1123,9 @@ const QuitPlanPage = () => {
                                                             <Button
                                                                 type="primary"
                                                                 style={{
-                                                                    background: `linear-gradient(135deg, ${template.color} 0%, ${template.color}CC 100%)`,
+                                                                    background: canAccessTemplate(template) 
+                                                                        ? `linear-gradient(135deg, ${template.color} 0%, ${template.color}CC 100%)`
+                                                                        : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                                                                     border: 'none',
                                                                     borderRadius: '12px',
                                                                     fontSize: '14px',
@@ -1000,13 +1134,203 @@ const QuitPlanPage = () => {
                                                                     paddingInline: '24px'
                                                                 }}
                                                             >
-                                                                Chọn kế hoạch này
+                                                                {canAccessTemplate(template) 
+                                                                    ? 'Chọn kế hoạch này' 
+                                                                    : '🔒 Cần Membership'
+                                                                }
                                                             </Button>
                                                         </div>
                                                     </Col>
                                                 ))}
                                             </Row>
                                         </Col>
+
+                                        {/* Show active plan at top if exists */}
+                                        {existingPlans.length > 0 && existingPlans.some(plan => plan.Status === 'active') && (
+                                            <Col span={24}>
+                                                {(() => {
+                                                    const activePlan = existingPlans.find(plan => plan.Status === 'active');
+                                                    const daysToTarget = calculateDaysToTarget(activePlan.TargetDate);
+                                                    const totalDays = dayjs(activePlan.TargetDate).diff(dayjs(activePlan.StartDate), 'day');
+                                                    const passedDays = dayjs().diff(dayjs(activePlan.StartDate), 'day');
+                                                    const progress = Math.max(0, Math.min(100, (passedDays / totalDays) * 100));
+
+                                                    return (
+                                                        <div style={currentPlanStyles.container}>
+                                                            {/* Header */}
+                                                            <div style={currentPlanStyles.header}>
+                                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <div style={{
+                                                                        width: window.innerWidth <= 480 ? '40px' : '48px',
+                                                                        height: window.innerWidth <= 480 ? '40px' : '48px',
+                                                                        borderRadius: '50%',
+                                                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        marginRight: '16px',
+                                                                        fontSize: window.innerWidth <= 480 ? '16px' : '20px'
+                                                                    }}>
+                                                                        🎯
+                                                                    </div>
+                                                                    <div>
+                                                                        <Title level={window.innerWidth <= 480 ? 4 : 3} style={{
+                                                                            margin: 0,
+                                                                            color: '#047857',
+                                                                            fontWeight: 700
+                                                                        }}>
+                                                                            Kế hoạch cai thuốc hiện tại
+                                                                        </Title>
+                                                                        <Text style={{
+                                                                            color: '#059669',
+                                                                            fontSize: window.innerWidth <= 480 ? '12px' : '14px',
+                                                                            fontWeight: 500
+                                                                        }}>
+                                                                            Đang hoạt động - Theo dõi tiến trình hàng ngày
+                                                                        </Text>
+                                                                    </div>
+                                                                </div>
+                                                                <Tag
+                                                                    color="success"
+                                                                    style={{
+                                                                        padding: window.innerWidth <= 480 ? '4px 8px' : '6px 16px',
+                                                                        borderRadius: '20px',
+                                                                        fontSize: window.innerWidth <= 480 ? '11px' : '13px',
+                                                                        fontWeight: 600,
+                                                                        border: 'none'
+                                                                    }}
+                                                                >
+                                                                    🟢 ĐANG HOẠT ĐỘNG
+                                                                </Tag>
+                                                            </div>
+
+                                                            {/* Progress Bar */}
+                                                            <div style={currentPlanStyles.progressCard}>
+                                                                <div style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    marginBottom: '8px'
+                                                                }}>
+                                                                    <Text style={{ fontSize: '14px', fontWeight: 600, color: '#047857' }}>
+                                                                        Tiến độ hoàn thành
+                                                                    </Text>
+                                                                    <Text style={{ fontSize: '14px', fontWeight: 600, color: '#047857' }}>
+                                                                        {Math.round(progress)}%
+                                                                    </Text>
+                                                                </div>
+                                                                <div style={{
+                                                                    height: '8px',
+                                                                    background: '#e5e7eb',
+                                                                    borderRadius: '4px',
+                                                                    overflow: 'hidden'
+                                                                }}>
+                                                                    <div style={{
+                                                                        height: '100%',
+                                                                        width: `${progress}%`,
+                                                                        background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                                                                        borderRadius: '4px',
+                                                                        transition: 'width 0.3s ease'
+                                                                    }} />
+                                                                </div>
+                                                                <div style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    marginTop: '8px'
+                                                                }}>
+                                                                    <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                                        Bắt đầu: {dayjs(activePlan.StartDate).format('DD/MM/YYYY')}
+                                                                    </Text>
+                                                                    <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                                        Mục tiêu: {dayjs(activePlan.TargetDate).format('DD/MM/YYYY')}
+                                                                    </Text>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Key Info */}
+                                                            <Row gutter={[16, 12]} style={{ marginBottom: '20px' }}>
+                                                                <Col xs={24} sm={8}>
+                                                                    <div style={currentPlanStyles.statCard}>
+                                                                        <div style={{
+                                                                            fontSize: window.innerWidth <= 480 ? '18px' : '20px',
+                                                                            fontWeight: 700,
+                                                                            color: daysToTarget > 0 ? '#10b981' : '#ef4444',
+                                                                            marginBottom: '4px'
+                                                                        }}>
+                                                                            {daysToTarget > 0 ? daysToTarget : 0}
+                                                                        </div>
+                                                                        <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                                            Ngày còn lại
+                                                                        </Text>
+                                                                    </div>
+                                                                </Col>
+                                                                <Col xs={24} sm={8}>
+                                                                    <div style={currentPlanStyles.statCard}>
+                                                                        <div style={{
+                                                                            fontSize: window.innerWidth <= 480 ? '18px' : '20px',
+                                                                            fontWeight: 700,
+                                                                            color: '#10b981',
+                                                                            marginBottom: '4px'
+                                                                        }}>
+                                                                            {Math.max(0, passedDays)}
+                                                                        </div>
+                                                                        <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                                            Ngày đã trải qua
+                                                                        </Text>
+                                                                    </div>
+                                                                </Col>
+                                                                <Col xs={24} sm={8}>
+                                                                    <div style={currentPlanStyles.statCard}>
+                                                                        <div style={{
+                                                                            fontSize: window.innerWidth <= 480 ? '18px' : '20px',
+                                                                            fontWeight: 700,
+                                                                            color: '#f59e0b',
+                                                                            marginBottom: '4px'
+                                                                        }}>
+                                                                            {activePlan.MotivationLevel}/10
+                                                                        </div>
+                                                                        <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                                            Mức động lực
+                                                                        </Text>
+                                                                    </div>
+                                                                </Col>
+                                                            </Row>
+
+                                                            {/* Action Buttons */}
+                                                            <div style={currentPlanStyles.actionButtons}>
+                                                                <Button
+                                                                    type="primary"
+                                                                    size="large"
+                                                                    icon={<CheckCircleOutlined />}
+                                                                    onClick={() => setActiveTab('progress')}
+                                                                    style={currentPlanStyles.primaryButton}
+                                                                >
+                                                                    Ghi tiến trình hôm nay
+                                                                </Button>
+                                                                <Button
+                                                                    size="large"
+                                                                    icon={<EyeOutlined />}
+                                                                    style={{
+                                                                        borderRadius: '12px',
+                                                                        fontWeight: 600,
+                                                                        flex: window.innerWidth <= 768 ? '1' : 'auto'
+                                                                    }}
+                                                                    onClick={() => {
+                                                                        // Scroll to plan details
+                                                                        const planSection = document.querySelector('[data-plan-details]');
+                                                                        if (planSection) {
+                                                                            planSection.scrollIntoView({ behavior: 'smooth' });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    Xem chi tiết
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </Col>
+                                        )}
 
                                         {/* Show message when no existing plans */}
                                         {existingPlans.length === 0 && (
@@ -1104,7 +1428,7 @@ const QuitPlanPage = () => {
                                         )}
 
                                         {/* Existing Plans Display - Hiển thị kế hoạch đã tạo */}
-                                        {existingPlans.length > 0 && (
+                                                                                        {existingPlans.length > 0 && !existingPlans.some(plan => plan.Status === 'active') && (
                                             <Col span={24}>
                                                 <div style={{
                                                     background: 'linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%)',
@@ -1131,16 +1455,17 @@ const QuitPlanPage = () => {
                                                             color: '#1d4ed8',
                                                             fontWeight: 600
                                                         }}>
-                                                            Kế hoạch cai thuốc của bạn
+                                                            Lịch sử kế hoạch cai thuốc
                                                         </Title>
                                                     </div>
                                                     <Text style={{ color: '#1e40af', fontSize: '14px' }}>
-                                                        Đây là những kế hoạch cai thuốc mà bạn đã tạo. Bạn có thể xem chi tiết và theo dõi tiến trình.
+                                                        Đây là những kế hoạch cai thuốc mà bạn đã tạo trước đây. Bạn có thể xem chi tiết và tạo kế hoạch mới.
                                                     </Text>
                                                 </div>
 
                                                 <List
                                                     dataSource={existingPlans}
+                                                    data-plan-details
                                                     renderItem={(plan) => {
                                                         const daysToTarget = calculateDaysToTarget(plan.TargetDate);
                                                         const isActive = plan.Status === 'active';

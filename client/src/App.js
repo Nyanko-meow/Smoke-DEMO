@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { Layout } from 'antd';
+import { Layout, ConfigProvider } from 'antd';
 import { useDispatch } from 'react-redux';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -32,6 +32,8 @@ import TestPage from './pages/TestPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailed from './pages/PaymentFailed';
 import { checkSessionExpiration, refreshSession } from './store/slices/authSlice';
+import viVN from 'antd/locale/vi_VN';
+import 'moment/locale/vi';
 
 // Import global error suppression for ResizeObserver errors
 import './utils/errorSuppression';
@@ -101,145 +103,154 @@ function App() {
     }, [dispatch]);
 
     return (
-        <Layout className="app-layout min-h-screen">
-            {shouldShowNavbar() && <Navbar />}
-            <Content className="app-content flex-grow">
-                <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/coach/login" element={<CoachLogin />} />
-                    <Route path="/coach/dashboard" element={<CoachDashboard />} />
-                    <Route path="/admin/login" element={<AdminLogin />} />
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    <Route
-                        path="/member/dashboard"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <MemberDashboard />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/profile"
-                        element={
-                            <PrivateRoute>
-                                <UserProfile />
-                            </PrivateRoute>
-                        }
-                    />
+        <ConfigProvider 
+            locale={viVN}
+            theme={{
+                token: {
+                    fontFamily: "'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Arial Unicode MS', 'Noto Sans', sans-serif"
+                }
+            }}
+        >
+            <Layout className="app-layout min-h-screen">
+                {shouldShowNavbar() && <Navbar />}
+                <Content className="app-content flex-grow">
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/coach/login" element={<CoachLogin />} />
+                        <Route path="/coach/dashboard" element={<CoachDashboard />} />
+                        <Route path="/admin/login" element={<AdminLogin />} />
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        <Route
+                            path="/member/dashboard"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <MemberDashboard />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/profile"
+                            element={
+                                <PrivateRoute>
+                                    <UserProfile />
+                                </PrivateRoute>
+                            }
+                        />
 
-                    <Route path="/blog/*" element={<BlogPage />} />
-                    <Route path="/community" element={<CommunityList />} />
-                    <Route path="/community/:postId" element={<CommunityDetail />} />
-                    <Route
-                        path="/community/new"
-                        element={
-                            <PrivateRoute>
-                                <CommunityPost />
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/membership"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <MembershipPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/refund-requests"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <RefundRequestsPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/smoking-survey"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <SurveyPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/quit-plan"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <QuitPlanPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/quit-plan/template/:templateId"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <TemplateDetailPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/quit-plan/form"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <QuitPlanFormPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
+                        <Route path="/blog/*" element={<BlogPage />} />
+                        <Route path="/community" element={<CommunityList />} />
+                        <Route path="/community/:postId" element={<CommunityDetail />} />
+                        <Route
+                            path="/community/new"
+                            element={
+                                <PrivateRoute>
+                                    <CommunityPost />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/membership"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <MembershipPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/refund-requests"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <RefundRequestsPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/smoking-survey"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <SurveyPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/quit-plan"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <QuitPlanPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/quit-plan/template/:templateId"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <TemplateDetailPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/quit-plan/form"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <QuitPlanFormPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
 
-                    <Route
-                        path="/achievement"
-                        element={
-                            <PrivateRoute>
-                                <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                    <AchievementPage />
-                                </RoleBasedRoute>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route path="/test" element={<TestPage />} />
-                    <Route path="/payment/success" element={<PaymentSuccess />} />
-                    <Route path="/payment/failed" element={<PaymentFailed />} />
-                    
-                    {/* Additional PayOS callback routes */}
-                    <Route path="/payment/cancelled" element={<PaymentFailed />} />
-                    <Route path="/payment/error" element={<PaymentFailed />} />
-                    
-                    {/* PayOS direct callback routes for better handling */}
-                    <Route path="/payos/success" element={<PaymentSuccess />} />
-                    <Route path="/payos/failed" element={<PaymentFailed />} />
-                    <Route path="/payos/cancelled" element={<PaymentFailed />} />
-                </Routes>
-            </Content>
-            <ToastContainer
-                position="top-right"
-                autoClose={5000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="colored"
-            />
-        </Layout>
+                        <Route
+                            path="/achievement"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <AchievementPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route path="/test" element={<TestPage />} />
+                        <Route path="/payment/success" element={<PaymentSuccess />} />
+                        <Route path="/payment/failed" element={<PaymentFailed />} />
+                        
+                        {/* Additional PayOS callback routes */}
+                        <Route path="/payment/cancelled" element={<PaymentFailed />} />
+                        <Route path="/payment/error" element={<PaymentFailed />} />
+                        
+                        {/* PayOS direct callback routes for better handling */}
+                        <Route path="/payos/success" element={<PaymentSuccess />} />
+                        <Route path="/payos/failed" element={<PaymentFailed />} />
+                        <Route path="/payos/cancelled" element={<PaymentFailed />} />
+                    </Routes>
+                </Content>
+                <ToastContainer
+                    position="top-right"
+                    autoClose={5000}
+                    hideProgressBar={false}
+                    newestOnTop={false}
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                    theme="colored"
+                />
+            </Layout>
+        </ConfigProvider>
     );
 }
 

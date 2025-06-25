@@ -35,23 +35,25 @@ async function insertMembershipPlans() {
         await sql.query`
             INSERT INTO MembershipPlans (Name, Description, Price, Duration, Features)
             VALUES 
-            ('Basic Plan', 'Get started on your smoke-free journey with our basic plan.', 99.00, 30, N'Progress tracking
-Basic quitting tips
-Community access'),
+            (N'Basic Plan', N'Gói cơ bản để bắt đầu hành trình cai thuốc của bạn.', 99000, 15, N'Theo dõi tiến trình
+Phân tích nâng cao  
+Chiến lược bỏ thuốc cao cấp
+Truy cập cộng đồng
+Động lực hàng tuần
+Được coach tư vấn qua chat và có thể đặt lịch'),
             
-            ('Premium Plan', 'Enhanced support for your smoke-free journey.', 199.00, 60, N'Progress tracking
-Advanced analytics
-Premium quitting strategies
-Community access
-Weekly motivation'),
-            
-            ('Pro Plan', 'Maximum support to ensure your success.', 299.00, 90, N'Progress tracking
-Advanced analytics
-Pro quitting strategies
-Community access
-Daily motivation
-Personalized coaching
-Health improvement dashboard')
+            (N'Premium Plan', N'Hỗ trợ nâng cao cho hành trình cai thuốc của bạn.', 199000, 60, N'Theo dõi tiến trình chi tiết
+Phân tích và báo cáo chuyên sâu
+Kế hoạch cai thuốc cá nhân hóa
+Tư vấn 1-1 với chuyên gia
+Hỗ trợ 24/7 qua chat và hotline
+Video hướng dẫn độc quyền
+Cộng đồng VIP và mentor
+Nhắc nhở thông minh theo thói quen
+Phân tích tâm lý và cảm xúc
+Chương trình thưởng đặc biệt
+Báo cáo tiến độ hàng tuần
+Truy cập không giới hạn tất cả tính năng')
         `;
 
         // Verify plans were inserted

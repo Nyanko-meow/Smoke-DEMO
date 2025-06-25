@@ -317,6 +317,14 @@ const authSlice = createSlice({
         clearError: (state) => {
             state.error = null;
         },
+        updateUserRole: (state, action) => {
+            if (state.user) {
+                state.user.role = action.payload;
+                // Update localStorage
+                const updatedUser = { ...state.user, role: action.payload };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+        },
         checkSessionExpiration: (state) => {
             if (state.tokenExpiration && state.isAuthenticated) {
                 const isExpired = new Date().getTime() > state.tokenExpiration;
@@ -472,5 +480,5 @@ const authSlice = createSlice({
     }
 });
 
-export const { clearError, checkSessionExpiration } = authSlice.actions;
+export const { clearError, checkSessionExpiration, updateUserRole } = authSlice.actions;
 export default authSlice.reducer; 

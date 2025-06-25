@@ -64,8 +64,6 @@ const CancellationManagement = () => {
         }
     };
 
-
-
     const handleViewDetails = (record) => {
         setSelectedRequest(record);
         setDetailModalVisible(true);
@@ -79,22 +77,24 @@ const CancellationManagement = () => {
         setApproveModalVisible(true);
     };
 
-
-
     const submitApproval = async (values) => {
         try {
             console.log('🔍 Submitting approval for request:', selectedRequest);
-            console.log('🔍 MembershipID:', selectedRequest?.MembershipID);
+            console.log('🔍 CancellationRequestID:', selectedRequest?.CancellationRequestID);
 
-            if (!selectedRequest?.MembershipID) {
-                message.error('Không tìm thấy ID membership');
+            if (!selectedRequest?.CancellationRequestID) {
+                message.error('Không tìm thấy ID yêu cầu hủy gói');
                 return;
             }
 
             const token = localStorage.getItem('adminToken');
             const response = await axios.post(
-                `http://localhost:4000/api/admin/confirm-membership-cancellation/${selectedRequest.MembershipID}`,
-                values,
+                `http://localhost:4000/api/admin/approve-cancellation/${selectedRequest.CancellationRequestID}`,
+                {
+                    approveRefund: true,
+                    refundAmount: selectedRequest.RequestedRefundAmount,
+                    adminNotes: values.adminNotes
+                },
                 {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
@@ -102,14 +102,14 @@ const CancellationManagement = () => {
             );
 
             if (response.data.success) {
-                message.success('Đã xác nhận hủy gói thành công! User có thể đặt mua gói mới.');
+                message.success('Đã chấp nhận yêu cầu hủy gói thành công!');
                 setApproveModalVisible(false);
                 approveForm.resetFields();
                 loadPendingRequests();
             }
         } catch (error) {
             console.error('Error approving cancellation:', error);
-            message.error('Lỗi khi xác nhận hủy gói');
+            message.error('Lỗi khi chấp nhận yêu cầu hủy gói');
         }
     };
 
@@ -124,16 +124,16 @@ const CancellationManagement = () => {
     const submitRejection = async (values) => {
         try {
             console.log('🔍 Submitting rejection for request:', selectedRequest);
-            console.log('🔍 RequestID:', selectedRequest?.RequestID);
+            console.log('🔍 CancellationRequestID:', selectedRequest?.CancellationRequestID);
 
-            if (!selectedRequest?.RequestID) {
+            if (!selectedRequest?.CancellationRequestID) {
                 message.error('Không tìm thấy ID yêu cầu hủy gói');
                 return;
             }
 
             const token = localStorage.getItem('adminToken');
             const response = await axios.post(
-                `http://localhost:4000/api/admin/reject-cancellation/${selectedRequest.RequestID}`,
+                `http://localhost:4000/api/admin/reject-cancellation/${selectedRequest.CancellationRequestID}`,
                 values,
                 {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -221,11 +221,11 @@ const CancellationManagement = () => {
                 <div>
                     <div className="text-sm">
                         <CalendarOutlined className="mr-1" />
-                        Từ: {formatDate(record.MembershipStartDate)}
+                        Từ: {formatDate(record.StartDate)}
                     </div>
                     <div className="text-sm">
                         <CalendarOutlined className="mr-1" />
-                        Đến: {formatDate(record.MembershipEndDate)}
+                        Đến: {formatDate(record.EndDate)}
                     </div>
                 </div>
             ),
@@ -262,7 +262,7 @@ const CancellationManagement = () => {
         },
         {
             title: 'Ngày yêu cầu',
-            dataIndex: 'CancellationRequestedAt',
+            dataIndex: 'RequestedAt',
             key: 'requestedAt',
             render: (date) => formatDate(date),
         },
@@ -303,8 +303,6 @@ const CancellationManagement = () => {
         },
     ];
 
-
-
     return (
         <div className="p-6">
             <div className="mb-6">
@@ -313,8 +311,6 @@ const CancellationManagement = () => {
                     Xem và xử lý các yêu cầu hủy gói dịch vụ từ khách hàng
                 </Text>
             </div>
-
-
 
             <Card title={`Yêu cầu chờ xử lý (${pendingRequests.length})`}>
                 <Table
@@ -368,10 +364,10 @@ const CancellationManagement = () => {
                                 {selectedRequest.Duration} ngày
                             </Descriptions.Item>
                             <Descriptions.Item label="Ngày bắt đầu" span={1}>
-                                {formatDate(selectedRequest.MembershipStartDate)}
+                                {formatDate(selectedRequest.StartDate)}
                             </Descriptions.Item>
                             <Descriptions.Item label="Ngày kết thúc" span={1}>
-                                {formatDate(selectedRequest.MembershipEndDate)}
+                                {formatDate(selectedRequest.EndDate)}
                             </Descriptions.Item>
                             <Descriptions.Item label="Mô tả" span={3}>
                                 {selectedRequest.PlanDescription}
@@ -472,41 +468,6 @@ const CancellationManagement = () => {
                     onFinish={submitApproval}
                 >
                     <Form.Item
-                        name="approveRefund"
-                        label="Chấp nhận hoàn tiền"
-                        valuePropName="checked"
-                    >
-                        <Switch />
-                    </Form.Item>
-
-                    <Form.Item
-                        noStyle
-                        shouldUpdate={(prevValues, currentValues) =>
-                            prevValues.approveRefund !== currentValues.approveRefund}
-                    >
-                        {({ getFieldValue }) =>
-                            getFieldValue('approveRefund') ? (
-                                <Form.Item
-                                    name="refundAmount"
-                                    label="Số tiền hoàn lại"
-                                    rules={[
-                                        { required: true, message: 'Vui lòng nhập số tiền hoàn lại' },
-                                        { type: 'number', min: 0, message: 'Số tiền phải lớn hơn 0' }
-                                    ]}
-                                >
-                                    <InputNumber
-                                        style={{ width: '100%' }}
-                                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                        parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                                        addonAfter="VNĐ"
-                                        placeholder="Nhập số tiền hoàn lại"
-                                    />
-                                </Form.Item>
-                            ) : null
-                        }
-                    </Form.Item>
-
-                    <Form.Item
                         name="adminNotes"
                         label="Ghi chú"
                         rules={[{ required: true, message: 'Vui lòng nhập ghi chú' }]}
@@ -552,7 +513,6 @@ const CancellationManagement = () => {
                     </Form.Item>
                 </Form>
             </Modal>
-
         </div>
     );
 };

@@ -3,9 +3,9 @@
  */
 const config = {
     user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || 'YourStrongPassword',
-    server: process.env.DB_SERVER || 'localhost',
-    database: process.env.DB_NAME || 'SMOKEKING',
+    password: process.env.DB_PASSWORD || '123',
+    server: process.env.DB_SERVER || 'NGOCTAM',
+    database: process.env.DB_NAME || 'SMOKEKING5',
     options: {
         encrypt: false,
         trustServerCertificate: true,

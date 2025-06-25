@@ -85,12 +85,11 @@ CREATE TABLE MembershipPlans (
 DELETE FROM MembershipPlans;
 DBCC CHECKIDENT ('MembershipPlans', RESEED, 0);
 
--- Insert các Plan mẫu với chỉ Premium Plan
+-- Insert các Plan mẫu với chỉ 2 gói: Basic và Premium
 INSERT INTO MembershipPlans (Name, Description, Price, Duration, Features)
 VALUES 
-
-('Basic Plan', 'Gói cao cấp có hỗ trợ nâng cao.', 50000, 15, 'Theo dõi tiến trình, Phân tích nâng cao, Chiến lược bỏ thuốc cao cấp, Truy cập cộng đồng, Động lực hàng tuần, Được coach tư vấn qua chat và có thể đặt lịch'),
-('Premium Plan', 'Gói cao cấp có hỗ trợ nâng cao.', 199000, 60, 'Theo dõi tiến trình, Phân tích nâng cao, Chiến lược bỏ thuốc cao cấp, Truy cập cộng đồng, Động lực hàng tuần, Được coach tư vấn qua chat và có thể đặt lịch');
+(N'Basic Plan', N'Gói cơ bản để bắt đầu hành trình cai thuốc của bạn.', 99000, 15, N'Theo dõi tiến trình, Phân tích nâng cao, Chiến lược bỏ thuốc cao cấp, Truy cập cộng đồng, Động lực hàng tuần, Được coach tư vấn qua chat và có thể đặt lịch'),
+(N'Premium Plan', N'Hỗ trợ nâng cao cho hành trình cai thuốc của bạn.', 199000, 60, N'Theo dõi tiến trình chi tiết, Phân tích và báo cáo chuyên sâu, Kế hoạch cai thuốc cá nhân hóa, Tư vấn 1-1 với chuyên gia, Hỗ trợ 24/7 qua chat và hotline, Video hướng dẫn độc quyền, Cộng đồng VIP và mentor, Nhắc nhở thông minh theo thói quen, Phân tích tâm lý và cảm xúc, Chương trình thưởng đặc biệt, Báo cáo tiến độ hàng tuần, Truy cập không giới hạn tất cả tính năng');
 
 -- User Memberships
 CREATE TABLE UserMemberships (
@@ -99,7 +98,7 @@ CREATE TABLE UserMemberships (
     PlanID INT FOREIGN KEY REFERENCES MembershipPlans(PlanID),
     StartDate DATETIME NOT NULL,
     EndDate DATETIME NOT NULL,
-    Status NVARCHAR(20) CHECK (Status IN ('active', 'expired', 'cancelled')),
+    Status NVARCHAR(20) CHECK (Status IN ('active', 'expired', 'cancelled', 'pending', 'pending_cancellation')),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
@@ -156,7 +155,13 @@ CREATE TABLE Payments (
     TransactionID NVARCHAR(255),
     StartDate DATETIME,
     EndDate DATETIME,
-    Note NVARCHAR(MAX)
+    Note NVARCHAR(MAX),
+    ReceivedDate DATETIME NULL,
+    BankAccountNumber NVARCHAR(50),
+    BankName NVARCHAR(100),
+    TransferDate DATETIME NULL,
+    TransferConfirmed BIT DEFAULT 0,
+    AccountHolderName NVARCHAR(100)
 );
 
 -- Payment Confirmations
@@ -755,6 +760,13 @@ CREATE TABLE CancellationRequests (
     AdminNotes NVARCHAR(MAX), -- Ghi chú của admin
     RefundApproved BIT DEFAULT 0, -- Admin có chấp nhận hoàn tiền không
     RefundAmount DECIMAL(10,2) NULL, -- Số tiền admin chấp nhận hoàn (có thể khác với yêu cầu)
+    BankAccountNumber NVARCHAR(50),
+    BankName NVARCHAR(100),
+    AccountHolderName NVARCHAR(100),
+    TransferConfirmed BIT DEFAULT 0,
+    TransferDate DATETIME NULL,
+    RefundReceived BIT DEFAULT 0,
+    ReceivedDate DATETIME NULL,
     
     FOREIGN KEY (UserID) REFERENCES Users(UserID),
     FOREIGN KEY (MembershipID) REFERENCES UserMemberships(MembershipID),
@@ -762,8 +774,4 @@ CREATE TABLE CancellationRequests (
     FOREIGN KEY (ProcessedByUserID) REFERENCES Users(UserID)
 );
 
--- Cập nhật bảng UserMemberships để hỗ trợ trạng thái pending_cancellation
--- Không cần ALTER TABLE vì đã có Status field, chỉ cần thêm giá trị mới vào CHECK constraint
--- ALTER TABLE UserMemberships DROP CONSTRAINT [constraint_name];
--- ALTER TABLE UserMemberships ADD CONSTRAINT CHK_UserMemberships_Status 
---     CHECK (Status IN ('active', 'expired', 'cancelled', 'pending', 'pending_cancellation'));
+

@@ -2348,17 +2348,17 @@ router.post('/request-cancel', protect, async (req, res) => {
         }
 
         // Find user's active membership
+        console.log('🔍 Looking for active membership for user:', req.user.id);
+        
         const membershipResult = await pool.request()
             .input('UserID', req.user.id)
             .query(`
                 SELECT TOP 1 
                     um.*,
                     mp.Name as PlanName,
-                    mp.Price as PlanPrice,
-                    p.PaymentID
+                    mp.Price as PlanPrice
                 FROM UserMemberships um
                 JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-                LEFT JOIN Payments p ON um.UserID = p.UserID AND um.PlanID = p.PlanID
                 WHERE um.UserID = @UserID AND um.Status = 'active'
                 ORDER BY um.CreatedAt DESC
             `);
@@ -2371,17 +2371,29 @@ router.post('/request-cancel', protect, async (req, res) => {
         }
 
         const membership = membershipResult.recordset[0];
+        
+        // Try to find related payment
+        const paymentResult = await pool.request()
+            .input('UserID', req.user.id)
+            .input('PlanID', membership.PlanID)
+            .query(`
+                SELECT TOP 1 PaymentID, Amount, Status
+                FROM Payments 
+                WHERE UserID = @UserID AND PlanID = @PlanID 
+                ORDER BY PaymentDate DESC
+            `);
+
+        const payment = paymentResult.recordset.length > 0 ? paymentResult.recordset[0] : null;
         console.log('✅ Found membership to cancel:', membership);
 
-        // Check if there's already a pending cancellation request for this membership
+        // Check if there's already a pending cancellation request
         const existingRequestResult = await pool.request()
             .input('MembershipID', membership.MembershipID)
             .input('UserID', req.user.id)
             .query(`
-                SELECT * FROM PaymentConfirmations 
+                SELECT * FROM CancellationRequests 
                 WHERE MembershipID = @MembershipID 
                 AND UserID = @UserID 
-                AND RequestType = 'cancellation' 
                 AND Status = 'pending'
             `);
 
@@ -2392,39 +2404,39 @@ router.post('/request-cancel', protect, async (req, res) => {
             });
         }
 
+        // Calculate 50% refund amount
+        const originalAmount = payment ? payment.Amount : membership.PlanPrice;
+        const refundAmount = Math.floor(originalAmount * 0.5);
+
         // Start transaction
         const transaction = pool.transaction();
         await transaction.begin();
 
         try {
-            // Create cancellation request in PaymentConfirmations table
+            // Create cancellation request in CancellationRequests table
             const cancellationResult = await transaction.request()
-                .input('PaymentID', membership.PaymentID)
                 .input('UserID', req.user.id)
                 .input('MembershipID', membership.MembershipID)
-                .input('RequestType', 'cancellation')
+                .input('PaymentID', payment ? payment.PaymentID : null)
                 .input('CancellationReason', reason.trim())
+                .input('RequestedRefundAmount', refundAmount)
                 .input('BankAccountNumber', bankAccountNumber.trim())
                 .input('BankName', bankName.trim())
                 .input('AccountHolderName', accountHolderName.trim())
-                .input('Status', 'pending')
-                .input('Notes', `Yêu cầu hủy gói ${membership.PlanName} - Lý do: ${reason.trim()}`)
                 .query(`
-                    INSERT INTO PaymentConfirmations (
-                        PaymentID, UserID, MembershipID, RequestType, 
-                        CancellationReason, BankAccountNumber, BankName, AccountHolderName,
-                        Status, Notes, ConfirmationDate
+                    INSERT INTO CancellationRequests (
+                        UserID, MembershipID, PaymentID, CancellationReason, RequestedRefundAmount,
+                        BankAccountNumber, BankName, AccountHolderName, Status, RequestedAt
                     )
                     OUTPUT INSERTED.*
                     VALUES (
-                        @PaymentID, @UserID, @MembershipID, @RequestType,
-                        @CancellationReason, @BankAccountNumber, @BankName, @AccountHolderName,
-                        @Status, @Notes, GETDATE()
+                        @UserID, @MembershipID, @PaymentID, @CancellationReason, @RequestedRefundAmount,
+                        @BankAccountNumber, @BankName, @AccountHolderName, 'pending', GETDATE()
                     )
                 `);
 
             const cancellationRequest = cancellationResult.recordset[0];
-            console.log('✅ Created cancellation request:', cancellationRequest.ConfirmationID);
+            console.log('✅ Created cancellation request:', cancellationRequest.CancellationRequestID);
 
             // Update membership status to pending_cancellation
             await transaction.request()
@@ -2457,7 +2469,7 @@ router.post('/request-cancel', protect, async (req, res) => {
                     await transaction.request()
                         .input('UserID', admin.UserID)
                         .input('Title', 'Yêu cầu hủy gói dịch vụ mới')
-                        .input('Message', `Có yêu cầu hủy gói ${membership.PlanName} từ user. Lí do: ${reason.trim()}`)
+                        .input('Message', `Có yêu cầu hủy gói ${membership.PlanName} từ user. Lí do: ${reason.trim()}. Số tiền hoàn: ${refundAmount.toLocaleString('vi-VN')} VNĐ`)
                         .input('Type', 'admin_cancellation_request')
                         .query(`
                             INSERT INTO Notifications (UserID, Title, Message, Type, CreatedAt)
@@ -2472,10 +2484,16 @@ router.post('/request-cancel', protect, async (req, res) => {
                 success: true,
                 message: 'Yêu cầu hủy gói dịch vụ đã được gửi thành công. Admin sẽ xem xét và xử lý.',
                 data: {
-                    cancellationId: cancellationRequest.ConfirmationID,
+                    cancellationId: cancellationRequest.CancellationRequestID,
                     membershipId: membership.MembershipID,
                     planName: membership.PlanName,
-                    status: 'pending_cancellation'
+                    refundAmount: refundAmount,
+                    status: 'pending_cancellation',
+                    bankInfo: {
+                        accountNumber: bankAccountNumber,
+                        bankName: bankName,
+                        accountHolder: accountHolderName
+                    }
                 }
             });
 
@@ -2490,6 +2508,173 @@ router.post('/request-cancel', protect, async (req, res) => {
             success: false,
             message: 'Lỗi khi xử lý yêu cầu hủy gói',
             error: error.message
+        });
+    }
+});
+
+// Get user's refund requests - Updated to use CancellationRequests only
+router.get('/refund-requests', protect, async (req, res) => {
+    try {
+        console.log('🔍 Getting refund requests for user:', req.user.id);
+
+        // Get cancellation requests only
+        const cancellationRequests = await pool.request()
+            .input('UserID', req.user.id)
+            .query(`
+                SELECT 
+                    cr.CancellationRequestID as RequestID,
+                    'cancellation' as RequestType,
+                    cr.RequestedRefundAmount as RefundAmount,
+                    cr.CancellationReason as RefundReason,
+                    cr.Status,
+                    cr.RequestedAt,
+                    cr.ProcessedAt,
+                    cr.AdminNotes,
+                    cr.RefundApproved,
+                    cr.RefundAmount as ApprovedRefundAmount,
+                    cr.BankAccountNumber,
+                    cr.BankName,
+                    cr.AccountHolderName,
+                    cr.TransferConfirmed,
+                    cr.TransferDate,
+                    cr.RefundReceived,
+                    cr.ReceivedDate,
+                    mp.Name as PlanName,
+                    mp.Price as PlanPrice,
+                    um.StartDate as MembershipStartDate,
+                    um.EndDate as MembershipEndDate,
+                    admin_u.FirstName + ' ' + admin_u.LastName as ProcessedByName
+                FROM CancellationRequests cr
+                JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+                JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                LEFT JOIN Users admin_u ON cr.ProcessedByUserID = admin_u.UserID
+                WHERE cr.UserID = @UserID
+                ORDER BY cr.RequestedAt DESC
+            `);
+
+        console.log(`📊 Found ${cancellationRequests.recordset.length} refund requests for user ${req.user.id}`);
+
+        res.json({
+            success: true,
+            data: cancellationRequests.recordset,
+            total: cancellationRequests.recordset.length
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching refund requests:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy danh sách yêu cầu hoàn tiền',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Member confirms refund received - Updated to use CancellationRequests
+router.post('/confirm-refund-received/:cancellationId', protect, async (req, res) => {
+    try {
+        const { cancellationId } = req.params;
+        const { confirmed } = req.body;
+
+        console.log('💰 Member confirming refund received for cancellation:', cancellationId);
+
+        if (!confirmed) {
+            return res.status(400).json({
+                success: false,
+                message: 'Xác nhận là bắt buộc'
+            });
+        }
+
+        // Start transaction
+        const transaction = pool.transaction();
+        await transaction.begin();
+
+        try {
+            // Check if cancellation request exists and transfer was confirmed
+            const cancellationResult = await transaction.request()
+                .input('CancellationRequestID', cancellationId)
+                .input('UserID', req.user.id)
+                .query(`
+                    SELECT cr.*, um.*, mp.Name as PlanName, u.FirstName, u.LastName
+                    FROM CancellationRequests cr
+                    JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+                    JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                    JOIN Users u ON cr.UserID = u.UserID
+                    WHERE cr.CancellationRequestID = @CancellationRequestID 
+                    AND cr.UserID = @UserID
+                    AND (cr.Status = 'transfer_confirmed' OR cr.Status = 'approved')
+                    AND cr.RefundApproved = 1
+                    AND (cr.RefundReceived = 0 OR cr.RefundReceived IS NULL)
+                `);
+
+            if (cancellationResult.recordset.length === 0) {
+                await transaction.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy yêu cầu hủy gói phù hợp hoặc bạn đã xác nhận nhận tiền rồi'
+                });
+            }
+
+            const cancellation = cancellationResult.recordset[0];
+
+            // Update cancellation request - mark refund as received
+            await transaction.request()
+                .input('CancellationRequestID', cancellationId)
+                .query(`
+                    UPDATE CancellationRequests
+                    SET RefundReceived = 1,
+                        ReceivedDate = GETDATE(),
+                        Status = 'completed'
+                    WHERE CancellationRequestID = @CancellationRequestID
+                `);
+
+            // Check if user has any other active memberships
+            const otherMembershipsResult = await transaction.request()
+                .input('UserID', req.user.id)
+                .query(`
+                    SELECT COUNT(*) as ActiveCount
+                    FROM UserMemberships
+                    WHERE UserID = @UserID AND Status = 'active'
+                `);
+
+            const hasOtherActiveMemberships = otherMembershipsResult.recordset[0].ActiveCount > 0;
+
+            // If no other active memberships, change user role to guest
+            if (!hasOtherActiveMemberships) {
+                await transaction.request()
+                    .input('UserID', req.user.id)
+                    .query(`
+                        UPDATE Users
+                        SET Role = 'guest'
+                        WHERE UserID = @UserID
+                    `);
+
+                console.log('🔄 User role changed to guest due to no active memberships');
+            }
+
+            await transaction.commit();
+
+            res.json({
+                success: true,
+                message: 'Đã xác nhận nhận tiền hoàn trả thành công. Quá trình hủy gói hoàn tất.',
+                data: {
+                    cancellationId: cancellationId,
+                    receivedDate: new Date(),
+                    refundAmount: cancellation.RefundAmount,
+                    newRole: hasOtherActiveMemberships ? 'member' : 'guest',
+                    status: 'completed'
+                }
+            });
+
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    } catch (error) {
+        console.error('Error confirming refund received:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi xác nhận nhận tiền hoàn trả'
         });
     }
 });

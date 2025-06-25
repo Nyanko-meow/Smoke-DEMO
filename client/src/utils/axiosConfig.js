@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// Define API URL for export
+export const API_URL = 'http://localhost:4000/api';
+
 // Create axios instance
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:4000/api',
+    baseURL: API_URL,
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
