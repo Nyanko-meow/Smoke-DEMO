@@ -1,18 +1,35 @@
-/* Base styles */
+/* Import Google Fonts with Vietnamese support */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap&subset=vietnamese,latin');
+
+/* Ensure Inter font loads properly with Vietnamese characters */
+@font-face {
+  font-family: 'Inter-fallback';
+  src: local('Inter'), local('Inter-Regular');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD, U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9;
+}
+
+/* Base styles with Vietnamese font support */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-feature-settings: "liga" 1, "kern" 1;
+  -webkit-font-feature-settings: "liga" 1, "kern" 1;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+    'Arial Unicode MS', 'Noto Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #333;
   background-color: #f5f7fa;
+  /* Ensure proper text rendering for Vietnamese characters */
+  text-rendering: optimizeLegibility;
 }
 
 /* Navbar Styles */
@@ -2203,4 +2220,202 @@ code {
     height: 52px;
     font-size: 16px;
   }
+}
+
+/* Membership Plans Styling */
+.membership-current-plan {
+  font-family: 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+.membership-current-plan * {
+  font-family: inherit !important;
+}
+
+.membership-features-section {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.membership-features-section * {
+  font-family: inherit !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: inherit;
+}
+
+.membership-feature-item {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  font-family: inherit !important;
+}
+
+.membership-feature-item:hover {
+  transform: translateX(2px);
+}
+
+.membership-feature-item span {
+  font-family: inherit !important;
+}
+
+.membership-info-card {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+.membership-info-card * {
+  font-family: inherit !important;
+}
+
+/* Ensure all membership elements use Inter font */
+[class*="membership"] {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+[class*="membership"] * {
+  font-family: inherit !important;
+}
+
+/* Override any other font settings for feature items specifically */
+.membership-features-section .membership-feature-item,
+.membership-features-section .membership-feature-item *,
+.membership-features-section div,
+.membership-features-section span {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Enhanced styling for features section visibility */
+.membership-features-section {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(22, 163, 74, 0.15) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  margin-bottom: 16px !important;
+}
+
+/* Enhanced title styling */
+.membership-features-section > div:first-child {
+  color: #16a34a !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  margin-bottom: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Enhanced feature item styling */
+.membership-feature-item {
+  padding: 8px 0 !important;
+  transition: all 0.2s ease !important;
+  border-radius: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.membership-feature-item:hover {
+  background-color: rgba(22, 163, 74, 0.05) !important;
+  padding-left: 8px !important;
+  transform: translateX(4px) !important;
+}
+
+/* Checkmark styling enhancement */
+.membership-feature-item span:first-child {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25) !important;
+  width: 18px !important;
+  height: 18px !important;
+  line-height: 18px !important;
+  font-size: 11px !important;
+  margin-right: 12px !important;
+}
+
+/* Feature text styling */
+.membership-feature-item span:last-child {
+  color: #374151 !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  font-size: 14px !important;
+}
+
+/* Vietnamese Font Optimization */
+html {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Specific Vietnamese character support */
+.vietnamese-text, 
+[lang="vi"],
+body[lang="vi"] {
+  font-family: 'Inter', 'Roboto', 'Segoe UI', 'Tahoma', 'Arial Unicode MS', 'Lucida Grande', sans-serif !important;
+  font-variant-ligatures: common-ligatures;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix for common Vietnamese character display issues */
+h1, h2, h3, h4, h5, h6, 
+.ant-typography,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-table,
+.ant-menu,
+.ant-card {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    'Arial Unicode MS', 'Noto Sans', sans-serif !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* Ant Design components Vietnamese support */
+.ant-typography * {
+  font-family: inherit !important;
+}
+
+/* Input and form elements Vietnamese support */
+input, textarea, select, option {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    'Arial Unicode MS', 'Noto Sans', sans-serif !important;
+}
+
+/* Ensure all text elements support Vietnamese properly */
+p, span, div, li, td, th, label, a, button {
+  font-feature-settings: "liga" 1, "kern" 1;
+  -webkit-font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* Fix for membership sections */
+.membership-current-plan,
+.membership-features-section,
+.membership-info-card {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    'Arial Unicode MS', 'Noto Sans', sans-serif !important;
+}
+
+.membership-current-plan *,
+.membership-features-section *,
+.membership-info-card * {
+  font-family: inherit !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+.membership-features-section .membership-feature-item,
+.membership-features-section .membership-feature-item *,
+.membership-features-section div,
+.membership-features-section span {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    'Arial Unicode MS', 'Noto Sans', sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
 }

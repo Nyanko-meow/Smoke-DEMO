@@ -9,7 +9,7 @@ import {
     clearSuccess,
     getRefundRequests
 } from '../../store/slices/membershipSlice';
-import { getCurrentUser } from '../../store/slices/authSlice';
+import { getCurrentUser, updateUserRole } from '../../store/slices/authSlice';
 import {
     Card,
     Button,
@@ -44,35 +44,19 @@ const PaymentMethodOptions = [
 const SAMPLE_PLANS = [
     {
         PlanID: 1,
-        Name: 'Gói Cơ Bản',
-        Description: 'Bắt đầu hành trình cai thuốc với gói cơ bản của chúng tôi.',
+        Name: 'Basic Plan',
+        Description: 'Gói cơ bản để bắt đầu hành trình cai thuốc của bạn.',
         Price: 99000,
-        Duration: 30,
-        Features: 'Theo dõi tiến trình\nMẹo cai thuốc cơ bản\nTruy cập cộng đồng'
-    },
-    {
-        PlanID: 4,
-        Name: 'Gói Basic',
-        Description: 'Trải nghiệm nhanh các tính năng cai thuốc trong 15 ngày.',
-        Price: 50000,
         Duration: 15,
-        Features: 'Theo dõi tiến trình\nPhân tích nâng cao\nChiến lược cai thuốc\nTruy cập cộng đồng\nĐộng lực hàng tuần\nTrải nghiệm đầy đủ tính năng'
+        Features: 'Theo dõi tiến trình\nPhân tích nâng cao\nChiến lược bỏ thuốc cao cấp\nTruy cập cộng đồng\nĐộng lực hàng tuần\nĐược coach tư vấn qua chat và có thể đặt lịch'
     },
     {
         PlanID: 2,
-        Name: 'Gói Cao Cấp',
+        Name: 'Premium Plan',
         Description: 'Hỗ trợ nâng cao cho hành trình cai thuốc của bạn.',
-        Price: 10000,
+        Price: 199000,
         Duration: 60,
-        Features: 'Theo dõi tiến trình\nPhân tích nâng cao\nChiến lược cai thuốc cao cấp\nTruy cập cộng đồng\nĐộng lực hàng tuần'
-    },
-    {
-        PlanID: 3,
-        Name: 'Gói Chuyên Nghiệp',
-        Description: 'Hỗ trợ tối đa để đảm bảo thành công của bạn.',
-        Price: 299000,
-        Duration: 90,
-        Features: 'Theo dõi tiến trình\nPhân tích nâng cao\nChiến lược cai thuốc chuyên nghiệp\nTruy cập cộng đồng\nĐộng lực hàng ngày\nHuấn luyện cá nhân\nBảng điều khiển cải thiện sức khỏe'
+        Features: 'Theo dõi tiến trình chi tiết\nPhân tích và báo cáo chuyên sâu\nKế hoạch cai thuốc cá nhân hóa\nTư vấn 1-1 với chuyên gia\nHỗ trợ 24/7 qua chat và hotline\nVideo hướng dẫn độc quyền\nCộng đồng VIP và mentor\nNhắc nhở thông minh theo thói quen\nPhân tích tâm lý và cảm xúc\nChương trình thưởng đặc biệt\nBáo cáo tiến độ hàng tuần\nTruy cập không giới hạn tất cả tính năng'
     }
 ];
 
@@ -179,7 +163,11 @@ const MembershipPlans = () => {
             console.log('🎉 PayOS payment successful:', event);
             setPaymentModalVisible(false);
             const request = await axiosInstance.get('/payments/payos/status/' + event.orderCode);
-            refreshMembershipData();
+            
+            // ✅ CẬP NHẬT: Refresh cả user data và membership data
+            await dispatch(getCurrentUser()).unwrap(); // Thêm dòng này
+            await refreshMembershipData();
+            
             notification.success({
                 message: 'Thanh toán thành công!',
                 description: 'Gói thành viên của bạn đã được kích hoạt.',
@@ -403,6 +391,8 @@ const MembershipPlans = () => {
     const refreshMembershipData = async () => {
         console.log('🔄 Manual refresh membership data...');
         try {
+            // ✅ CẬP NHẬT: Thêm getCurrentUser
+            await dispatch(getCurrentUser()).unwrap();
             await dispatch(getCurrentMembership()).unwrap();
             await fetchPaymentHistory();
             console.log('✅ Manual refresh completed');
@@ -561,245 +551,156 @@ const MembershipPlans = () => {
 
     // Function to check membership expiration and auto-downgrade to guest
     const checkMembershipExpiration = async () => {
-        if (!user) {
-            return;
-        }
+        if (!user || !paymentHistory) return;
 
-        // Handle case where user has no payment history at all
-        if (!paymentHistory || paymentHistory.length === 0) {
-            console.log('🚫 User has no payment history at all');
-
-            // Check if user is currently not a guest
-            if (user.role && user.role !== 'guest') {
-                console.log('🔄 User has no payment history but is not guest - downgrading...');
-
-                try {
-                    // Try the original endpoint first
-                    let response;
-                    try {
-                        response = await axiosInstance.post('/membership/downgrade-to-guest');
-                    } catch (firstError) {
-                        console.log('⚠️ First downgrade method failed, trying force method...', firstError);
-                        // If first method fails, try force method
-                        response = await axiosInstance.post('/membership/force-guest');
-                    }
-
-                    console.log('✅ Downgrade API response:', response.data);
-
-                    // Refresh user data
-                    await dispatch(getCurrentUser()).unwrap();
-
-                    notification.success({
-                        message: 'Tài khoản được chuyển về Guest',
-                        description: 'Bạn không có gói dịch vụ nào. Tài khoản đã được chuyển về trạng thái Guest.',
-                        duration: 6
-                    });
-
-                    // Force reload the page to refresh UI completely
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-
-                } catch (error) {
-                    console.error('❌ Error downgrading to guest (no payment history):', error);
-                    // Don't show notification for this error to avoid spam
-                }
-            }
-            return;
-        }
-
-        try {
-            // Filter out ALL cancelled and pending_cancellation memberships first
-            const activePayments = paymentHistory.filter(payment => {
-                if (payment.MembershipStatus === 'cancelled' ||
-                    payment.PaymentStatus === 'cancelled' ||
-                    payment.Status === 'cancelled' ||
-                    payment.MembershipStatus === 'pending_cancellation') {
-                    return false;
-                }
-                return true;
-            });
-
-            console.log('🔍 Checking membership expiration with active payments:', activePayments);
-
-            // If no active payments at all, user should be guest
-            if (activePayments.length === 0) {
-                console.log('🚫 No active payments found - checking if user should be guest...');
-
-                // Check if user is currently not a guest
-                if (user.role && user.role !== 'guest') {
-                    console.log('🔄 User has no active memberships but is not guest - downgrading...');
-
-                    try {
-                        // Try the original endpoint first
-                        let response;
-                        try {
-                            response = await axiosInstance.post('/membership/downgrade-to-guest');
-                        } catch (firstError) {
-                            console.log('⚠️ First downgrade method failed, trying force method...', firstError);
-                            // If first method fails, try force method
-                            response = await axiosInstance.post('/membership/force-guest');
-                        }
-
-                        console.log('✅ Downgrade API response:', response.data);
-
-                        // Refresh user data to get updated role
-                        await dispatch(getCurrentUser()).unwrap();
-
-                        notification.success({
-                            message: 'Tài khoản được chuyển về Guest',
-                            description: 'Bạn không còn gói dịch vụ nào đang hoạt động. Tài khoản đã được chuyển về trạng thái Guest.',
-                            duration: 6
-                        });
-
-                        // Force reload the page to refresh UI completely
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-
-                    } catch (error) {
-                        console.error('❌ Error downgrading to guest:', error);
-                        // Removed error notification to avoid spam
-                    }
-                }
-                return;
-            }
-
-            // Find active confirmed membership
-            const activeMembership = activePayments.find(payment =>
-                (payment.PaymentStatus === 'confirmed' || payment.Status === 'confirmed')
-            );
-
-            if (!activeMembership || !activeMembership.EndDate) {
-                // No confirmed membership but has pending payments - don't downgrade yet
-                console.log('📝 Has pending payments but no confirmed membership');
-                return;
-            }
-
-            // Check if membership has expired
-            const endDate = new Date(activeMembership.EndDate);
-            const currentDate = new Date();
-
-            if (currentDate > endDate) {
-                console.log('⏲️ Membership expired, auto-downgrading to guest...');
-
-                // Call API to expire the membership
-                try {
-                    await axiosInstance.post('/membership/expire-membership', {
-                        membershipId: activeMembership.MembershipID || activeMembership.PaymentID
-                    });
-
-                    // Refresh payment history to reflect changes
-                    await fetchPaymentHistory();
-
-                    // Refresh user data to update role
-                    dispatch(getCurrentUser());
-
-                    notification.warning({
-                        message: 'Gói dịch vụ đã hết hạn',
-                        description: 'Gói dịch vụ của bạn đã hết hạn và được chuyển về tài khoản guest. Bạn có thể mua gói mới để tiếp tục sử dụng.',
-                        duration: 8
-                    });
-                } catch (error) {
-                    console.error('❌ Error expiring membership:', error);
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error checking membership expiration:', error);
-        }
-    };
-
-    // Check if user has active membership
-    const hasActiveMembership = () => {
-        // IMPORTANT: Guest users never have active membership
-        if (user && user.role === 'guest') {
-            console.log('🚫 User is guest - no active membership by definition');
-            return false;
-        }
-
-        if (!paymentHistory || paymentHistory.length === 0) {
-            console.log('✅ No payment history - user can purchase');
-
-            // Auto-check if user should be downgraded to guest
-            if (user && user.role && user.role !== 'guest') {
-                console.log('🔍 User has no payment history but is not guest - might need downgrade');
-                // This will be handled by checkMembershipExpiration
-            }
-
-            return false;
-        }
-
-        // Filter out ALL cancelled and pending_cancellation memberships first (same as renderPaymentInfo)
         const activePayments = paymentHistory.filter(payment => {
-            // Exclude any payment with cancelled membership or payment status
-            if (payment.MembershipStatus === 'cancelled' ||
-                payment.PaymentStatus === 'cancelled' ||
-                payment.Status === 'cancelled') {
-                console.log('🚫 Filtering out cancelled payment in hasActiveMembership:', payment);
+            // Only check confirmed payments
+            if (payment.PaymentStatus !== 'confirmed' && payment.Status !== 'confirmed') {
                 return false;
             }
-            // Also exclude pending_cancellation
-            if (payment.MembershipStatus === 'pending_cancellation') {
-                console.log('🚫 Filtering out pending_cancellation payment in hasActiveMembership:', payment);
+            // Skip cancelled memberships
+            if (payment.MembershipStatus === 'cancelled' || 
+                payment.PaymentStatus === 'cancelled' || 
+                payment.Status === 'cancelled') {
                 return false;
             }
             return true;
         });
 
-        console.log('📋 Active payments for membership check:', activePayments);
+        if (activePayments.length === 0) return;
 
-        if (activePayments.length === 0) {
-            console.log('✅ No active payments after filtering - user can purchase');
-
-            // Auto-check if user should be downgraded to guest
-            if (user && user.role && user.role !== 'guest') {
-                console.log('🔍 User has no active payments but is not guest - might need downgrade');
-                // This will be handled by checkMembershipExpiration
+        // Get the latest payment
+        const latestPayment = activePayments.sort((a, b) => {
+            if (a.PaymentDate && b.PaymentDate) {
+                return new Date(b.PaymentDate) - new Date(a.PaymentDate);
             }
+            return (b.PaymentID || 0) - (a.PaymentID || 0);
+        })[0];
 
+        if (!latestPayment || !latestPayment.EndDate) return;
+
+        const endDate = new Date(latestPayment.EndDate);
+        const currentDate = new Date();
+
+        console.log('🕒 Checking membership expiration:', {
+            endDate: endDate.toISOString(),
+            currentDate: currentDate.toISOString(),
+            isExpired: currentDate > endDate,
+            userRole: user.role,
+            membershipStatus: latestPayment.MembershipStatus
+        });
+
+        if (currentDate > endDate && user.role !== 'guest') {
+            console.log('⚠️ Membership expired, downgrading to guest...');
+            
+            try {
+                // Call API to downgrade user to guest
+                const response = await axiosInstance.post('/auth/downgrade-to-guest', {
+                    userId: user.id,
+                    reason: 'membership_expired'
+                });
+
+                if (response.data.success) {
+                    console.log('✅ Successfully downgraded to guest');
+                    
+                    // Update user role in Redux store
+                    dispatch(updateUserRole('guest'));
+                    
+                    // Show notification
+                    notification.warning({
+                        message: 'Gói thành viên đã hết hạn',
+                        description: 'Tài khoản của bạn đã được chuyển về gói miễn phí. Vui lòng gia hạn để tiếp tục sử dụng các tính năng cao cấp.',
+                        duration: 10
+                    });
+                    
+                    // Refresh data
+                    await loadData();
+                } else {
+                    console.error('❌ Failed to downgrade to guest:', response.data.message);
+                }
+            } catch (error) {
+                console.error('❌ Error downgrading to guest:', error);
+            }
+        }
+    };
+
+    // Function to check if user has active membership
+    const hasActiveMembership = () => {
+        if (!paymentHistory || paymentHistory.length === 0) {
+            console.log('🔍 hasActiveMembership: No payment history');
             return false;
         }
 
-        // Check for any confirmed membership that is not expired
-        const activeMembership = activePayments.find(payment =>
-            (payment.PaymentStatus === 'confirmed' || payment.Status === 'confirmed')
-        );
+        const activePayments = paymentHistory.filter(payment => {
+            const isConfirmed = payment.PaymentStatus === 'confirmed' || payment.Status === 'confirmed';
+            const isNotCancelled = payment.PaymentStatus !== 'cancelled' && 
+                                  payment.Status !== 'cancelled' && 
+                                  payment.MembershipStatus !== 'cancelled';
+            
+            console.log('🔍 Checking payment:', {
+                paymentId: payment.PaymentID,
+                isConfirmed,
+                isNotCancelled,
+                paymentStatus: payment.PaymentStatus,
+                status: payment.Status,
+                membershipStatus: payment.MembershipStatus
+            });
+            
+            return isConfirmed && isNotCancelled;
+        });
 
-        if (activeMembership) {
-            // Check if not expired
-            const endDate = new Date(activeMembership.EndDate || activeMembership.PaymentEndDate || activeMembership.MembershipEndDate || '2025-08-02T00:00:00.000Z');
-            const currentDate = new Date();
+        const hasActive = activePayments.length > 0;
+        console.log('🔍 hasActiveMembership result:', {
+            hasActive,
+            activePaymentsCount: activePayments.length,
+            totalPayments: paymentHistory.length
+        });
 
-            if (!isNaN(endDate.getTime()) && currentDate <= endDate) {
-                console.log('🚫 User has active membership:', {
-                    planName: activeMembership.PlanName,
-                    endDate: endDate.toLocaleDateString('vi-VN'),
-                    daysRemaining: Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24)),
-                    membershipStatus: activeMembership.MembershipStatus,
-                    paymentStatus: activeMembership.PaymentStatus
-                });
-                return true;
-            } else {
-                console.log('⏰ Active membership found but expired:', {
-                    planName: activeMembership.PlanName,
-                    endDate: endDate.toLocaleDateString('vi-VN')
-                });
-                // Expired membership will be handled by checkMembershipExpiration
-            }
+        return hasActive;
+    };
+
+    // Check if user has active membership to disable purchase buttons
+    const hasActiveMembershipForPurchase = () => {
+        if (!paymentHistory || paymentHistory.length === 0) {
+            console.log('🔍 No payment history for purchase check');
+            return false;
         }
 
-        // Also check for pending memberships (just paid, waiting for confirmation)
-        const pendingMembership = activePayments.find(payment =>
-            (payment.PaymentStatus === 'pending' || payment.Status === 'pending') &&
-            payment.PaymentStatus !== 'rejected' && payment.Status !== 'rejected'
+        // Check for any active payments (confirmed and not cancelled)
+        const activePayments = paymentHistory.filter(payment => {
+            const isActiveStatus = (payment.PaymentStatus === 'confirmed' || payment.Status === 'confirmed') ||
+                                  (payment.PaymentStatus === 'pending' || payment.Status === 'pending');
+            
+            const isNotCancelled = payment.PaymentStatus !== 'cancelled' && 
+                                  payment.Status !== 'cancelled' && 
+                                  payment.PaymentStatus !== 'rejected' && 
+                                  payment.Status !== 'rejected' &&
+                                  payment.MembershipStatus !== 'cancelled' &&
+                                  payment.MembershipStatus !== 'pending_cancellation';
+            
+            return isActiveStatus && isNotCancelled;
+        });
+
+        const hasActivePending = activePayments.some(p => 
+            (p.PaymentStatus === 'pending' || p.Status === 'pending') &&
+            p.PaymentStatus !== 'rejected' && p.Status !== 'rejected'
         );
 
-        if (pendingMembership) {
+        if (hasActivePending) {
             console.log('🚫 User has pending membership payment:', {
-                planName: pendingMembership.PlanName,
-                membershipStatus: pendingMembership.MembershipStatus,
-                paymentStatus: pendingMembership.PaymentStatus
+                planName: activePayments.find(p => p.PaymentStatus === 'pending' || p.Status === 'pending')?.PlanName,
+                membershipStatus: activePayments.find(p => p.PaymentStatus === 'pending' || p.Status === 'pending')?.MembershipStatus,
+                paymentStatus: activePayments.find(p => p.PaymentStatus === 'pending' || p.Status === 'pending')?.PaymentStatus
             });
+            return true;
+        }
+
+        const hasActiveConfirmed = activePayments.some(p => 
+            (p.PaymentStatus === 'confirmed' || p.Status === 'confirmed')
+        );
+
+        if (hasActiveConfirmed) {
+            console.log('🚫 User has confirmed membership payment');
             return true;
         }
 
@@ -813,10 +714,9 @@ const MembershipPlans = () => {
             return null;
         }
 
-        // IMPORTANT: Hide payment info completely if user is guest
-        // This ensures when user is downgraded to guest, they don't see old payment info
-        if (user.role === 'guest') {
-            console.log('🚫 User is guest - hiding all payment info');
+        // ✅ THAY ĐỔI: Chỉ ẩn nếu user là guest VÀ KHÔNG có payment history
+        if (user.role === 'guest' && (!paymentHistory || paymentHistory.length === 0)) {
+            console.log('🚫 User is guest with no payment history - hiding payment info');
             return null;
         }
 
@@ -839,10 +739,10 @@ const MembershipPlans = () => {
                 if (payment.MembershipStatus === 'cancelled' ||
                     payment.PaymentStatus === 'cancelled' ||
                     payment.Status === 'cancelled') {
-                    console.log('🚫 Filtering out cancelled payment:', payment);
+                    console.log('🚫 Filtering out cancelled payment in hasActiveMembership:', payment);
                     return false;
                 }
-                // Keep pending_cancellation to show "Đang chờ hủy gói" status
+                // Keep pending_cancellation
                 if (payment.MembershipStatus === 'pending_cancellation') {
                     console.log('⏳ Keeping pending_cancellation payment for display:', payment);
                     return true;
@@ -853,18 +753,23 @@ const MembershipPlans = () => {
             console.log('📋 Active payments after filtering cancelled:', activePayments);
 
             // If no active payments remain, hide payment info completely
-            // This is crucial for guest users - they should not see any payment info
             if (activePayments.length === 0) {
                 console.log('💳 No active payments remaining after filtering - hiding payment info');
                 return null;
             }
 
-            // Additional check: if user is guest, don't show ANY payment info even if there are active payments
-            // This handles cases where role change is faster than payment cleanup
-            if (user.role === 'guest') {
-                console.log('🚫 User is guest - force hiding payment info even with active payments');
-                return null;
-            }
+            // ✅ XÓA LOGIC NÀY - không còn ẩn thông tin thanh toán khi user role = guest
+            // if (user.role === 'guest') {
+            //     console.log('🚫 User is guest - force hiding payment info even with active payments');
+            //     return null;
+            // }
+
+            // ✅ THÊM LOG để debug
+            console.log('✅ SHOWING payment info for user:', {
+                userRole: user.role,
+                activePaymentsCount: activePayments.length,
+                paymentHistoryCount: paymentHistory.length
+            });
 
             // FIXED: Always use the most recent payment (by PaymentDate or PaymentID)
             // This ensures we show the latest payment status, not just confirmed ones
@@ -1089,7 +994,7 @@ const MembershipPlans = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '1px',
-                            marginBottom: '8px'
+                            marginBottom: '12px'
                         }}>
                             <div style={{
                                 background: 'rgba(255, 255, 255, 0.7)',
@@ -1108,17 +1013,19 @@ const MembershipPlans = () => {
                                 }}>
                                     <span style={{ fontSize: '14px' }}>📦</span>
                                     <span style={{
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         color: '#6b7280',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                     }}>
                                         Gói dịch vụ:
                                     </span>
                                 </div>
                                 <div style={{
-                                    fontSize: '13px',
+                                    fontSize: '14px',
                                     fontWeight: 700,
-                                    color: '#1f2937'
+                                    color: '#1f2937',
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                 }}>
                                     {latestPayment.PlanName || latestPayment.Name || 'Premium Plan'}
                                 </div>
@@ -1141,17 +1048,19 @@ const MembershipPlans = () => {
                                 }}>
                                     <span style={{ fontSize: '14px' }}>📅</span>
                                     <span style={{
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         color: '#6b7280',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                     }}>
                                         Thời gian:
                                     </span>
                                 </div>
                                 <div style={{
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     color: '#374151',
-                                    fontWeight: 600
+                                    fontWeight: 600,
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                 }}>
                                     {startDate} → {endDate}
                                 </div>
@@ -1174,17 +1083,19 @@ const MembershipPlans = () => {
                                 }}>
                                     <span style={{ fontSize: '14px' }}>💳</span>
                                     <span style={{
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         color: '#6b7280',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                     }}>
                                         Thanh toán:
                                     </span>
                                 </div>
                                 <div style={{
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     color: '#374151',
-                                    fontWeight: 600
+                                    fontWeight: 600,
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                 }}>
                                     {latestPayment.PaymentMethod === 'BankTransfer' ? 'Chuyển khoản' :
                                         latestPayment.PaymentMethod === 'Cash' ? 'Tiền mặt' :
@@ -1210,26 +1121,117 @@ const MembershipPlans = () => {
                                 }}>
                                     <span style={{ fontSize: '14px' }}>📊</span>
                                     <span style={{
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         color: '#6b7280',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                     }}>
                                         Trạng thái:
                                     </span>
                                 </div>
                                 <div style={{
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     fontWeight: 700,
                                     color: correctedStatus === 'confirmed' ? '#16a34a' :
                                         correctedStatus === 'pending' ? '#d97706' :
-                                            '#dc2626'
+                                            '#dc2626',
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                                 }}>
                                     {statusText}
                                 </div>
                             </div>
                         </div>
 
-
+                        {/* Tính năng nổi bật section - ALWAYS show for active membership */}
+                        <div className="membership-features-section membership-info-card" style={{
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            border: '1px solid rgba(22, 163, 74, 0.2)',
+                            backdropFilter: 'blur(20px)',
+                            marginBottom: '16px',
+                            fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
+                        }}>
+                            <div style={{
+                                fontSize: '16px',
+                                fontWeight: 700,
+                                color: '#16a34a',
+                                marginBottom: '16px',
+                                fontFamily: 'inherit',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <span style={{ 
+                                    fontSize: '18px', 
+                                    fontFamily: 'inherit',
+                                    display: 'inline-block',
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    background: '#16a34a',
+                                    color: 'white',
+                                    textAlign: 'center',
+                                    lineHeight: '24px'
+                                }}>✨</span>
+                                <span style={{ fontFamily: 'inherit' }}>Tính năng nổi bật</span>
+                            </div>
+                            {(() => {
+                                // Find the current plan's features
+                                const currentPlan = displayPlans.find(plan => 
+                                    plan.Name === (latestPayment.PlanName || latestPayment.Name)
+                                );
+                                const features = currentPlan ? 
+                                    formatFeatureList(currentPlan.Features) : 
+                                    [
+                                        'Theo dõi tiến trình cai thuốc chi tiết',
+                                        'Phân tích nâng cao và báo cáo', 
+                                        'Chiến lược bỏ thuốc cao cấp',
+                                        'Truy cập cộng đồng và chia sẻ',
+                                        'Động lực hàng tuần từ coach',
+                                        'Được coach tư vấn qua chat và đặt lịch hẹn'
+                                    ];
+                                
+                                return features.slice(0, 4).map((feature, idx) => (
+                                    <div key={idx} className="membership-feature-item" style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginBottom: '10px',
+                                        fontSize: '14px',
+                                        fontFamily: 'inherit',
+                                        padding: '6px 0'
+                                    }}>
+                                        <span style={{
+                                            display: 'inline-block',
+                                            width: '18px',
+                                            height: '18px',
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                            color: 'white',
+                                            textAlign: 'center',
+                                            lineHeight: '18px',
+                                            fontSize: '11px',
+                                            marginRight: '12px',
+                                            flexShrink: 0,
+                                            fontFamily: 'inherit',
+                                            fontWeight: 'bold',
+                                            boxShadow: '0 2px 6px rgba(34, 197, 94, 0.25)'
+                                        }}>
+                                            ✓
+                                        </span>
+                                        <span style={{
+                                            color: '#374151',
+                                            lineHeight: 1.6,
+                                            fontFamily: 'inherit',
+                                            fontWeight: 500
+                                        }}>
+                                            {feature}
+                                        </span>
+                                    </div>
+                                ));
+                            })()}
+                        </div>
 
                         {correctedStatus === 'confirmed' && (
                             <div style={{
@@ -1364,8 +1366,6 @@ const MembershipPlans = () => {
                                 ) : null}
                             </div>
                         )}
-
-
 
                         {correctedStatus === 'cancelled' && (
                             <div style={{
@@ -2566,34 +2566,145 @@ const MembershipPlans = () => {
                                 ))}
                             </div>
 
-                            {/* Simplified Button */}
-                            <Button
-                                type="primary"
-                                size="large"
-                                block
-                                onClick={() => handleSelectPlan(plan)}
-                                disabled={loading}
-                                style={{
-                                    height: '44px',
-                                    borderRadius: '10px',
-                                    fontWeight: 600,
-                                    fontSize: '14px',
-                                    background: planTheme.gradient,
-                                    border: 'none',
-                                    color: 'white'
-                                }}
-                            >
-                                Mua gói
-                            </Button>
+                            {/* Conditional Button with Same Logic as Table */}
+                            {(() => {
+                                // Apply same logic as table for determining button state
+                                const isCurrent = currentMembership && 
+                                    (currentMembership.PlanName === plan.Name || 
+                                     currentMembership.PlanID === plan.PlanID);
+                                
+                                const isCurrentActive = currentMembership && 
+                                    currentMembership.Status === 'active' && 
+                                    isCurrent;
 
-                            <button
-                                className="btn btn-success me-2"
-                                onClick={() => handlePayOSPayment(plan)}
-                                disabled={loading}
-                            >
-                                <i className="fas fa-credit-card me-2"></i>
-                                Thanh toán PayOS
-                            </button>
+                                // Check for active payments for this plan
+                                const activePayments = paymentHistory ? paymentHistory.filter(p => {
+                                    const planMatches = p.PlanName === plan.Name || 
+                                                       p.PlanID === plan.PlanID ||
+                                                       (p.PlanName && plan.Name && 
+                                                        p.PlanName.toLowerCase().includes(plan.Name.toLowerCase()));
+                                    
+                                    const isActivePayment = (p.PaymentStatus === 'pending' || p.Status === 'pending' ||
+                                                           p.PaymentStatus === 'confirmed' || p.Status === 'confirmed') &&
+                                                          p.PaymentStatus !== 'cancelled' && p.Status !== 'cancelled' &&
+                                                          p.PaymentStatus !== 'rejected' && p.Status !== 'rejected';
+                                    
+                                    return planMatches && isActivePayment;
+                                }) : [];
+
+                                const hasActivePendingPayment = activePayments && activePayments.some(p =>
+                                    (p.PaymentStatus === 'pending' || p.Status === 'pending') &&
+                                    p.PaymentStatus !== 'rejected' && p.Status !== 'rejected'
+                                );
+
+                                const hasActiveConfirmedPayment = activePayments && activePayments.some(p =>
+                                    (p.PaymentStatus === 'confirmed' || p.Status === 'confirmed')
+                                );
+
+                                // Check if user has ANY active membership (not just for this plan)
+                                const hasAnyActiveMembership = paymentHistory && paymentHistory.some(p => 
+                                    (p.PaymentStatus === 'confirmed' || p.Status === 'confirmed') &&
+                                    p.PaymentStatus !== 'cancelled' && p.Status !== 'cancelled' &&
+                                    p.PaymentStatus !== 'rejected' && p.Status !== 'rejected' &&
+                                    p.MembershipStatus !== 'cancelled' && p.MembershipStatus !== 'pending_cancellation'
+                                );
+
+                                const isPurchasable = user &&
+                                    !hasActivePendingPayment &&
+                                    !hasAnyActiveMembership &&  // Don't allow purchasing if user has ANY active membership
+                                    plan.Price > 0 &&
+                                    !isCurrentActive;
+
+                                const isGuestPlan = plan.Price === 0;
+
+                                if (hasActivePendingPayment) {
+                                    return (
+                                        <Button
+                                            type="primary"
+                                            size="large"
+                                            block
+                                            disabled={true}
+                                            style={{
+                                                height: '44px',
+                                                borderRadius: '10px',
+                                                fontWeight: 600,
+                                                fontSize: '14px',
+                                                background: '#d1d5db',
+                                                border: 'none',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            Đang chờ thanh toán
+                                        </Button>
+                                    );
+                                }
+
+                                if (isPurchasable && !isGuestPlan) {
+                                    return (
+                                        <>
+                                            <Button
+                                                type="primary"
+                                                size="large"
+                                                block
+                                                onClick={() => handleSelectPlan(plan)}
+                                                disabled={loading}
+                                                style={{
+                                                    height: '44px',
+                                                    borderRadius: '10px',
+                                                    fontWeight: 600,
+                                                    fontSize: '14px',
+                                                    background: planTheme.gradient,
+                                                    border: 'none',
+                                                    color: 'white',
+                                                    marginBottom: '8px'
+                                                }}
+                                            >
+                                                Mua gói
+                                            </Button>
+                                            
+                                            <Button
+                                                type="default"
+                                                size="large"
+                                                block
+                                                onClick={() => handlePayOSPayment(plan)}
+                                                disabled={loading}
+                                                style={{
+                                                    height: '40px',
+                                                    borderRadius: '8px',
+                                                    fontWeight: 500,
+                                                    fontSize: '13px',
+                                                    border: '1px solid #22c55e',
+                                                    color: '#22c55e'
+                                                }}
+                                            >
+                                                <i className="fas fa-credit-card me-2"></i>
+                                                Thanh toán PayOS
+                                            </Button>
+                                        </>
+                                    );
+                                } else {
+                                    return (
+                                        <Button
+                                            type="primary"
+                                            size="large"
+                                            block
+                                            disabled={true}
+                                            style={{
+                                                height: '44px',
+                                                borderRadius: '10px',
+                                                fontWeight: 600,
+                                                fontSize: '14px',
+                                                background: '#d1d5db',
+                                                border: 'none',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {(isCurrent && hasActiveConfirmedPayment) || isCurrentActive ? 'Gói hiện tại' :
+                                                isGuestPlan ? 'Miễn phí' : 'Không khả dụng'}
+                                        </Button>
+                                    );
+                                }
+                            })()}
                         </div>
                     );
                 })}
