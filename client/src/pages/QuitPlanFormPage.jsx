@@ -161,7 +161,8 @@ const QuitPlanFormPage = () => {
                 targetDate: formatDate(values.targetDate),
                 reason: values.reason || '',
                 motivationLevel: values.motivationLevel || 5,
-                detailedPlan: values.detailedPlan || ''
+                detailedPlan: values.detailedPlan || '',
+                templateId: selectedTemplate.id
             };
 
             console.log('📤 Final submit data:', submitData);

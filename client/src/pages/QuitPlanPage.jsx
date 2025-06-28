@@ -1428,7 +1428,7 @@ const QuitPlanPage = () => {
                                         )}
 
                                         {/* Existing Plans Display - Hiển thị kế hoạch đã tạo */}
-                                                                                        {existingPlans.length > 0 && !existingPlans.some(plan => plan.Status === 'active') && (
+                                        {existingPlans.length > 0 && (
                                             <Col span={24}>
                                                 <div style={{
                                                     background: 'linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%)',
@@ -1455,11 +1455,17 @@ const QuitPlanPage = () => {
                                                             color: '#1d4ed8',
                                                             fontWeight: 600
                                                         }}>
-                                                            Lịch sử kế hoạch cai thuốc
+                                                            {existingPlans.some(plan => plan.Status === 'active') ? 
+                                                                'Kế hoạch cai thuốc chi tiết' : 
+                                                                'Lịch sử kế hoạch cai thuốc'
+                                                            }
                                                         </Title>
                                                     </div>
                                                     <Text style={{ color: '#1e40af', fontSize: '14px' }}>
-                                                        Đây là những kế hoạch cai thuốc mà bạn đã tạo trước đây. Bạn có thể xem chi tiết và tạo kế hoạch mới.
+                                                        {existingPlans.some(plan => plan.Status === 'active') ? 
+                                                            'Chi tiết kế hoạch cai thuốc hiện tại và lịch sử của bạn.' :
+                                                            'Đây là những kế hoạch cai thuốc mà bạn đã tạo trước đây. Bạn có thể xem chi tiết và tạo kế hoạch mới.'
+                                                        }
                                                     </Text>
                                                 </div>
 
@@ -1581,8 +1587,6 @@ const QuitPlanPage = () => {
                                                                                     <BookOutlined style={{ marginRight: '8px', color: '#6366f1' }} />
                                                                                     <Text strong>Kế hoạch chi tiết:</Text>
                                                                                 </div>
-
-
 
                                                                                 {!plan.DetailedPlan ? (
                                                                                     /* Tạo template mặc định dựa vào membership */
@@ -1742,18 +1746,27 @@ const QuitPlanPage = () => {
                                                                                         // Xác định template nào đã được sử dụng dựa vào nội dung
                                                                                         let matchedTemplate = null;
 
-                                                                                        // Kiểm tra từng template để tìm match
-                                                                                        for (const template of allTemplateOptions) {
-                                                                                            if (template.phases && template.phases.length > 0) {
-                                                                                                // Kiểm tra xem có phase nào match không
-                                                                                                const hasMatchingPhases = template.phases.some(phase =>
-                                                                                                    plan.DetailedPlan.includes(phase.phaseName) ||
-                                                                                                    plan.DetailedPlan.includes(phase.phaseName.split(':')[0])
-                                                                                                );
+                                                                                        // Kiểm tra xem có TEMPLATE_ID trong DetailedPlan không
+                                                                                        const templateIdMatch = plan.DetailedPlan.match(/\[TEMPLATE_ID:([^\]]+)\]/);
+                                                                                        if (templateIdMatch) {
+                                                                                            const templateId = templateIdMatch[1];
+                                                                                            matchedTemplate = allTemplateOptions.find(t => t.id === templateId);
+                                                                                        }
 
-                                                                                                if (hasMatchingPhases) {
-                                                                                                    matchedTemplate = template;
-                                                                                                    break;
+                                                                                        // Nếu không tìm thấy TEMPLATE_ID, thử match bằng phase names (logic cũ)
+                                                                                        if (!matchedTemplate) {
+                                                                                            for (const template of allTemplateOptions) {
+                                                                                                if (template.phases && template.phases.length > 0) {
+                                                                                                    // Kiểm tra xem có phase nào match không
+                                                                                                    const hasMatchingPhases = template.phases.some(phase =>
+                                                                                                        plan.DetailedPlan.includes(phase.phaseName) ||
+                                                                                                        plan.DetailedPlan.includes(phase.phaseName.split(':')[0])
+                                                                                                    );
+
+                                                                                                    if (hasMatchingPhases) {
+                                                                                                        matchedTemplate = template;
+                                                                                                        break;
+                                                                                                    }
                                                                                                 }
                                                                                             }
                                                                                         }

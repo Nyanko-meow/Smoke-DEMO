@@ -7,8 +7,8 @@ const { checkMembershipAccess, filterByCurrentMembership } = require('../middlew
 // Import setup function
 const { setupPlanTemplates } = require('../../setup-templates');
 
-// Middleware để kiểm tra quyền truy cập (chỉ dựa vào PaymentConfirmations)
-const checkPaymentConfirmationAccess = async (req, res, next) => {
+// Middleware để kiểm tra quyền truy cập (sử dụng UserMemberships)
+const checkUserMembershipAccess = async (req, res, next) => {
     try {
         const userId = req.user.UserID;
         const userRole = req.user.Role;
@@ -18,44 +18,46 @@ const checkPaymentConfirmationAccess = async (req, res, next) => {
             return next();
         }
 
-        // Kiểm tra user có payment được confirm không
-        const paymentConfirmationQuery = `
+        // Kiểm tra user có membership active không
+        const membershipQuery = `
             SELECT TOP 1 
-                pc.ConfirmationID,
-                pc.ConfirmationDate,
-                p.PaymentID,
-                p.Amount,
-                p.Status as PaymentStatus,
+                um.MembershipID,
+                um.UserID,
+                um.PlanID,
+                um.StartDate,
+                um.EndDate,
+                um.Status,
                 mp.Name as PlanName,
-                p.StartDate,
-                p.EndDate
-            FROM PaymentConfirmations pc
-            JOIN Payments p ON pc.PaymentID = p.PaymentID
-            JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
-            WHERE p.UserID = @UserID 
-            AND p.Status = 'confirmed'
-            ORDER BY pc.ConfirmationDate DESC
+                mp.Description as PlanDescription,
+                mp.Price,
+                mp.Duration as PlanDuration
+            FROM UserMemberships um
+            JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+            WHERE um.UserID = @UserID 
+            AND um.Status IN ('active', 'confirmed')
+            AND um.EndDate > GETDATE()
+            ORDER BY um.EndDate DESC
         `;
 
-        const confirmationResult = await pool.request()
+        const membershipResult = await pool.request()
             .input('UserID', userId)
-            .query(paymentConfirmationQuery);
+            .query(membershipQuery);
 
-        if (confirmationResult.recordset.length === 0) {
+        if (membershipResult.recordset.length === 0) {
             return res.status(403).json({
                 success: false,
-                message: 'Bạn cần đăng ký và thanh toán gói dịch vụ được xác nhận để truy cập tính năng này'
+                message: 'Bạn cần có gói membership đang hoạt động để truy cập tính năng này'
             });
         }
 
-        // Thêm thông tin payment confirmation vào request
-        req.paymentConfirmation = confirmationResult.recordset[0];
+        // Thêm thông tin membership vào request
+        req.userMembership = membershipResult.recordset[0];
 
-        console.log(`User ${userId} has payment confirmation access:`, req.paymentConfirmation);
+        console.log(`User ${userId} has membership access:`, req.userMembership);
 
         next();
     } catch (error) {
-        console.error('Error checking payment confirmation access:', error);
+        console.error('Error checking membership access:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi hệ thống khi kiểm tra quyền truy cập'
@@ -117,59 +119,127 @@ const ensurePlanTemplatesExists = async () => {
     }
 };
 
+// Templates hard-coded (di chuyển ra ngoài để dùng chung)
+const templates = {
+    'premium': {
+        name: 'Kế hoạch Premium - 8 tuần',
+        phases: [
+            {
+                phaseName: "Tuần 1-2: Detox và chuẩn bị",
+                phaseDescription: "• Thực hiện detox cơ thể với chế độ ăn uống lành mạnh\n• Bắt đầu chương trình tập luyện thể chất\n• Thiết lập hệ thống hỗ trợ từ gia đình và bạn bè\n• Học các kỹ thuật thư giãn: thiền, yoga\n• Ghi chép chi tiết về triggers và cách đối phó",
+                durationDays: 14
+            },
+            {
+                phaseName: "Tuần 3-4: Xây dựng thói quen mới",
+                phaseDescription: "• Phát triển hobby mới để thay thế thời gian hút thuốc\n• Tham gia các nhóm hỗ trợ trực tuyến/offline\n• Áp dụng kỹ thuật CBT (Cognitive Behavioral Therapy)\n• Theo dõi cải thiện sức khỏe: huyết áp, nhịp tim\n• Lập kế hoạch tài chính từ tiền tiết kiệm",
+                durationDays: 14
+            },
+            {
+                phaseName: "Tuần 5-6: Đối phó với khó khăn",
+                phaseDescription: "• Nhận diện và xử lý các tình huống nguy hiểm\n• Phát triển kỹ năng quản lý stress nâng cao\n• Tạo động lực dài hạn với mục tiêu cụ thể\n• Đánh giá tiến bộ và điều chỉnh kế hoạch\n• Chuẩn bị tâm lý cho giai đoạn duy trì",
+                durationDays: 14
+            },
+            {
+                phaseName: "Tuần 7-8: Duy trì và phát triển",
+                phaseDescription: "• Ổn định lối sống không thuốc lá\n• Mở rộng mạng lưới hỗ trợ xã hội\n• Theo dõi và cải thiện sức khỏe tinh thần\n• Lập kế hoạch phòng ngừa tái phát\n• Chia sẻ kinh nghiệm để giúp người khác",
+                durationDays: 14
+            }
+        ]
+    },
+    'premium-intensive': {
+        phases: [
+            {
+                phaseName: "Tuần 1-2: Cắt bỏ hoàn toàn và detox mạnh",
+                phaseDescription: "• Ngừng thuốc lá ngay lập tức, không giảm dần\n• Chế độ detox nghiêm ngặt: nước chanh, trà xanh, rau xanh\n• Tập thể dục cường độ cao 2 lần/ngày\n• Thiền và yoga mỗi sáng tối\n• Ghi nhật ký chi tiết mọi cảm xúc và triệu chứng\n• Loại bỏ hoàn toàn caffeine và đồ ngọt"
+            },
+            {
+                phaseName: "Tuần 3-4: Tái cấu trúc lối sống hoàn toàn",
+                phaseDescription: "• Thay đổi toàn bộ thói quen hàng ngày\n• Học 2 kỹ năng mới: nhạc cụ, ngoại ngữ, nghề thủ công\n• Tham gia cộng đồng thể thao/câu lạc bộ sức khỏe\n• Áp dụng cold therapy và breathing exercises\n• Đọc 1 cuốn sách về tâm lý học mỗi tuần\n• Lập kế hoạch kinh doanh từ tiền tiết kiệm"
+            },
+            {
+                phaseName: "Tuần 5-6: Thử thách bản thân và vượt giới hạn",
+                phaseDescription: "• Tham gia các thử thách thể chất: chạy marathon mini, leo núi\n• Học các kỹ thuật quản lý stress của doanh nhân\n• Trở thành mentor cho người mới bắt đầu cai thuốc\n• Thực hành mindfulness meditation 30 phút/ngày\n• Tạo ra sản phẩm sáng tạo: blog, video, podcast về hành trình\n• Xây dựng network với cộng đồng healthy lifestyle"
+            },
+            {
+                phaseName: "Tuần 7-8: Trở thành champion và lan tỏa",
+                phaseDescription: "• Hoàn thiện bản thân với lối sống hoàn toàn mới\n• Tổ chức events/workshop chia sẻ kinh nghiệm\n• Xây dựng kế hoạch dài hạn 5-10 năm tới\n• Trở thành inspiration cho cộng đồng\n• Phát triển dự án kinh doanh/charity liên quan đến sức khỏe\n• Lập kế hoạch maintenance và continuous improvement"
+            }
+        ]
+    },
+    'basic': {
+        name: 'Kế hoạch Cơ bản - 2 tuần',
+        phases: [
+            {
+                phaseName: "Tuần 1 (Ngày 1-7): Chuẩn bị và bắt đầu",
+                phaseDescription: "• Đặt ngày quit smoking cụ thể\n• Loại bỏ thuốc lá và dụng cụ hút thuốc\n• Thông báo với gia đình và bạn bè\n• Chuẩn bị tinh thần cho thử thách\n• Tìm hiểu về tác hại của thuốc lá",
+                durationDays: 7
+            },
+            {
+                phaseName: "Tuần 2 (Ngày 8-15): Vượt qua và duy trì",
+                phaseDescription: "• Sử dụng kỹ thuật thở sâu khi thèm thuốc\n• Uống nhiều nước và ăn trái cây\n• Tránh xa những nơi thường hút thuốc\n• Tập thể dục nhẹ nhàng\n• Tìm hoạt động thay thế\n• Củng cố thói quen tích cực\n• Đánh giá tiến bộ ban đầu",
+                durationDays: 8
+            }
+        ]
+    },
+    'basic-gentle': {
+        phases: [
+            {
+                phaseName: "Tuần 1 (Ngày 1-7): Làm quen và giảm dần",
+                phaseDescription: "• Ghi chép thói quen hút thuốc hiện tại\n• Giảm 50% lượng thuốc hút mỗi ngày\n• Uống nước khi muốn hút thuốc\n• Nhai kẹo cao su không đường\n• Tập thở sâu 5 phút mỗi ngày\n• Đi bộ nhẹ nhàng 15 phút sau bữa ăn"
+            },
+            {
+                phaseName: "Tuần 2 (Ngày 8-15): Ngừng hoàn toàn và thay thế",
+                phaseDescription: "• Ngừng hút thuốc hoàn toàn\n• Thay thế bằng trà thảo mộc\n• Nghe nhạc thư giãn khi căng thẳng\n• Gặp gỡ bạn bè không hút thuốc\n• Ăn hoa quả khi thèm thuốc\n• Tự thưởng bản thân khi hoàn thành mục tiêu\n• Chia sẻ với người thân về tiến bộ"
+            }
+        ]
+    }
+};
+
 // GET /api/quit-plan - Lấy kế hoạch cai thuốc hiện tại của user
-router.get('/', auth, requireActivated, filterByCurrentMembership, async (req, res) => {
+router.get('/', auth, requireActivated, async (req, res) => {
     try {
         const userId = req.user.UserID;
+        const userRole = req.user.Role;
 
         console.log('📋 GET /api/quit-plan - userId:', userId);
 
-        // Check payment confirmation manually (without blocking)
-        let paymentConfirmation = null;
+        // Check UserMembership thay vì PaymentConfirmations
+        let userMembership = null;
         try {
-            const paymentConfirmationQuery = `
+            const membershipQuery = `
                 SELECT TOP 1 
-                    pc.ConfirmationID,
-                    pc.ConfirmationDate,
-                    p.PaymentID,
-                    p.Amount,
-                    p.Status as PaymentStatus,
+                    um.MembershipID,
+                    um.UserID,
+                    um.PlanID,
+                    um.StartDate,
+                    um.EndDate,
+                    um.Status,
                     mp.Name as PlanName,
-                    p.StartDate,
-                    p.EndDate
-                FROM PaymentConfirmations pc
-                JOIN Payments p ON pc.PaymentID = p.PaymentID
-                JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
-                WHERE p.UserID = @UserID 
-                AND p.Status = 'confirmed'
-                ORDER BY pc.ConfirmationDate DESC
+                    mp.Description as PlanDescription,
+                    mp.Price,
+                    mp.Duration as PlanDuration
+                FROM UserMemberships um
+                JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+                WHERE um.UserID = @UserID 
+                AND um.Status IN ('active', 'confirmed')
+                ORDER BY um.EndDate DESC
             `;
 
-            const confirmationResult = await pool.request()
+            const membershipResult = await pool.request()
                 .input('UserID', userId)
-                .query(paymentConfirmationQuery);
+                .query(membershipQuery);
 
-            if (confirmationResult.recordset.length > 0) {
-                paymentConfirmation = confirmationResult.recordset[0];
-                console.log('📋 Payment confirmation found:', paymentConfirmation);
+            if (membershipResult.recordset.length > 0) {
+                userMembership = membershipResult.recordset[0];
+                console.log('📋 User membership found:', userMembership);
             } else {
-                console.log('📋 No payment confirmation found for user');
+                console.log('📋 No active membership found for user');
             }
         } catch (err) {
-            console.log('📋 Error checking payment confirmation:', err.message);
+            console.log('📋 Error checking user membership:', err.message);
         }
 
-        // Nếu không có active membership, return empty
-        if (req.noActiveMembership) {
-            return res.json({
-                success: true,
-                data: [],
-                paymentInfo: null,
-                planTemplate: [],
-                message: 'No active membership found'
-            });
-        }
-
+        // Lấy QuitPlans của user (không filter theo membership nữa để lấy hết data)
         let query = `
             SELECT 
                 PlanID,
@@ -180,32 +250,25 @@ router.get('/', auth, requireActivated, filterByCurrentMembership, async (req, r
                 MotivationLevel,
                 DetailedPlan,
                 Status,
-                CreatedAt
+                CreatedAt,
+                MembershipID
             FROM QuitPlans 
             WHERE UserID = @UserID
+            ORDER BY CreatedAt DESC
         `;
 
-        const request = pool.request()
-            .input('UserID', userId);
-
-        // Nếu có MembershipID từ middleware, filter theo đó
-        if (req.currentMembershipID) {
-            query += ` AND MembershipID = @MembershipID`;
-            request.input('MembershipID', req.currentMembershipID);
-        }
-
-        query += ` ORDER BY CreatedAt DESC`;
-
-        const result = await request.query(query);
+        const result = await pool.request()
+            .input('UserID', userId)
+            .query(query);
 
         console.log('📋 Quit plans found:', result.recordset.length);
 
-        // Lấy kế hoạch mẫu CHÍNH XÁC theo gói user đã đăng ký và được confirm
+        // Lấy kế hoạch mẫu theo membership của user
         let templateQuery = '';
         let templateResult = { recordset: [] };
 
-        if (paymentConfirmation) {
-            // User có payment confirmed - chỉ lấy template của gói đã mua
+        if (userMembership) {
+            // User có membership - lấy template của gói đã đăng ký
             templateQuery = `
                 SELECT 
                     pt.TemplateID,
@@ -219,39 +282,32 @@ router.get('/', auth, requireActivated, filterByCurrentMembership, async (req, r
                     mp.Duration as PlanDuration
                 FROM PlanTemplates pt
                 JOIN MembershipPlans mp ON pt.PlanID = mp.PlanID
-                WHERE mp.PlanID = (
-                    SELECT TOP 1 p.PlanID 
-                    FROM Payments p 
-                    WHERE p.UserID = @UserID 
-                        AND p.Status = 'confirmed'
-                    ORDER BY p.PaymentDate DESC
-                )
+                WHERE mp.PlanID = @PlanID
                 ORDER BY pt.SortOrder
             `;
 
             templateResult = await pool.request()
-                .input('UserID', userId)
+                .input('PlanID', userMembership.PlanID)
                 .query(templateQuery);
 
-            console.log('📋 User has confirmed payment - showing specific plan templates only');
+            console.log('📋 User has active membership - showing specific plan templates');
         } else {
-            // User chưa có payment confirmed - không hiện template gì cả hoặc chỉ custom
-            console.log('📋 User has no confirmed payment - no plan templates available');
+            console.log('📋 User has no active membership - no plan templates available');
         }
 
         console.log('📋 Plan templates found:', templateResult.recordset.length);
 
-        // Always return 200 with proper data structure
+        // Return data với userMembership thay vì paymentInfo
         const responseData = {
             success: true,
             data: result.recordset || [],
-            paymentInfo: paymentConfirmation,
+            paymentInfo: userMembership, // Đổi tên để tương thích với frontend
             planTemplate: templateResult.recordset || []
         };
 
         console.log('📋 Sending response:', JSON.stringify(responseData, null, 2));
 
-        // Force fresh response (prevent 304)
+        // Force fresh response
         res.set({
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
@@ -327,7 +383,6 @@ router.get('/templates/all', async (req, res) => {
     try {
         console.log('📋 Getting all plan templates...');
 
-        // Direct query without ensurePlanTemplatesExists which might be causing issues
         const query = `
             SELECT 
                 pt.TemplateID,
@@ -409,42 +464,49 @@ router.post('/', auth, requireActivated, async (req, res) => {
 
         const userId = req.user.UserID;
         const userRole = req.user.Role;
-        const { startDate, targetDate, reason, motivationLevel, detailedPlan } = req.body;
+        const { 
+            startDate, 
+            targetDate, 
+            reason, 
+            motivationLevel, 
+            detailedPlan,
+            templateId // Thêm templateId
+        } = req.body;
 
         console.log('📝 Creating quit plan for user:', userId, 'role:', userRole);
         console.log('📋 Request body:', req.body);
 
-        // Check payment confirmation (but don't block for coaches/admins)
-        let hasPaymentAccess = false;
+        // Check UserMembership access (but don't block for coaches/admins)
+        let hasMembershipAccess = false;
         if (['coach', 'admin'].includes(userRole)) {
-            hasPaymentAccess = true;
-            console.log('📋 Coach/Admin bypassing payment check');
+            hasMembershipAccess = true;
+            console.log('📋 Coach/Admin bypassing membership check');
         } else {
             try {
-                const paymentConfirmationQuery = `
-                    SELECT TOP 1 pc.ConfirmationID
-                    FROM PaymentConfirmations pc
-                    JOIN Payments p ON pc.PaymentID = p.PaymentID
-                    WHERE p.UserID = @UserID AND p.Status = 'confirmed'
-                    ORDER BY pc.ConfirmationDate DESC
+                const membershipQuery = `
+                    SELECT TOP 1 um.MembershipID
+                    FROM UserMemberships um
+                    WHERE um.UserID = @UserID 
+                    AND um.Status IN ('active', 'confirmed')
+                    AND um.EndDate > GETDATE()
+                    ORDER BY um.EndDate DESC
                 `;
 
-                const confirmationResult = await pool.request()
+                const membershipResult = await pool.request()
                     .input('UserID', userId)
-                    .query(paymentConfirmationQuery);
+                    .query(membershipQuery);
 
-                hasPaymentAccess = confirmationResult.recordset.length > 0;
-                console.log('📋 Payment access check result:', hasPaymentAccess);
-            } catch (paymentError) {
-                console.log('📋 Payment check error (proceeding anyway):', paymentError.message);
-                hasPaymentAccess = false;
+                hasMembershipAccess = membershipResult.recordset.length > 0;
+                console.log('📋 Membership access check result:', hasMembershipAccess);
+            } catch (membershipError) {
+                console.log('📋 Membership check error (proceeding anyway):', membershipError.message);
+                hasMembershipAccess = false;
             }
         }
 
-        // For now, allow creation even without payment (with limited features)
-        if (!hasPaymentAccess) {
-            console.log('📋 User has no payment confirmation - allowing basic plan creation');
-            // Could add limitations here in the future
+        // Allow creation even without membership (with limited features)
+        if (!hasMembershipAccess) {
+            console.log('📋 User has no active membership - allowing basic plan creation');
         }
 
         // Validation
@@ -484,14 +546,12 @@ router.post('/', auth, requireActivated, async (req, res) => {
             });
         }
 
-        // Skip membership end date validation for now to allow plan creation
-
         console.log('✅ All validations passed');
 
-        // Tìm membership ID linh hoạt hơn
+        // Tìm membership ID và plan name
         let currentMembershipID = null;
+        let userPlanName = null;
         
-        // Kiểm tra membership active trước
         const membershipQuery = `
             SELECT TOP 1 
                 um.MembershipID,
@@ -514,25 +574,75 @@ router.post('/', auth, requireActivated, async (req, res) => {
 
         if (membershipResult.recordset.length > 0) {
             currentMembershipID = membershipResult.recordset[0].MembershipID;
+            userPlanName = membershipResult.recordset[0].PlanName;
             console.log('📋 Found membership:', membershipResult.recordset[0]);
         } else {
-            // Fallback: Tìm membership gần đây nhất
-            const fallbackQuery = `
-                SELECT TOP 1 MembershipID
-                FROM UserMemberships
-                WHERE UserID = @UserID
-                ORDER BY CreatedAt DESC
-            `;
+            console.log('📋 No active membership found');
+        }
+
+        // Tự động chọn template dựa trên templateId trước
+        let selectedTemplate = templates.basic; // Default
+        let templateName = 'basic';
+
+        // BƯỚC 1: Ưu tiên templateId từ frontend
+        if (templateId && templates[templateId]) {
+            selectedTemplate = templates[templateId];
+            templateName = templateId;
+            console.log('🎯 Using template from frontend:', templateId);
+        } 
+        // BƯỚC 2: Fallback detect từ Reason field
+        else if (reason && typeof reason === 'string') {
+            const reasonLower = reason.toLowerCase();
             
-            const fallbackResult = await pool.request()
-                .input('UserID', userId)
-                .query(fallbackQuery);
-                
-            if (fallbackResult.recordset.length > 0) {
-                currentMembershipID = fallbackResult.recordset[0].MembershipID;
-                console.log('📋 Using fallback membership:', currentMembershipID);
+            if (reasonLower.includes('premium chuyên sâu') || reasonLower.includes('premium intensive')) {
+                selectedTemplate = templates['premium-intensive'];
+                templateName = 'premium-intensive';
+                console.log('🎯 Detected template from Reason: premium-intensive');
+            } else if (reasonLower.includes('premium')) {
+                selectedTemplate = templates.premium;
+                templateName = 'premium';
+                console.log('🎯 Detected template from Reason: premium');
+            } else if (reasonLower.includes('basic nhẹ nhàng') || reasonLower.includes('basic gentle')) {
+                selectedTemplate = templates['basic-gentle'];
+                templateName = 'basic-gentle';
+                console.log('🎯 Detected template from Reason: basic-gentle');
+            } else if (reasonLower.includes('basic') || reasonLower.includes('cơ bản')) {
+                selectedTemplate = templates.basic;
+                templateName = 'basic';
+                console.log('🎯 Detected template from Reason: basic');
+            }
+        } 
+        // BƯỚC 3: Fallback dựa vào membership (chỉ khi không detect được)
+        else if (userPlanName) {
+            const planNameLower = userPlanName.toLowerCase();
+            if (planNameLower.includes('premium') || planNameLower.includes('cao cấp')) {
+                selectedTemplate = templates.premium;
+                templateName = 'premium';
+                console.log('🎯 Using Premium template from membership:', userPlanName);
+            } else if (planNameLower.includes('basic') || planNameLower.includes('cơ bản')) {
+                selectedTemplate = templates.basic;
+                templateName = 'basic';
+                console.log('🎯 Using Basic template from membership:', userPlanName);
             }
         }
+
+        console.log('🎯 Final selected template:', templateName);
+
+        // Generate DetailedPlan từ template
+        let autoGeneratedDetailedPlan = '';
+        
+        if (selectedTemplate && selectedTemplate.phases) {
+            // Thêm template ID vào đầu DetailedPlan
+            const templateHeader = `[TEMPLATE_ID:${templateName}]\n\n`;
+            autoGeneratedDetailedPlan = templateHeader + selectedTemplate.phases.map((phase, index) => 
+                `${phase.phaseName}:\n${phase.phaseDescription}\n`
+            ).join('\n');
+            
+            console.log(`🎯 Auto-generated DetailedPlan with template ID: ${templateName}`);
+        }
+
+        // Sử dụng DetailedPlan từ request hoặc auto-generated
+        const finalDetailedPlan = detailedPlan || autoGeneratedDetailedPlan;
 
         // Hủy kế hoạch active hiện tại (nếu có)
         const cancelResult = await pool.request()
@@ -547,46 +657,32 @@ router.post('/', auth, requireActivated, async (req, res) => {
 
         // Tạo kế hoạch mới với MembershipID (hoặc null nếu không có)
         let insertQuery;
-        if (currentMembershipID) {
-            insertQuery = `
-                INSERT INTO QuitPlans (UserID, MembershipID, StartDate, TargetDate, Reason, MotivationLevel, DetailedPlan, Status, CreatedAt, UpdatedAt)
-                OUTPUT INSERTED.PlanID
-                VALUES (@UserID, @MembershipID, @StartDate, @TargetDate, @Reason, @MotivationLevel, @DetailedPlan, 'active', GETDATE(), GETDATE())
-            `;
-        } else {
-            insertQuery = `
-                INSERT INTO QuitPlans (UserID, StartDate, TargetDate, Reason, MotivationLevel, DetailedPlan, Status, CreatedAt, UpdatedAt)
-                OUTPUT INSERTED.PlanID
-                VALUES (@UserID, @StartDate, @TargetDate, @Reason, @MotivationLevel, @DetailedPlan, 'active', GETDATE(), GETDATE())
-            `;
-        }
-
         const request = pool.request()
             .input('UserID', userId)
             .input('StartDate', start)
             .input('TargetDate', target)
             .input('Reason', reason)
             .input('MotivationLevel', motivationLevel)
-            .input('DetailedPlan', detailedPlan || '');
+            .input('DetailedPlan', finalDetailedPlan);
 
-        // Thêm MembershipID nếu có
         if (currentMembershipID) {
+            insertQuery = `
+                INSERT INTO QuitPlans (UserID, MembershipID, StartDate, TargetDate, Reason, MotivationLevel, DetailedPlan, Status, CreatedAt, UpdatedAt)
+                OUTPUT INSERTED.PlanID
+                VALUES (@UserID, @MembershipID, @StartDate, @TargetDate, @Reason, @MotivationLevel, @DetailedPlan, 'active', GETDATE(), GETDATE())
+            `;
             request.input('MembershipID', currentMembershipID);
             console.log('✅ Creating quit plan with membership ID:', currentMembershipID);
         } else {
+            insertQuery = `
+                INSERT INTO QuitPlans (UserID, StartDate, TargetDate, Reason, MotivationLevel, DetailedPlan, Status, CreatedAt, UpdatedAt)
+                OUTPUT INSERTED.PlanID
+                VALUES (@UserID, @StartDate, @TargetDate, @Reason, @MotivationLevel, @DetailedPlan, 'active', GETDATE(), GETDATE())
+            `;
             console.log('⚠️ Creating quit plan without membership ID');
         }
 
-        console.log('🔍 About to execute query:', insertQuery);
-        console.log('🔍 With parameters:', {
-            UserID: userId,
-            MembershipID: currentMembershipID,
-            StartDate: start,
-            TargetDate: target,
-            Reason: reason,
-            MotivationLevel: motivationLevel,
-            DetailedPlan: detailedPlan || ''
-        });
+        console.log('🔍 About to execute query with DetailedPlan length:', finalDetailedPlan.length);
 
         let result;
         try {
@@ -594,16 +690,6 @@ router.post('/', auth, requireActivated, async (req, res) => {
             console.log('✅ Query executed successfully');
         } catch (dbError) {
             console.error('❌ Database query failed:', dbError);
-            console.error('❌ Query was:', insertQuery);
-            console.error('❌ Parameters were:', {
-                UserID: userId,
-                MembershipID: currentMembershipID,
-                StartDate: start,
-                TargetDate: target,
-                Reason: reason,
-                MotivationLevel: motivationLevel,
-                DetailedPlan: detailedPlan || ''
-            });
             throw dbError;
         }
 
@@ -621,7 +707,8 @@ router.post('/', auth, requireActivated, async (req, res) => {
                 MotivationLevel,
                 DetailedPlan,
                 Status,
-                CreatedAt
+                CreatedAt,
+                MembershipID
             FROM QuitPlans 
             WHERE PlanID = @PlanID
         `;
@@ -630,12 +717,13 @@ router.post('/', auth, requireActivated, async (req, res) => {
             .input('PlanID', newPlanId)
             .query(selectQuery);
 
-        console.log('✅ Successfully created quit plan');
+        console.log('✅ Successfully created quit plan with auto-generated DetailedPlan');
 
         res.status(201).json({
             success: true,
             message: 'Kế hoạch cai thuốc đã được tạo thành công',
-            data: newPlanResult.recordset[0]
+            data: newPlanResult.recordset[0],
+            templateUsed: templateName // Thêm thông tin template đã sử dụng
         });
     } catch (error) {
         console.error('❌ Error creating quit plan:', error);
@@ -682,23 +770,24 @@ router.put('/:planId', auth, requireActivated, async (req, res) => {
 
         // Validation cho user thường (không phải coach)
         if (userRole !== 'coach' && userRole !== 'admin') {
-            // Kiểm tra payment confirmation access
-            const paymentConfirmationQuery = `
-                SELECT TOP 1 pc.ConfirmationID
-                FROM PaymentConfirmations pc
-                JOIN Payments p ON pc.PaymentID = p.PaymentID
-                WHERE p.UserID = @UserID AND p.Status = 'confirmed'
-                ORDER BY pc.ConfirmationDate DESC
+            // Kiểm tra membership access
+            const membershipQuery = `
+                SELECT TOP 1 um.MembershipID
+                FROM UserMemberships um
+                WHERE um.UserID = @UserID 
+                AND um.Status IN ('active', 'confirmed')
+                AND um.EndDate > GETDATE()
+                ORDER BY um.EndDate DESC
             `;
 
-            const confirmationResult = await pool.request()
+            const membershipResult = await pool.request()
                 .input('UserID', userId)
-                .query(paymentConfirmationQuery);
+                .query(membershipQuery);
 
-            if (confirmationResult.recordset.length === 0) {
+            if (membershipResult.recordset.length === 0) {
                 return res.status(403).json({
                     success: false,
-                    message: 'Bạn cần có payment được confirm để sửa kế hoạch'
+                    message: 'Bạn cần có membership active để sửa kế hoạch'
                 });
             }
         }
@@ -726,10 +815,13 @@ router.put('/:planId', auth, requireActivated, async (req, res) => {
 
             // Kiểm tra ngày mục tiêu phải nằm trong thời hạn membership (chỉ cho user thường)
             if (userRole !== 'coach' && userRole !== 'admin') {
-                // Lấy thông tin membership của user
                 const membershipQuery = `
-                    SELECT EndDate FROM UserMemberships 
-                    WHERE UserID = @UserID AND Status = 'active' AND EndDate > GETDATE()
+                    SELECT um.EndDate 
+                    FROM UserMemberships um
+                    WHERE um.UserID = @UserID 
+                    AND um.Status IN ('active', 'confirmed') 
+                    AND um.EndDate > GETDATE()
+                    ORDER BY um.EndDate DESC
                 `;
                 const membershipResult = await pool.request()
                     .input('UserID', plan.UserID)
@@ -787,6 +879,9 @@ router.put('/:planId', auth, requireActivated, async (req, res) => {
             });
         }
 
+        // Thêm UpdatedAt
+        updateFields.push('UpdatedAt = GETDATE()');
+
         // Thực hiện UPDATE
         const updateQuery = `
             UPDATE QuitPlans 
@@ -814,7 +909,9 @@ router.put('/:planId', auth, requireActivated, async (req, res) => {
                     MotivationLevel,
                     DetailedPlan,
                     Status,
-                    CreatedAt
+                    CreatedAt,
+                    MembershipID,
+                    UpdatedAt
                 FROM QuitPlans 
                 WHERE PlanID = @PlanID
             `);
@@ -856,6 +953,7 @@ router.get('/all', auth, requireActivated, async (req, res) => {
                 qp.DetailedPlan,
                 qp.Status,
                 qp.CreatedAt,
+                qp.MembershipID,
                 u.FirstName + ' ' + u.LastName as UserName,
                 u.Email as UserEmail
             FROM QuitPlans qp
@@ -874,6 +972,122 @@ router.get('/all', auth, requireActivated, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Lỗi khi lấy danh sách kế hoạch'
+        });
+    }
+});
+
+// POST /api/quit-plan/populate-templates - Populate DetailedPlan cho các kế hoạch đang trống
+router.post('/populate-templates', auth, requireActivated, async (req, res) => {
+    try {
+        const userRole = req.user.Role;
+
+        // Chỉ admin mới được sử dụng chức năng này
+        if (userRole !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Chỉ admin mới có thể sử dụng chức năng này'
+            });
+        }
+
+        console.log('🔧 Starting template population for empty DetailedPlan...');
+
+        // Lấy tất cả kế hoạch có DetailedPlan trống
+        const emptyPlansQuery = `
+            SELECT 
+                qp.PlanID,
+                qp.UserID,
+                qp.MembershipID,
+                qp.StartDate,
+                qp.TargetDate,
+                qp.Reason,
+                qp.MotivationLevel,
+                qp.Status,
+                um.PlanID as UserPlanID,
+                mp.Name as PlanName
+            FROM QuitPlans qp
+            LEFT JOIN UserMemberships um ON qp.MembershipID = um.MembershipID
+            LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
+            WHERE (qp.DetailedPlan IS NULL OR qp.DetailedPlan = '')
+            AND qp.Status = 'active'
+        `;
+
+        const emptyPlansResult = await pool.request().query(emptyPlansQuery);
+        const emptyPlans = emptyPlansResult.recordset;
+
+        console.log(`📋 Found ${emptyPlans.length} plans with empty DetailedPlan`);
+
+        if (emptyPlans.length === 0) {
+            return res.json({
+                success: true,
+                message: 'Không có kế hoạch nào cần cập nhật DetailedPlan',
+                data: { updated: 0 }
+            });
+        }
+
+        let updatedCount = 0;
+
+        // Xử lý từng kế hoạch
+        for (const plan of emptyPlans) {
+            try {
+                let selectedTemplate = null;
+                let templateKey = 'basic'; // Default template
+
+                // Xác định template dựa vào PlanName
+                if (plan.PlanName) {
+                    const planName = plan.PlanName.toLowerCase();
+                    if (planName.includes('premium') || planName.includes('cao cấp')) {
+                        templateKey = 'premium';
+                    } else if (planName.includes('basic') || planName.includes('cơ bản')) {
+                        templateKey = 'basic';
+                    }
+                }
+
+                selectedTemplate = templates[templateKey];
+
+                if (!selectedTemplate) {
+                    console.log(`⚠️ No template found for plan ${plan.PlanID}, using basic template`);
+                    selectedTemplate = templates['basic'];
+                }
+
+                // Tạo DetailedPlan từ template
+                const detailedPlanText = selectedTemplate.phases.map((phase, index) => 
+                    `${phase.phaseName}:\n${phase.phaseDescription}\n`
+                ).join('\n');
+
+                // Update DetailedPlan
+                await pool.request()
+                    .input('PlanID', plan.PlanID)
+                    .input('DetailedPlan', detailedPlanText)
+                    .query(`
+                        UPDATE QuitPlans 
+                        SET DetailedPlan = @DetailedPlan, UpdatedAt = GETDATE()
+                        WHERE PlanID = @PlanID
+                    `);
+
+                updatedCount++;
+                console.log(`✅ Updated plan ${plan.PlanID} with ${templateKey} template`);
+
+            } catch (error) {
+                console.error(`❌ Error updating plan ${plan.PlanID}:`, error);
+            }
+        }
+
+        console.log(`🎉 Template population completed. Updated ${updatedCount}/${emptyPlans.length} plans`);
+
+        res.json({
+            success: true,
+            message: `Đã cập nhật DetailedPlan cho ${updatedCount} kế hoạch`,
+            data: { 
+                updated: updatedCount, 
+                total: emptyPlans.length 
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error populating templates:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi populate templates: ' + error.message
         });
     }
 });

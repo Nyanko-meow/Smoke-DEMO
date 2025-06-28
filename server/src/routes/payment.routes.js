@@ -699,6 +699,7 @@ router.get('/payos/cancel', async (req, res) => {
 });
 
 // Check PayOS payment status
+/*
 router.get('/payos/status/:orderCode', protect, async (req, res) => {
     try {
         const { orderCode } = req.params;
@@ -734,6 +735,110 @@ router.get('/payos/status/:orderCode', protect, async (req, res) => {
         });
     }
 });
+*/
+
+// Check PayOS payment status
+router.get('/payos/status/:orderCode', protect, async (req, res) => {
+  try {
+    const { orderCode } = req.params;
+
+    /* 1) Gọi PayOS lấy trạng thái */
+    const paymentInfo = await payOSService.getPaymentInfo(parseInt(orderCode));
+
+    if (paymentInfo && paymentInfo.status === 'PAID') {
+      /* 2) Truy bản ghi payment */
+      const paymentRes = await pool.request()
+        .input('OrderCode', orderCode)
+        .query(`
+          SELECT TOP (1) *
+          FROM [Payments]
+          WHERE [TransactionID] = @OrderCode
+        `);
+
+      if (paymentRes.recordset.length) {
+        const payment = paymentRes.recordset[0];
+        const transactionDate = new Date(
+          paymentInfo.transactions[0].transactionDateTime
+        );
+
+        /* 3) Cập nhật Payments.Status nếu còn pending */
+        if (payment.Status === 'pending') {
+          await pool.request()
+            .input('Status', 'confirmed')
+            .input('OrderCode', orderCode)
+            .query(`
+              UPDATE [Payments]
+              SET Status = @Status
+              WHERE [TransactionID] = @OrderCode
+            `);
+          console.log('✅ Payment status updated → confirmed');
+        }
+
+        /* 4) Kiểm tra / tạo UserMemberships */
+        const memRes = await pool.request()
+          .input('UserID', payment.UserID)
+          .input('PlanID', payment.PlanID)
+          .input('Today', new Date())
+          .query(`
+            SELECT TOP (1) *
+            FROM [UserMemberships]
+            WHERE UserID = @UserID
+              AND PlanID = @PlanID
+              AND Status = 'active'
+              AND EndDate >= @Today
+          `);
+
+        if (!memRes.recordset.length) {
+          const startDate = transactionDate;
+          const endDate   = new Date(startDate);
+          endDate.setMonth(endDate.getMonth() + 1);   // thời hạn 1 tháng
+
+          await pool.request()
+            .input('UserID', payment.UserID)
+            .input('PlanID', payment.PlanID)
+            .input('StartDate', startDate)
+            .input('EndDate', endDate)
+            .input('Status', 'active')
+            .input('CreatedAt', new Date())
+            .query(`
+              INSERT INTO [UserMemberships]
+                (UserID, PlanID, StartDate, EndDate, Status, CreatedAt)
+              VALUES
+                (@UserID, @PlanID, @StartDate, @EndDate, @Status, @CreatedAt)
+            `);
+
+          console.log('✅ UserMembership inserted');
+        } else {
+          console.log('ℹ️ Membership already active – skip insert');
+        }
+
+        /* 5) ĐỔI ROLE GUEST → MEMBER ------------------------------ */
+        await pool.request()
+          .input('UserID', payment.UserID)
+          .query(`
+            UPDATE [Users]
+            SET Role = 'member'
+            WHERE UserID = @UserID
+              AND Role   = 'guest'     -- chỉ đổi khi còn là guest
+          `);
+        console.log('✅ User role updated → member (nếu trước đó là guest)');
+      }
+    }
+
+    /* 6) Trả kết quả cho client */
+    res.json({
+      success: true,
+      data: paymentInfo
+    });
+  } catch (err) {
+    console.error('❌ Error checking PayOS payment status:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking payment status'
+    });
+  }
+});
+
 
 
 
