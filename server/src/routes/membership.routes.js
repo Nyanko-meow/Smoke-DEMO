@@ -734,6 +734,24 @@ router.post('/cancel', protect, async (req, res) => {
 
             console.log('✅ Updated UserMemberships status to pending_cancellation');
 
+            // 1.1. Cancel all QuitPlans linked to cancelled memberships
+            await transaction.request()
+                .input('UserID', userId)
+                .query(`
+                    UPDATE QuitPlans 
+                    SET Status = 'cancelled',
+                        DetailedPlan = ISNULL(DetailedPlan, '') + ' [Cancelled - Membership cancelled]'
+                    WHERE UserID = @UserID 
+                    AND MembershipID IN (
+                        SELECT MembershipID FROM UserMemberships 
+                        WHERE UserID = @UserID AND Status = 'pending_cancellation'
+                    )
+                    AND Status = 'active'
+                `);
+
+            console.log('✅ Cancelled QuitPlans linked to cancelled memberships');
+
+
             // 3. Get MembershipID for the refund record
             const membershipResult = await transaction.request()
                 .input('UserID', userId)
@@ -1379,6 +1397,19 @@ router.post('/request-cancellation', protect, async (req, res) => {
                     SET Status = 'pending_cancellation'
                     WHERE MembershipID = @MembershipID
                 `);
+
+             // Cancel QuitPlans linked to this membership
+             await transaction.request()
+             .input('MembershipID', actualMembershipId)
+             .query(`
+                 UPDATE QuitPlans 
+                 SET Status = 'cancelled',
+                     DetailedPlan = ISNULL(DetailedPlan, '') + ' [Cancelled - Membership cancellation requested]'
+                 WHERE MembershipID = @MembershipID AND Status = 'active'
+             `);
+
+            console.log('✅ Cancelled QuitPlans linked to membership:', actualMembershipId);
+
 
             // Create notification for user
             await transaction.request()
@@ -2448,7 +2479,19 @@ router.post('/request-cancel', protect, async (req, res) => {
                 `);
 
             console.log('✅ Updated membership status to pending_cancellation');
+            
+             // Cancel QuitPlans linked to this membership
+             await transaction.request()
+             .input('MembershipID', membership.MembershipID)
+             .query(`
+                 UPDATE QuitPlans 
+                 SET Status = 'cancelled',
+                     DetailedPlan = ISNULL(DetailedPlan, '') + ' [Cancelled - Membership cancelled]'
+                 WHERE MembershipID = @MembershipID AND Status = 'active'
+             `);
 
+         console.log('✅ Cancelled QuitPlans linked to membership:', membership.MembershipID);
+            
             // Create notification for user
             await transaction.request()
                 .input('UserID', req.user.id)

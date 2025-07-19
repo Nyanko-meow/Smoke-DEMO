@@ -38,7 +38,28 @@ const Login = () => {
             console.log('Login result action:', resultAction);
 
             if (login.fulfilled.match(resultAction)) {
-                // Login successful - navigate to requested page or home
+                // Check if user role is member
+                const user = resultAction.payload.user;
+                if (user && user.role) {
+                    if (user.role.toLowerCase() === 'coach') {
+                        // Clear authentication data and show error
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('tokenExpiration');
+                        alert('Tài khoản Coach không thể đăng nhập tại đây. Vui lòng sử dụng màn hình đăng nhập Coach.');
+                        return;
+                    }
+                    if (user.role.toLowerCase() === 'admin') {
+                        // Clear authentication data and show error
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('tokenExpiration');
+                        alert('Tài khoản Admin không thể đăng nhập tại đây. Vui lòng sử dụng màn hình đăng nhập Admin.');
+                        return;
+                    }
+                }
+                
+                // Login successful for member - navigate to requested page or home
                 const { from } = location.state || { from: { pathname: '/' } };
                 navigate(from.pathname);
             } else if (login.rejected.match(resultAction)) {

@@ -306,6 +306,9 @@ const AchievementPage = () => {
     };
 
     const isAchievementEligible = (achievement) => {
+        // if (isAchievementEarned(achievement.AchievementID)) {
+        //     return true;
+        // }
         // Check if achievement has IsEligible property from API
         if (achievement.hasOwnProperty('IsEligible')) {
             return achievement.IsEligible === 1;

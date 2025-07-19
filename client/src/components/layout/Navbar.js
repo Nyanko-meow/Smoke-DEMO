@@ -35,6 +35,7 @@ import {
 } from "@ant-design/icons";
 import { logout } from "../../store/slices/authSlice";
 import MemberChat from "../chat/MemberChat";
+import "./Navbar.css"; // Import file CSS
 
 const { Header } = Layout;
 
@@ -324,94 +325,7 @@ const Navbar = () => {
 
   return (
     <>
-      {/* ✅ Custom CSS for enhanced navbar styling */}
-      <style jsx>{`
-        .navbar-menu .ant-menu-item {
-          position: relative;
-          margin: 0 8px;
-          border-radius: 8px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          overflow: hidden;
-        }
-        
-        .navbar-menu .ant-menu-item:hover {
-          background: rgba(255, 255, 255, 0.15) !important;
-          color: #fff !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .navbar-menu .ant-menu-item-selected {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1)) !important;
-          color: #fff !important;
-          font-weight: 600;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .navbar-menu .ant-menu-item-selected::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 80%;
-          height: 3px;
-          background: linear-gradient(90deg, #4ecdc4, #44a08d);
-          border-radius: 2px;
-          box-shadow: 0 2px 4px rgba(78, 205, 196, 0.4);
-        }
-        
-        .navbar-menu .ant-menu-item .anticon {
-          font-size: 16px;
-          margin-right: 8px;
-        }
-        
-        .navbar-appointment-btn {
-          background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(68, 160, 141, 0.2)) !important;
-          border: 1px solid rgba(78, 205, 196, 0.4) !important;
-          border-radius: 8px !important;
-          color: #fff !important;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-        
-        .navbar-appointment-btn:hover {
-          background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(68, 160, 141, 0.3)) !important;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
-        }
-        
-        .notification-badge .ant-badge-count {
-          background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-          border: 2px solid #fff;
-          box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
-        }
-        
-        .navbar-user:hover {
-          background: rgba(255, 255, 255, 0.2) !important;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        @media (max-width: 768px) {
-          .navbar-menu-desktop {
-            display: none !important;
-          }
-          .navbar-mobile-toggle {
-            display: block !important;
-          }
-        }
-        
-        .mobile-nav-menu .ant-menu-item {
-          border-radius: 6px;
-          margin: 4px 12px;
-        }
-        
-        .mobile-nav-menu .ant-menu-item-selected {
-          background: rgba(255, 255, 255, 0.15) !important;
-        }
-      `}</style>
-
+      
       <Header
         className="navbar-header"
         style={{

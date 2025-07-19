@@ -7,6 +7,7 @@ const { pool } = require('../config/database');
 router.post('/', protect, async (req, res) => {
     try {
         const { startDate, targetDate, reason, motivationLevel, detailedPlan } = req.body;
+        const userId = req.user.id || req.user.UserID;
 
         // Validate motivation level
         if (motivationLevel && (motivationLevel < 1 || motivationLevel > 10)) {
@@ -36,29 +37,17 @@ router.post('/', protect, async (req, res) => {
         }
 
         const result = await pool.request()
-            .input('UserID', req.user.UserID)
+            .input('UserID', userId)
             .input('StartDate', startDate)
             .input('TargetDate', targetDate)
             .input('Reason', reason)
-            .input('MotivationLevel', motivationLevel || 5) // Default to 5 if not provided
+            .input('MotivationLevel', motivationLevel || 5)
             .input('DetailedPlan', detailedPlan || null)
             .query(`
-        INSERT INTO QuitPlans (UserID, StartDate, TargetDate, Reason, MotivationLevel, Status)
-        OUTPUT INSERTED.*
-        VALUES (@UserID, @StartDate, @TargetDate, @Reason, @MotivationLevel, 'active')
-      `);
-
-        // If detailed plan is provided, store it in a separate table or as JSON
-        if (detailedPlan) {
-            await pool.request()
-                .input('PlanID', result.recordset[0].PlanID)
-                .input('DetailedPlan', JSON.stringify(detailedPlan))
-                .query(`
-            UPDATE QuitPlans
-            SET DetailedPlan = @DetailedPlan
-            WHERE PlanID = @PlanID
-          `);
-        }
+                INSERT INTO QuitPlans (UserID, StartDate, TargetDate, Reason, MotivationLevel, DetailedPlan, Status)
+                OUTPUT INSERTED.*
+                VALUES (@UserID, @StartDate, @TargetDate, @Reason, @MotivationLevel, @DetailedPlan, 'active')
+            `);
 
         res.status(201).json({
             success: true,
@@ -73,18 +62,20 @@ router.post('/', protect, async (req, res) => {
     }
 });
 
-// Get user's quit plan
+// Get user's current quit plan
 router.get('/current', protect, async (req, res) => {
     try {
+        const userId = req.user.id || req.user.UserID;
+        
         const result = await pool.request()
-            .input('UserID', req.user.UserID)
+            .input('UserID', userId)
             .query(`
-        SELECT *
-        FROM QuitPlans
-        WHERE UserID = @UserID
-        AND Status = 'active'
-        ORDER BY CreatedAt DESC
-      `);
+                SELECT *
+                FROM QuitPlans
+                WHERE UserID = @UserID
+                AND Status = 'active'
+                ORDER BY CreatedAt DESC
+            `);
 
         res.json({
             success: true,
@@ -104,23 +95,24 @@ router.put('/:planId', protect, async (req, res) => {
     try {
         const { planId } = req.params;
         const { startDate, targetDate, reason, status } = req.body;
+        const userId = req.user.id || req.user.UserID;
 
         const result = await pool.request()
             .input('PlanID', planId)
-            .input('UserID', req.user.UserID)
+            .input('UserID', userId)
             .input('StartDate', startDate)
             .input('TargetDate', targetDate)
             .input('Reason', reason)
             .input('Status', status)
             .query(`
-        UPDATE QuitPlans
-        SET StartDate = @StartDate,
-            TargetDate = @TargetDate,
-            Reason = @Reason,
-            Status = @Status
-        OUTPUT INSERTED.*
-        WHERE PlanID = @PlanID AND UserID = @UserID
-      `);
+                UPDATE QuitPlans
+                SET StartDate = @StartDate,
+                    TargetDate = @TargetDate,
+                    Reason = @Reason,
+                    Status = @Status
+                OUTPUT INSERTED.*
+                WHERE PlanID = @PlanID AND UserID = @UserID
+            `);
 
         if (result.recordset.length === 0) {
             return res.status(404).json({
@@ -146,27 +138,28 @@ router.put('/:planId', protect, async (req, res) => {
 router.get('/:planId/progress', protect, async (req, res) => {
     try {
         const { planId } = req.params;
+        const userId = req.user.id || req.user.UserID;
 
         const result = await pool.request()
             .input('PlanID', planId)
-            .input('UserID', req.user.UserID)
+            .input('UserID', userId)
             .query(`
-        SELECT 
-          qp.*,
-          DATEDIFF(day, qp.StartDate, GETDATE()) as DaysElapsed,
-          DATEDIFF(day, qp.StartDate, qp.TargetDate) as TotalDays,
-          (SELECT COUNT(*) FROM ProgressTracking pt 
-           WHERE pt.UserID = qp.UserID 
-           AND pt.Date BETWEEN qp.StartDate AND GETDATE()) as DaysTracked,
-          (SELECT SUM(CigarettesSmoked) FROM ProgressTracking pt 
-           WHERE pt.UserID = qp.UserID 
-           AND pt.Date BETWEEN qp.StartDate AND GETDATE()) as TotalCigarettesSmoked,
-          (SELECT SUM(MoneySpent) FROM ProgressTracking pt 
-           WHERE pt.UserID = qp.UserID 
-           AND pt.Date BETWEEN qp.StartDate AND GETDATE()) as TotalMoneySpent
-        FROM QuitPlans qp
-        WHERE qp.PlanID = @PlanID AND qp.UserID = @UserID
-      `);
+                SELECT 
+                  qp.*,
+                  DATEDIFF(day, qp.StartDate, GETDATE()) as DaysElapsed,
+                  DATEDIFF(day, qp.StartDate, qp.TargetDate) as TotalDays,
+                  (SELECT COUNT(*) FROM ProgressTracking pt 
+                   WHERE pt.UserID = qp.UserID 
+                   AND pt.Date BETWEEN qp.StartDate AND GETDATE()) as DaysTracked,
+                  (SELECT SUM(CigarettesSmoked) FROM ProgressTracking pt 
+                   WHERE pt.UserID = qp.UserID 
+                   AND pt.Date BETWEEN qp.StartDate AND GETDATE()) as TotalCigarettesSmoked,
+                  (SELECT SUM(MoneySpent) FROM ProgressTracking pt 
+                   WHERE pt.UserID = qp.UserID 
+                   AND pt.Date BETWEEN qp.StartDate AND GETDATE()) as TotalMoneySpent
+                FROM QuitPlans qp
+                WHERE qp.PlanID = @PlanID AND qp.UserID = @UserID
+            `);
 
         if (result.recordset.length === 0) {
             return res.status(404).json({
@@ -188,30 +181,51 @@ router.get('/:planId/progress', protect, async (req, res) => {
     }
 });
 
-// Get all quit plans (for admin)
+// Get all quit plans (for user)
 router.get('/', protect, async (req, res) => {
     try {
+        console.log('🔍 Getting quit plans for user:', req.user.id || req.user.UserID);
+        
+        // Use the correct property name - try both for compatibility
+        const userId = req.user.id || req.user.UserID;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID not found in request'
+            });
+        }
+
         const result = await pool.request()
-            .input('UserID', req.user.UserID)
+            .input('UserID', userId)
             .query(`
-        SELECT qp.*, u.FirstName, u.LastName, u.Email
-        FROM QuitPlans qp
-        JOIN Users u ON qp.UserID = u.UserID
-        WHERE qp.UserID = @UserID
-        ORDER BY qp.CreatedAt DESC
-      `);
+                SELECT qp.*, u.FirstName, u.LastName, u.Email
+                FROM QuitPlans qp
+                JOIN Users u ON qp.UserID = u.UserID
+                WHERE qp.UserID = @UserID
+                AND qp.Status = 'active'
+                ORDER BY qp.CreatedAt DESC
+            `);
+
+        console.log('✅ Query result:', {
+            userId: userId,
+            recordCount: result.recordset.length,
+            records: result.recordset
+        });
 
         res.json({
             success: true,
             data: result.recordset
         });
     } catch (error) {
-        console.error(error);
+        console.error('❌ Error getting quit plans:', error);
         res.status(500).json({
             success: false,
-            message: 'Error getting quit plans'
+            message: 'Error getting quit plans',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
+
 
 module.exports = router; 

@@ -254,6 +254,7 @@ router.get('/', auth, requireActivated, async (req, res) => {
                 MembershipID
             FROM QuitPlans 
             WHERE UserID = @UserID
+            AND Status = 'active'
             ORDER BY CreatedAt DESC
         `;
 

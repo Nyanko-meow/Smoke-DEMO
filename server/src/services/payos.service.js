@@ -1,5 +1,6 @@
 const { payOS, PAYOS_CONFIG } = require('../config/payos.config');
 const { pool } = require('../config/database');
+const { sendPaymentInvoiceEmail } = require('../utils/email.util');
 
 class PayOSService {
     async createPaymentLink(orderData) {
@@ -36,12 +37,11 @@ class PayOSService {
         }
     }
 
-    async verifyWebhookData(webhookBody) {
+    async verifyWebhookData(webhookData) {
         try {
-            console.log('🔐 Verifying PayOS webhook data:', webhookBody);
-            const paymentData = payOS.verifyPaymentWebhookData(webhookBody);
-            console.log('✅ Verified payment data:', paymentData);
-            return paymentData;
+            console.log('🔍 Verifying PayOS webhook data...');
+            const verifiedData = await payOS.verifyPaymentWebhookData(webhookData);
+            return verifiedData;
         } catch (error) {
             console.error('❌ PayOS verifyWebhookData error:', error);
             throw error;
@@ -49,104 +49,150 @@ class PayOSService {
     }
 
     async updatePaymentStatus(orderCode, status, paymentData = null) {
+        const transaction = await pool.transaction();
+        
         try {
-            console.log(`🔄 PayOS: Updating payment status for ${orderCode} to ${status}`);
-            
-            const transaction = pool.transaction();
             await transaction.begin();
+            console.log(`🔄 Updating payment status for orderCode ${orderCode} to ${status}`);
+            
+            // Cập nhật status trong bảng Payments
+            const updateResult = await transaction.request()
+                .input('Status', status === 'PAID' ? 'confirmed' : status.toLowerCase())
+                .input('OrderCode', orderCode.toString())
+                .query(`
+                    UPDATE Payments 
+                    SET Status = @Status, UpdatedAt = GETDATE()
+                    OUTPUT INSERTED.*
+                    WHERE TransactionID = @OrderCode
+                `);
 
-            try {
-                // Get payment and user info first
-                const paymentInfo = await transaction.request()
-                    .input('OrderCode', orderCode)
+            if (updateResult.recordset.length === 0) {
+                throw new Error(`Payment not found for orderCode: ${orderCode}`);
+            }
+
+            const payment = updateResult.recordset[0];
+            console.log('✅ Payment status updated:', payment.PaymentID);
+
+            if (status === 'PAID' || status === 'confirmed') {
+                // 🔄 BƯỚC 1: TẠO MEMBERSHIP TRƯỚC
+                console.log('📅 Creating/checking membership first...');
+                
+                const membershipResult = await transaction.request()
+                    .input('UserID', payment.UserID)
+                    .input('PlanID', payment.PlanID)
                     .query(`
-                        SELECT p.*, u.FirstName, u.LastName, u.Email, u.UserID, mp.Name as PlanName, mp.Duration
-                        FROM Payments p
-                        JOIN Users u ON p.UserID = u.UserID
-                        JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
-                        WHERE p.TransactionID = @OrderCode
+                        SELECT * FROM UserMemberships 
+                        WHERE UserID = @UserID AND PlanID = @PlanID AND Status = 'active'
                     `);
 
-                if (paymentInfo.recordset.length === 0) {
-                    throw new Error(`Payment not found for orderCode: ${orderCode}`);
-                }
-
-                const payment = paymentInfo.recordset[0];
-                console.log(`🎯 PayOS: Processing payment for user ${payment.Email}, plan ${payment.PlanName}`);
-
-                // Update payment status to confirmed (for PayOS successful payments)
-                const finalStatus = status === 'PAID' ? 'confirmed' : status;
-                await transaction.request()
-                    .input('OrderCode', orderCode)
-                    .input('Status', finalStatus)
-                    .input('PaymentData', paymentData ? JSON.stringify(paymentData) : null)
-                    .query(`
-                        UPDATE Payments 
-                        SET Status = @Status, 
-                            PaymentData = @PaymentData,
-                            PaymentDate = CASE WHEN @Status = 'confirmed' THEN GETDATE() ELSE PaymentDate END
-                        WHERE TransactionID = @OrderCode
-                    `);
-
-                console.log(`✅ PayOS: Payment status updated to ${finalStatus}`);
-
-                // Auto-activate membership for successful PayOS payments
-                if (finalStatus === 'confirmed') {
-                    console.log('🚀 PayOS: Auto-activating membership (no admin approval needed)...');
+                if (membershipResult.recordset.length === 0) {
+                    // Lấy thông tin plan Duration
+                    const planResult = await transaction.request()
+                        .input('PlanID', payment.PlanID)
+                        .query('SELECT Duration FROM MembershipPlans WHERE PlanID = @PlanID');
                     
-                    // Calculate membership dates
+                    const planDuration = planResult.recordset[0]?.Duration || 30;
+                    
                     const startDate = new Date();
                     const endDate = new Date();
-                    endDate.setDate(endDate.getDate() + payment.Duration);
+                    endDate.setDate(endDate.getDate() + planDuration);
+                    
+                    console.log(`📅 Creating membership with ${planDuration} days duration`);
 
-                    // Create or update active membership
                     await transaction.request()
                         .input('UserID', payment.UserID)
                         .input('PlanID', payment.PlanID)
                         .input('StartDate', startDate)
                         .input('EndDate', endDate)
+                        .input('Status', 'active')
                         .query(`
-                            MERGE UserMemberships AS target
-                            USING (SELECT @UserID AS UserID) AS source
-                            ON target.UserID = source.UserID
-                            WHEN MATCHED THEN
-                                UPDATE SET
-                                    PlanID = @PlanID,
-                                    StartDate = @StartDate,
-                                    EndDate = @EndDate,
-                                    Status = 'active',
-                                    UpdatedAt = GETDATE()
-                            WHEN NOT MATCHED THEN
-                                INSERT (UserID, PlanID, StartDate, EndDate, Status, CreatedAt, UpdatedAt)
-                                VALUES (@UserID, @PlanID, @StartDate, @EndDate, 'active', GETDATE(), GETDATE());
+                            INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status, CreatedAt)
+                            VALUES (@UserID, @PlanID, @StartDate, @EndDate, @Status, GETDATE())
                         `);
 
-                    console.log(`✅ PayOS: Membership activated for user ${payment.Email}`);
-
-                    // Create success notification for user (no admin notification needed)
-                    await transaction.request()
-                        .input('UserID', payment.UserID)
-                        .input('Title', '🎉 Gói dịch vụ đã được kích hoạt!')
-                        .input('Message', `Chúc mừng! Gói ${payment.PlanName} của bạn đã được thanh toán thành công qua PayOS và đã được kích hoạt ngay lập tức. Hãy bắt đầu hành trình cai thuốc của bạn!`)
-                        .input('Type', 'membership_activated')
-                        .query(`
-                            INSERT INTO Notifications (UserID, Title, Message, Type, CreatedAt)
-                            VALUES (@UserID, @Title, @Message, @Type, GETDATE())
-                        `);
-
-                    console.log(`✅ PayOS: Success notification sent to user ${payment.Email}`);
+                    console.log('✅ Membership activated for user:', payment.UserID);
                 }
 
-                await transaction.commit();
-                console.log('✅ PayOS: Transaction completed successfully');
-                return true;
-            } catch (error) {
-                await transaction.rollback();
-                console.error('❌ PayOS: Transaction rolled back due to error:', error);
-                throw error;
+                // 🔄 BƯỚC 2: CẬP NHẬT USER ROLE
+                await transaction.request()
+                    .input('UserID', payment.UserID)
+                    .query(`
+                        UPDATE Users 
+                        SET Role = 'member' 
+                        WHERE UserID = @UserID AND Role = 'guest'
+                    `);
+
+                // 🔄 BƯỚC 3: GỬI EMAIL (SAU KHI ĐÃ CÓ MEMBERSHIP)
+                console.log('💌 Sending invoice email...');
+                
+                try {
+                    const paymentDetailResult = await transaction.request()
+                        .input('PaymentID', payment.PaymentID)
+                        .query(`
+                            SELECT 
+                                p.*,
+                                u.FirstName, u.LastName, u.Email, u.PhoneNumber,
+                                mp.Name as PlanName, mp.Description as PlanDescription, 
+                                mp.Duration, mp.Features, mp.Price,
+                                FORMAT(p.PaymentDate, 'dd/MM/yyyy HH:mm') as FormattedPaymentDate,
+                                um.StartDate as MembershipStartDate,
+                                um.EndDate as MembershipEndDate,
+                                FORMAT(um.EndDate, 'dd/MM/yyyy') as FormattedEndDate
+                            FROM Payments p
+                            INNER JOIN Users u ON p.UserID = u.UserID
+                            INNER JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
+                            LEFT JOIN UserMemberships um ON p.UserID = um.UserID 
+                                AND p.PlanID = um.PlanID 
+                                AND um.Status = 'active'
+                            WHERE p.PaymentID = @PaymentID
+                        `);
+
+                    if (paymentDetailResult.recordset.length > 0) {
+                        const paymentDetail = paymentDetailResult.recordset[0];
+                        
+                        console.log('🔍 Payment detail data:');
+                        console.log('  - FormattedEndDate:', paymentDetail.FormattedEndDate);
+                        console.log('  - MembershipEndDate:', paymentDetail.MembershipEndDate);
+                        
+                        const user = {
+                            FirstName: paymentDetail.FirstName,
+                            LastName: paymentDetail.LastName,
+                            Email: paymentDetail.Email,
+                            PhoneNumber: paymentDetail.PhoneNumber
+                        };
+
+                        const plan = {
+                            Name: paymentDetail.PlanName,
+                            Description: paymentDetail.PlanDescription,
+                            Duration: paymentDetail.Duration,
+                            Features: paymentDetail.Features,
+                            Price: paymentDetail.Price
+                        };
+
+                        // 📧 GỬI EMAIL (Bây giờ đã có membership data)
+                        await sendPaymentInvoiceEmail({
+                            user,
+                            payment: paymentDetail,
+                            plan,
+                            orderCode
+                        });
+
+                        console.log('✅ Payment invoice email sent successfully to:', user.Email);
+                    }
+                } catch (emailError) {
+                    console.error('⚠️ Failed to send payment invoice email:', emailError);
+                }
+            } else {
+                console.log(`⏭️ Skipping email for status: ${status}`);
             }
+
+            await transaction.commit();
+            console.log('✅ Payment status update completed successfully');
+
+            return payment;
         } catch (error) {
-            console.error('❌ PayOS: Update payment status error:', error);
+            await transaction.rollback();
+            console.error('❌ Error updating payment status:', error);
             throw error;
         }
     }

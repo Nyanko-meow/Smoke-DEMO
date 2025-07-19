@@ -545,12 +545,39 @@ const CoachDashboard = () => {
             title: 'Trạng thái',
             dataIndex: 'isActive',
             key: 'isActive',
-            render: (isActive) => (
-                <Badge
-                    status={isActive ? 'success' : 'default'}
-                    text={isActive ? 'Hoạt động' : 'Không hoạt động'}
-                />
-            ),
+            render: (isActive, record) => {
+                // Debug log để xem dữ liệu thực tế
+                console.log('Member status debug:', {
+                    member: record.fullName,
+                    isActive: isActive,
+                    isActiveType: typeof isActive,
+                    membership: record.membership
+                });
+
+                // Xử lý nhiều định dạng khác nhau của isActive
+                let isUserActive = false;
+                
+                if (typeof isActive === 'boolean') {
+                    isUserActive = isActive;
+                } else if (typeof isActive === 'string') {
+                    isUserActive = isActive === 'true' || isActive === '1';
+                } else if (typeof isActive === 'number') {
+                    isUserActive = isActive === 1;
+                }
+
+                // Có thể kết hợp với thông tin membership để xác định trạng thái
+                // Nếu có membership active thì coi như hoạt động
+                if (!isUserActive && record.membership && record.membership.planName) {
+                    isUserActive = true;
+                }
+
+                return (
+                    <Badge
+                        status={isUserActive ? 'success' : 'default'}
+                        text={isUserActive ? 'Hoạt động' : 'Không hoạt động'}
+                    />
+                );
+            },
         },
         {
             title: 'Gói dịch vụ',
@@ -1124,12 +1151,39 @@ const CoachDashboard = () => {
                                 title: 'Trạng thái',
                                 dataIndex: 'isActive',
                                 key: 'isActive',
-                                render: (isActive) => (
-                                    <Badge
-                                        status={isActive ? 'success' : 'default'}
-                                        text={isActive ? 'Hoạt động' : 'Không hoạt động'}
-                                    />
-                                ),
+                                render: (isActive, record) => {
+                                    // Debug log để xem dữ liệu thực tế
+                                    console.log('Progress tracking - Member status debug:', {
+                                        member: record.fullName,
+                                        isActive: isActive,
+                                        isActiveType: typeof isActive,
+                                        membership: record.membership
+                                    });
+
+                                    // Xử lý nhiều định dạng khác nhau của isActive
+                                    let isUserActive = false;
+                                    
+                                    if (typeof isActive === 'boolean') {
+                                        isUserActive = isActive;
+                                    } else if (typeof isActive === 'string') {
+                                        isUserActive = isActive === 'true' || isActive === '1';
+                                    } else if (typeof isActive === 'number') {
+                                        isUserActive = isActive === 1;
+                                    }
+
+                                    // Có thể kết hợp với thông tin membership để xác định trạng thái
+                                    // Nếu có membership active thì coi như hoạt động
+                                    if (!isUserActive && record.membership && record.membership.planName) {
+                                        isUserActive = true;
+                                    }
+
+                                    return (
+                                        <Badge
+                                            status={isUserActive ? 'success' : 'default'}
+                                            text={isUserActive ? 'Hoạt động' : 'Không hoạt động'}
+                                        />
+                                    );
+                                },
                             },
                             {
                                 title: 'Hành động',

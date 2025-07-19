@@ -8,6 +8,7 @@ const path = require('path');
 const { connectDB, pool } = require('./config/database');
 const { startScheduler } = require('./utils/subscription-scheduler');
 const { testDatabaseConnection, testSurveyQuestionsTable } = require('./runSchemaUpdate');
+const { verifyMailConnection } = require('./utils/email.util');
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +20,22 @@ process.env.JWT_COOKIE_EXPIRE = process.env.JWT_COOKIE_EXPIRE || '30';
 
 // Connect to database
 connectDB();
+
+// 🆕 THÊM EMAIL VERIFICATION
+async function initializeServices() {
+    try {
+        console.log('📧 Verifying email connection...');
+        const emailOk = await verifyMailConnection();
+        if (!emailOk) {
+            console.log('⚠️ Email service not available - emails will not be sent');
+        }
+    } catch (error) {
+        console.error('❌ Email service initialization failed:', error);
+    }
+}
+
+// Call initialization
+initializeServices();
 
 // Auto setup function
 async function autoSetup() {
