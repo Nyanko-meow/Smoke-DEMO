@@ -875,55 +875,29 @@ router.get('/payos/status/:orderCode', protect, async (req, res) => {
     }
 });
 
-// 🆕 THÊM ENDPOINT TEST EMAIL BILL
+// 🆕 HÀM PHỤ: lấy EndDate mới nhất từ UserMemberships
+async function attachMembershipEndDateToPayment(payment) {
+    const result = await pool.request()
+        .input('UserID', payment.UserID)
+        .input('PlanID', payment.PlanID)
+        .query(`
+            SELECT TOP 1 EndDate
+            FROM UserMemberships
+            WHERE UserID = @UserID AND PlanID = @PlanID
+            ORDER BY CreatedAt DESC
+        `);
+    if (result.recordset.length) {
+        payment.UserMembershipEndDate = result.recordset[0].EndDate;
+    }
+}
+
+// 🆕 ENDPOINT TEST EMAIL BILL
 router.get('/test-invoice-email/:paymentId', protect, async (req, res) => {
     try {
         const { paymentId } = req.params;
-        
         console.log('🧪 Testing invoice email for paymentId:', paymentId);
-        
-        // Kiểm tra và tạo membership nếu chưa có
-        const membershipCheck = await pool.request()
-            .input('PaymentID', paymentId)
-            .query(`
-                SELECT p.UserID, p.PlanID
-                FROM Payments p
-                LEFT JOIN UserMemberships um ON p.UserID = um.UserID 
-                    AND p.PlanID = um.PlanID 
-                    AND um.Status = 'active'
-                WHERE p.PaymentID = @PaymentID AND um.MembershipID IS NULL
-            `);
 
-        // Tạo membership nếu chưa có
-        if (membershipCheck.recordset.length > 0) {
-            const { UserID, PlanID } = membershipCheck.recordset[0];
-            
-            console.log('⚠️ No active membership found, creating one for test...');
-            
-            const planRes = await pool.request()
-                .input('PlanID', PlanID)
-                .query('SELECT Duration FROM MembershipPlans WHERE PlanID = @PlanID');
-            
-            const planDuration = planRes.recordset[0]?.Duration || 30;
-            const startDate = new Date();
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() + planDuration);
-            
-            await pool.request()
-                .input('UserID', UserID)
-                .input('PlanID', PlanID)
-                .input('StartDate', startDate)
-                .input('EndDate', endDate)
-                .input('Status', 'active')
-                .query(`
-                    INSERT INTO UserMemberships (UserID, PlanID, StartDate, EndDate, Status, CreatedAt)
-                    VALUES (@UserID, @PlanID, @StartDate, @EndDate, @Status, GETDATE())
-                `);
-            
-            console.log(`✅ Created test membership with ${planDuration} days duration`);
-        }
-        
-        // Bây giờ query với đầy đủ data
+        // Lấy payment, user, plan như cũ (không sửa query chính)
         const paymentDetailResult = await pool.request()
             .input('PaymentID', paymentId)
             .query(`
@@ -932,34 +906,23 @@ router.get('/test-invoice-email/:paymentId', protect, async (req, res) => {
                     u.FirstName, u.LastName, u.Email, u.PhoneNumber,
                     mp.Name as PlanName, mp.Description as PlanDescription, 
                     mp.Duration, mp.Features, mp.Price,
-                    FORMAT(p.PaymentDate, 'dd/MM/yyyy HH:mm') as FormattedPaymentDate,
-                    um.StartDate as MembershipStartDate,
-                    um.EndDate as MembershipEndDate,
-                    FORMAT(um.EndDate, 'dd/MM/yyyy') as FormattedEndDate
+                    FORMAT(p.PaymentDate, 'dd/MM/yyyy HH:mm') as FormattedPaymentDate
                 FROM Payments p
                 INNER JOIN Users u ON p.UserID = u.UserID
                 INNER JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
-                LEFT JOIN UserMemberships um ON p.UserID = um.UserID 
-                    AND p.PlanID = um.PlanID 
-                    AND um.Status = 'active'
                 WHERE p.PaymentID = @PaymentID
             `);
 
-        if (paymentDetailResult.recordset.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Payment not found'
-            });
+        if (!paymentDetailResult.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Payment not found' });
         }
 
         const paymentDetail = paymentDetailResult.recordset[0];
-        
-        // 🆕 THÊM: Debug logging
-        console.log('🔍 Test endpoint - Payment detail data:');
-        console.log('  - FormattedEndDate:', paymentDetail.FormattedEndDate);
-        console.log('  - MembershipEndDate:', paymentDetail.MembershipEndDate);
-        console.log('  - PlanDuration:', paymentDetail.Duration);
-        
+
+        // ✅ Gắn EndDate từ bảng UserMemberships (nếu có)
+        await attachMembershipEndDateToPayment(paymentDetail);
+
+        // Chuẩn bị object user & plan
         const user = {
             FirstName: paymentDetail.FirstName,
             LastName: paymentDetail.LastName,
@@ -975,13 +938,11 @@ router.get('/test-invoice-email/:paymentId', protect, async (req, res) => {
             Price: paymentDetail.Price
         };
 
-        // Import email utility
+        // Gửi email
         const { sendPaymentInvoiceEmail } = require('../utils/email.util');
-        
-        // Gửi email test với membership data
         await sendPaymentInvoiceEmail({
             user,
-            payment: paymentDetail, // Bây giờ đã có FormattedEndDate và MembershipEndDate
+            payment: paymentDetail,
             plan,
             orderCode: paymentDetail.TransactionID
         });
@@ -994,7 +955,7 @@ router.get('/test-invoice-email/:paymentId', protect, async (req, res) => {
                 orderCode: paymentDetail.TransactionID,
                 amount: paymentDetail.Amount,
                 planName: plan.Name,
-                membershipEndDate: paymentDetail.FormattedEndDate || 'Not found' // 🆕 THÊM debug info
+                membershipEndDate: paymentDetail.UserMembershipEndDate || 'null'
             }
         });
 
@@ -1007,6 +968,7 @@ router.get('/test-invoice-email/:paymentId', protect, async (req, res) => {
         });
     }
 });
+
 
 // 🆕 THÊM ENDPOINT TEST EMAIL SERVICE
 router.post('/test-email-service', protect, async (req, res) => {
