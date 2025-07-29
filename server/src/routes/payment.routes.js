@@ -49,6 +49,11 @@ router.post('/', protect, async (req, res) => {
         await transaction.begin();
 
         try {
+            // Calculate dates
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + plan.Duration);
+
             // Create payment record with pending status
             const paymentResult = await transaction.request()
                 .input('UserID', req.user.id)
@@ -57,10 +62,12 @@ router.post('/', protect, async (req, res) => {
                 .input('PaymentMethod', paymentMethod)
                 .input('TransactionID', transactionId || `TX-${Date.now()}`)
                 .input('Status', 'pending')
+                .input('StartDate', startDate)
+                .input('EndDate', endDate)
                 .query(`
-                    INSERT INTO Payments (UserID, PlanID, Amount, PaymentMethod, Status, TransactionID)
+                    INSERT INTO Payments (UserID, PlanID, Amount, PaymentMethod, Status, TransactionID, StartDate, EndDate)
                     OUTPUT INSERTED.*
-                    VALUES (@UserID, @PlanID, @Amount, @PaymentMethod, @Status, @TransactionID)
+                    VALUES (@UserID, @PlanID, @Amount, @PaymentMethod, @Status, @TransactionID, @StartDate, @EndDate)
                 `);
 
             // Get the payment record
@@ -76,11 +83,6 @@ router.post('/', protect, async (req, res) => {
             }
 
             const plan = planResult.recordset[0];
-
-            // Calculate dates
-            const startDate = new Date();
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() + plan.Duration);
 
             // Create membership record with active status (immediate activation)
             const membershipResult = await transaction.request()
@@ -530,7 +532,7 @@ router.get('/pending', protect, async (req, res) => {
     }
 });
 
-// Create PayOS payment link
+// Create PayOS payment link từ đây trở xuống là các API của PayOS
 router.post('/payos/create', protect, async (req, res) => {
     try {
         console.log('🚀 PayOS create payment request received:');
@@ -634,22 +636,33 @@ router.post('/payos/create', protect, async (req, res) => {
     }
 });
 
-// PayOS webhook handler
+// PayOS webhook handler - IMPROVED VERSION
 router.post('/payos/webhook', async (req, res) => {
     try {
-        console.log('PayOS webhook received:', req.body);
+        console.log('🎯 PayOS webhook received at:', new Date().toISOString());
+        console.log('📦 Webhook payload:', JSON.stringify(req.body, null, 2));
 
         // Verify webhook data
         const paymentData = await payOSService.verifyWebhookData(req.body);
-        
-        console.log('Verified payment data:', paymentData);
+        console.log('✅ Verified payment data:', JSON.stringify(paymentData, null, 2));
 
-        // Update payment status
-        await payOSService.updatePaymentStatus(
-            paymentData.orderCode.toString(),
-            paymentData.code === '00' ? 'PAID' : 'FAILED',
-            paymentData
-        );
+        // Determine status
+        const status = paymentData.code === '00' ? 'PAID' : 'FAILED';
+        console.log(`💰 Payment status: ${status} (code: ${paymentData.code})`);
+
+        // Update payment status in database
+        await pool.request()
+            .input('TransactionID', paymentData.orderCode.toString())
+            .input('Status', status === 'PAID' ? 'confirmed' : 'failed')
+            .query(`
+                UPDATE Payments
+                SET Status = @Status
+                WHERE TransactionID = @TransactionID
+            `);
+
+        console.log('✅ Payment status updated in DB');
+
+        // Optional: Trigger other logic like membership creation, email, etc.
 
         res.json({
             success: true,
@@ -657,10 +670,11 @@ router.post('/payos/webhook', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('PayOS webhook error:', error);
+        console.error('❌ PayOS webhook error:', error);
         res.status(500).json({
             success: false,
-            message: 'Webhook processing failed'
+            message: 'Webhook processing failed',
+            error: error.message
         });
     }
 });
@@ -702,32 +716,162 @@ router.get('/payos/cancel', async (req, res) => {
 router.get('/payos/status/:orderCode', protect, async (req, res) => {
     try {
         const { orderCode } = req.params;
-        
-        const paymentInfo = await payOSService.getPaymentInfo(parseInt(orderCode));
 
-        if(paymentInfo != null && paymentInfo.status == "PAID"){
-            const paymentResult = await pool.request()
+        console.log('🔍 Checking PayOS payment status for orderCode:', orderCode);
+
+        /* 1) Gọi PayOS lấy trạng thái */
+        const paymentInfo = await payOSService.getPaymentInfo(parseInt(orderCode));
+        console.log('💰 PayOS payment info:', paymentInfo?.status);
+
+        if (paymentInfo && paymentInfo.status === 'PAID') {
+            /* 2) Truy bản ghi payment */
+            const paymentRes = await pool.request()
                 .input('OrderCode', orderCode)
-                .query('SELECT TOP(1) * FROM [Payments] WHERE [TransactionID] = @OrderCode');
-            if(paymentResult != null && paymentResult.recordset[0]){
-                const payment = paymentResult.recordset[0];
-                const transactionDateStr = paymentInfo.transactions[0].transactionDateTime;
-                const paymentDate = new Date(payment.PaymentDate);
-                const transactionDate = new Date(transactionDateStr);
-                if(payment.Status == "pending") {
-                    const result  = await pool.request()
-                        .input('Status', "confirmed")
+                .query(`
+                    SELECT TOP (1) *
+                    FROM [Payments]
+                    WHERE [TransactionID] = @OrderCode
+                `);
+
+            if (paymentRes.recordset.length) {
+                const payment = paymentRes.recordset[0];
+                console.log('📄 Found payment record:', payment.PaymentID, 'Status:', payment.Status);
+
+                /* 3) Cập nhật Payments.Status nếu còn pending */
+                if (payment.Status === 'pending') {
+                    await pool.request()
+                        .input('Status', 'confirmed')
                         .input('OrderCode', orderCode)
-                        .query('UPDATE [Payments] SET Status = @Status WHERE [TransactionID] = @OrderCode');
+                        .query(`
+                            UPDATE [Payments]
+                            SET Status = @Status
+                            WHERE [TransactionID] = @OrderCode
+                        `);
+                    console.log('✅ Payment status updated → confirmed');
+
+                    /* 🆕 FALLBACK: GỬI EMAIL KHI UPDATE STATUS */
+                    try {
+                        console.log('📧 Triggering email fallback mechanism...');
+                        
+                        // Lấy thông tin chi tiết để gửi email
+                        const emailDataResult = await pool.request()
+                            .input('PaymentID', payment.PaymentID)
+                            .query(`
+                                SELECT 
+                                    p.*,
+                                    u.FirstName, u.LastName, u.Email, u.PhoneNumber,
+                                    mp.Name as PlanName, mp.Description as PlanDescription, 
+                                    mp.Duration, mp.Features, mp.Price
+                                FROM Payments p
+                                INNER JOIN Users u ON p.UserID = u.UserID
+                                INNER JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
+                                WHERE p.PaymentID = @PaymentID
+                            `);
+
+                        if (emailDataResult.recordset.length > 0) {
+                            const emailData = emailDataResult.recordset[0];
+                            
+                            const user = {
+                                FirstName: emailData.FirstName,
+                                LastName: emailData.LastName,
+                                Email: emailData.Email,
+                                PhoneNumber: emailData.PhoneNumber
+                            };
+
+                            const plan = {
+                                Name: emailData.PlanName,
+                                Description: emailData.PlanDescription,
+                                Duration: emailData.Duration,
+                                Features: emailData.Features,
+                                Price: emailData.Price
+                            };
+
+                            const { sendPaymentInvoiceEmail } = require('../utils/email.util');
+                            
+                            console.log(`📧 Sending fallback invoice email to: ${user.Email}`);
+                            
+                            await sendPaymentInvoiceEmail({
+                                user,
+                                payment: emailData,
+                                plan,
+                                orderCode
+                            });
+
+                            console.log('✅ Fallback invoice email sent successfully!');
+                        }
+                    } catch (emailError) {
+                        console.error('⚠️ Fallback email failed:', emailError);
+                        // Không throw error
+                    }
                 }
+
+                /* 4) Kiểm tra / tạo UserMemberships */
+                const memRes = await pool.request()
+                    .input('UserID', payment.UserID)
+                    .input('PlanID', payment.PlanID)
+                    .input('Today', new Date())
+                    .query(`
+                        SELECT TOP (1) *
+                        FROM [UserMemberships]
+                        WHERE UserID = @UserID
+                          AND PlanID = @PlanID
+                          AND Status = 'active'
+                          AND EndDate >= @Today
+                    `);
+
+                if (!memRes.recordset.length) {
+                    // 🔧 THÊM: Lấy thông tin plan Duration
+                    const planRes = await pool.request()
+                        .input('PlanID', payment.PlanID)
+                        .query('SELECT Duration FROM MembershipPlans WHERE PlanID = @PlanID');
+                    
+                    const planDuration = planRes.recordset[0]?.Duration || 30; // fallback 30 ngày
+                    
+                    const startDate = new Date();
+                    const endDate = new Date(startDate);
+                    // 🆕 SỬA: Sử dụng plan.Duration thay vì hardcode 1 tháng
+                    endDate.setDate(endDate.getDate() + planDuration);
+                    
+                    console.log(`📅 Creating membership with ${planDuration} days duration`);
+
+                    await pool.request()
+                        .input('UserID', payment.UserID)
+                        .input('PlanID', payment.PlanID)
+                        .input('StartDate', startDate)
+                        .input('EndDate', endDate)
+                        .input('Status', 'active')
+                        .input('CreatedAt', new Date())
+                        .query(`
+                            INSERT INTO [UserMemberships]
+                              (UserID, PlanID, StartDate, EndDate, Status, CreatedAt)
+                            VALUES
+                              (@UserID, @PlanID, @StartDate, @EndDate, @Status, @CreatedAt)
+                        `);
+
+                    console.log('✅ UserMembership inserted');
+                }
+
+                /* 5) ĐỔI ROLE GUEST → MEMBER */
+                await pool.request()
+                    .input('UserID', payment.UserID)
+                    .query(`
+                        UPDATE [Users]
+                        SET Role = 'member'
+                        WHERE UserID = @UserID
+                          AND Role   = 'guest'
+                    `);
+                console.log('✅ User role updated → member');
             }
         }
+
+        /* 6) Trả kết quả cho client */
         res.json({
             success: true,
-            data: paymentInfo
+            data: paymentInfo,
+            emailSent: true  // Báo cho client biết email đã được gửi
         });
-    } catch (error) {
-        console.error('Error checking PayOS payment status:', error);
+    } catch (err) {
+        console.error('❌ Error checking PayOS payment status:', err);
         res.status(500).json({
             success: false,
             message: 'Error checking payment status'
@@ -735,6 +879,175 @@ router.get('/payos/status/:orderCode', protect, async (req, res) => {
     }
 });
 
+// 🆕 HÀM PHỤ: lấy EndDate mới nhất từ UserMemberships
+async function attachMembershipEndDateToPayment(payment) {
+    const result = await pool.request()
+        .input('UserID', payment.UserID)
+        .input('PlanID', payment.PlanID)
+        .query(`
+            SELECT TOP 1 EndDate
+            FROM UserMemberships
+            WHERE UserID = @UserID AND PlanID = @PlanID
+            ORDER BY CreatedAt DESC
+        `);
+    if (result.recordset.length) {
+        payment.UserMembershipEndDate = result.recordset[0].EndDate;
+    }
+}
 
+// 🆕 ENDPOINT TEST EMAIL BILL
+router.get('/test-invoice-email/:paymentId', protect, async (req, res) => {
+    try {
+        const { paymentId } = req.params;
+        console.log('🧪 Testing invoice email for paymentId:', paymentId);
+
+        // Lấy payment, user, plan như cũ (không sửa query chính)
+        const paymentDetailResult = await pool.request()
+            .input('PaymentID', paymentId)
+            .query(`
+                SELECT 
+                    p.*,
+                    u.FirstName, u.LastName, u.Email, u.PhoneNumber,
+                    mp.Name as PlanName, mp.Description as PlanDescription, 
+                    mp.Duration, mp.Features, mp.Price,
+                    FORMAT(p.PaymentDate, 'dd/MM/yyyy HH:mm') as FormattedPaymentDate
+                FROM Payments p
+                INNER JOIN Users u ON p.UserID = u.UserID
+                INNER JOIN MembershipPlans mp ON p.PlanID = mp.PlanID
+                WHERE p.PaymentID = @PaymentID
+            `);
+
+        if (!paymentDetailResult.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Payment not found' });
+        }
+
+        const paymentDetail = paymentDetailResult.recordset[0];
+
+        // ✅ Gắn EndDate từ bảng UserMemberships (nếu có)
+        await attachMembershipEndDateToPayment(paymentDetail);
+
+        // Chuẩn bị object user & plan
+        const user = {
+            FirstName: paymentDetail.FirstName,
+            LastName: paymentDetail.LastName,
+            Email: paymentDetail.Email,
+            PhoneNumber: paymentDetail.PhoneNumber
+        };
+
+        const plan = {
+            Name: paymentDetail.PlanName,
+            Description: paymentDetail.PlanDescription,
+            Duration: paymentDetail.Duration,
+            Features: paymentDetail.Features,
+            Price: paymentDetail.Price
+        };
+
+        // Gửi email
+        const { sendPaymentInvoiceEmail } = require('../utils/email.util');
+        await sendPaymentInvoiceEmail({
+            user,
+            payment: paymentDetail,
+            plan,
+            orderCode: paymentDetail.TransactionID
+        });
+
+        res.json({
+            success: true,
+            message: 'Test invoice email sent successfully',
+            data: {
+                recipient: user.Email,
+                orderCode: paymentDetail.TransactionID,
+                amount: paymentDetail.Amount,
+                planName: plan.Name,
+                membershipEndDate: paymentDetail.UserMembershipEndDate || 'null'
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error sending test invoice email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error sending test email',
+            error: error.message
+        });
+    }
+});
+
+
+// 🆕 THÊM ENDPOINT TEST EMAIL SERVICE
+router.post('/test-email-service', protect, async (req, res) => {
+    try {
+        const { verifyMailConnection, sendPaymentInvoiceEmail } = require('../utils/email.util');
+        
+        console.log('🧪 Testing email service...');
+        const emailOk = await verifyMailConnection();
+        
+        if (emailOk) {
+            // Test gửi email thực
+            const testUser = {
+                FirstName: 'Test',
+                LastName: 'User',
+                Email: req.user.Email,
+                PhoneNumber: '0123456789'
+            };
+            
+            const testPayment = {
+                PaymentID: 'TEST-001',
+                Amount: 99000,
+                PaymentDate: new Date(),
+                TransactionID: 'TEST-TX-001'
+            };
+            
+            const testPlan = {
+                Name: 'Gói Test',
+                Description: 'Đây là gói test email',
+                Duration: 30,
+                Features: 'Tính năng test email',
+                Price: 99000
+            };
+            
+            await sendPaymentInvoiceEmail({
+                user: testUser,
+                payment: testPayment,
+                plan: testPlan,
+                orderCode: 'TEST-ORDER-001'
+            });
+            
+            return res.json({
+                success: true,
+                emailServiceWorking: true,
+                message: 'Email service is working - Test email sent successfully!'
+            });
+        } else {
+            return res.json({
+                success: false,
+                emailServiceWorking: false,
+                message: 'Email service has connection issues'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Email test failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Email test failed',
+            error: error.message
+        });
+    }
+});
+
+// �� THÊM ENDPOINT TEST NHIỀU SMTP
+router.post('/test-smtp-list', async (req, res) => {
+    try {
+        const { testSMTPConnections } = require('../utils/email.util');
+        const smtpConfigs = req.body.smtpConfigs;
+        if (!Array.isArray(smtpConfigs) || smtpConfigs.length === 0) {
+            return res.status(400).json({ success: false, message: 'Vui lòng truyền vào mảng cấu hình smtpConfigs' });
+        }
+        const results = await testSMTPConnections(smtpConfigs);
+        res.json({ success: true, results });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi khi test SMTP', error: error.message });
+    }
+});
 
 module.exports = router; 

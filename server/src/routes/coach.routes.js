@@ -4,6 +4,133 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const { protect, authorize } = require('../middleware/auth.middleware');
+const nodemailer = require('nodemailer');
+
+// Cấu hình nodemailer với TLS port 465
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for SSL/TLS on port 465
+  auth: {
+    user: 'wibuclient@gmail.com',
+    pass: 'zvhw mkkm yrgl zpqf',
+  },
+  tls: {
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  },
+  connectionTimeout: 60000, // 60 giây
+  greetingTimeout: 30000,   // 30 giây
+  socketTimeout: 60000,     // 60 giây
+  debug: true, // Enable debug logs
+  logger: true // Enable logs
+});
+
+// Verify connection on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.log('❌ Email transporter verification failed:', error);
+    } else {
+        console.log('✅ Email transporter is ready to send messages (TLS 465)');
+    }
+});
+
+// Thêm templates và function notifyAppointmentChange
+const EMAIL_TEMPLATES = {
+  create:  { subject: 'Lịch hẹn mới được tạo',  statusText: 'đặt mới' },
+  confirm: { subject: 'Lịch hẹn đã xác nhận',   statusText: 'xác nhận' },
+  complete:{ subject: 'Lịch hẹn đã hoàn thành', statusText: 'hoàn thành' },
+  cancel:  { subject: 'Lịch hẹn đã bị huỷ',     statusText: 'huỷ' },
+  delete:  { subject: 'Lịch hẹn đã bị xoá',     statusText: 'xoá' },
+  'update-link': { subject: 'Cập nhật link tham gia', statusText: 'cập nhật link' },
+  update:  { subject: 'Cập nhật lịch hẹn',      statusText: 'cập nhật' },
+};
+
+async function notifyAppointmentChange({ action, appointment, member, notes = '', meetingLink = '#' }) {
+  const { subject, statusText } = EMAIL_TEMPLATES[action] || EMAIL_TEMPLATES.update;
+
+  const apptDate = new Date(appointment.AppointmentDate);
+  const dateStr  = apptDate.toLocaleDateString('vi-VN');
+  const timeStr  = apptDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+  const html = `
+    <p>Xin chào <strong>${member.FirstName} ${member.LastName}</strong>,</p>
+    <p>Lịch hẹn tư vấn của bạn đã được <strong>${statusText}</strong>.</p>
+    <ul>
+      <li><strong>Thời gian:</strong> ${dateStr} lúc ${timeStr}</li>
+      <li><strong>Trạng thái:</strong> ${statusText}</li>
+      <li><strong>Ghi chú:</strong> ${notes || 'Không có'}</li>
+      <li><strong>Link tham gia:</strong> <a href="${meetingLink}">${meetingLink}</a></li>
+    </ul>
+    <p>Trân trọng,<br/>Đội ngũ SmokeKing</p>`;
+
+  await transporter.sendMail({
+    from: 'SmokeKing <wibuclient@gmail.com>',
+    to: member.Email,
+    subject: `[SmokeKing] ${subject}`,
+    html,
+  });
+}
+
+// Test email endpoint với thông tin port mới
+router.get('/test-email', async (req, res) => {
+    try {
+        console.log('🧪 Testing email configuration with TLS 465...');
+        
+        // Test connection
+        await transporter.verify();
+        console.log('✅ SMTP TLS 465 connection verified');
+        
+        // Send test email
+        const testResult = await transporter.sendMail({
+            from: 'SmokeKing <wibuclient@gmail.com>',
+            to: 'wibuclient@gmail.com',
+            subject: 'Test Email - SmokeKing (TLS 465)',
+            html: `
+                <h2>Test Email - TLS Configuration</h2>
+                <p>Email configuration is working correctly!</p>
+                <ul>
+                    <li><strong>Host:</strong> smtp.gmail.com</li>
+                    <li><strong>Port:</strong> 465</li>
+                    <li><strong>Security:</strong> TLS/SSL</li>
+                    <li><strong>User:</strong> wibuclient@gmail.com</li>
+                </ul>
+                <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+                <p>🎉 Email gửi thành công qua TLS port 465!</p>
+            `
+        });
+        
+        console.log('✅ Test email sent successfully via TLS 465:', testResult.messageId);
+        
+        res.json({
+            success: true,
+            message: 'Email test successful with TLS 465',
+            messageId: testResult.messageId,
+            config: {
+                host: 'smtp.gmail.com',
+                port: 465,
+                secure: true,
+                protocol: 'TLS/SSL',
+                user: 'wibuclient@gmail.com'
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Email test failed with TLS 465:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Email test failed with TLS 465',
+            error: error.message,
+            code: error.code,
+            config: {
+                host: 'smtp.gmail.com',
+                port: 465,
+                secure: true,
+                protocol: 'TLS/SSL'
+            }
+        });
+    }
+});
 
 // Coach login endpoint - only for role 'coach'
 router.post('/login', async (req, res) => {
@@ -1761,6 +1888,19 @@ router.post('/schedule', protect, authorize('coach'), async (req, res) => {
                 `);
         }
 
+        // 👉 THÊM EMAIL NOTIFICATION Ở ĐÂY
+        try {
+            await notifyAppointmentChange({
+                action: 'create',
+                appointment,
+                member,
+                notes,
+                meetingLink: meetingLink || '#',
+            });
+        } catch (emailError) {
+            console.log('⚠️ Email notification failed:', emailError.message);
+        }
+
         res.status(201).json({
             success: true,
             message: 'Lịch tư vấn đã được đặt thành công',
@@ -1988,6 +2128,40 @@ router.patch('/appointments/:appointmentId', protect, authorize('coach'), async 
         }
 
         const updatedAppointment = result.recordset[0];
+
+        // 👉 THÊM EMAIL NOTIFICATION Ở ĐÂY
+        try {
+            // Lấy thông tin member
+            const memberInfo = await pool.request()
+                .input('AppointmentID', appointmentId)
+                .query(`
+                    SELECT u.UserID, u.FirstName, u.LastName, u.Email,
+                           ca.AppointmentDate
+                    FROM ConsultationAppointments ca
+                    JOIN Users u ON ca.MemberID = u.UserID
+                    WHERE ca.AppointmentID = @AppointmentID
+                `);
+
+            if (memberInfo.recordset.length > 0) {
+                const member = memberInfo.recordset[0];
+                
+                // Xác định action theo status
+                let action = 'update';
+                if (status === 'confirmed') action = 'confirm';
+                if (status === 'completed') action = 'complete';
+                if (status === 'cancelled') action = 'cancel';
+
+                await notifyAppointmentChange({
+                    action,
+                    appointment: { ...updatedAppointment, AppointmentDate: member.AppointmentDate },
+                    member,
+                    notes: updatedAppointment.Notes,
+                    meetingLink: updatedAppointment.MeetingLink || '#',
+                });
+            }
+        } catch (emailError) {
+            console.log('⚠️ Email notification failed:', emailError.message);
+        }
 
         res.json({
             success: true,

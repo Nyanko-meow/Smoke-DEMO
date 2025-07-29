@@ -98,7 +98,7 @@ const ProgressTracking = () => {
             setMembershipLoading(true);
             const token = localStorage.getItem('memberToken') || localStorage.getItem('token');
 
-            const response = await axios.get('http://localhost:4000/api/membership/current', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/membership/current', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -154,14 +154,14 @@ const ProgressTracking = () => {
             const token = localStorage.getItem('memberToken') || localStorage.getItem('token');
 
             // Load progress summary data
-            const summaryResponse = await axios.get('http://localhost:4000/api/progress/summary', {
+            const summaryResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/summary', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
             // Load progress range data (last 30 days)
-            const rangeResponse = await axios.get('http://localhost:4000/api/progress/range', {
+            const rangeResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/range', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -172,7 +172,7 @@ const ProgressTracking = () => {
             });
 
             // Load streak information
-            const streakResponse = await axios.get('http://localhost:4000/api/progress/streak', {
+            const streakResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/streak', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -231,7 +231,7 @@ const ProgressTracking = () => {
         try {
             const token = localStorage.getItem('memberToken') || localStorage.getItem('token');
 
-            const response = await axios.get('http://localhost:4000/api/achievements/user', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/achievements/user', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -251,7 +251,7 @@ const ProgressTracking = () => {
         try {
             const token = localStorage.getItem('memberToken') || localStorage.getItem('token');
 
-            const response = await axios.get('http://localhost:4000/api/plans/current', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/plans/current', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -274,7 +274,7 @@ const ProgressTracking = () => {
             // Try multiple endpoints to get smoking status
             let response;
             try {
-                response = await axios.get('http://localhost:4000/api/users/profile', {
+                response = await axios.get('http://smokeking.wibu.me:4000/api/users/profile', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -289,7 +289,7 @@ const ProgressTracking = () => {
 
             // Fallback to smoking-status endpoint
             try {
-                response = await axios.get('http://localhost:4000/api/users/smoking-status', {
+                response = await axios.get('http://smokeking.wibu.me:4000/api/users/smoking-status', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -318,7 +318,7 @@ const ProgressTracking = () => {
                 emotionNotes: values.emotionNotes || ''
             };
 
-            const response = await axios.post('http://localhost:4000/api/progress', progressEntry, {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/progress', progressEntry, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

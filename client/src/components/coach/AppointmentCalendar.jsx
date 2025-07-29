@@ -77,7 +77,7 @@ const AppointmentCalendar = React.memo(() => {
 
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.get('http://localhost:4000/api/coach/appointments', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/appointments', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -119,7 +119,7 @@ const AppointmentCalendar = React.memo(() => {
         try {
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.get('http://localhost:4000/api/coach/members', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/members', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -190,7 +190,7 @@ const AppointmentCalendar = React.memo(() => {
         try {
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.post('http://localhost:4000/api/coach/schedule', {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/coach/schedule', {
                 memberId: values.memberId,
                 appointmentDate: values.appointmentDate.toISOString(),
                 duration: values.duration,
@@ -218,7 +218,7 @@ const AppointmentCalendar = React.memo(() => {
         try {
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.patch(`http://localhost:4000/api/coach/appointments/${appointmentId}`, {
+            const response = await axios.patch(`http://smokeking.wibu.me:4000/api/coach/appointments/${appointmentId}`, {
                 status
             }, {
                 headers: {
@@ -241,7 +241,7 @@ const AppointmentCalendar = React.memo(() => {
         try {
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.delete(`http://localhost:4000/api/coach/appointments/${appointmentId}`, {
+            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/coach/appointments/${appointmentId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -298,7 +298,7 @@ const AppointmentCalendar = React.memo(() => {
             const token = localStorage.getItem('coachToken');
 
             const response = await axios.patch(
-                `http://localhost:4000/api/coach/appointments/${appointmentId}`,
+                `http://smokeking.wibu.me:4000/api/coach/appointments/${appointmentId}`,
                 {
                     meetingLink: tempMeetingLink
                 },

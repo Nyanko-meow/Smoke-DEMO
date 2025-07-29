@@ -67,7 +67,7 @@ const CoachAppointments = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get('http://localhost:4000/api/chat/appointments', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/chat/appointments', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -95,7 +95,7 @@ const CoachAppointments = () => {
     const loadMembers = async () => {
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get('http://localhost:4000/api/coach/members', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/members', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -113,7 +113,7 @@ const CoachAppointments = () => {
             setSubmitting(true);
 
             // First get member's membership info to validate appointment date
-            const membershipResponse = await axios.get(`http://localhost:4000/api/coach/members/${values.memberId}/details`, {
+            const membershipResponse = await axios.get(`http://smokeking.wibu.me:4000/api/coach/members/${values.memberId}/details`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
 
@@ -128,7 +128,7 @@ const CoachAppointments = () => {
                 }
             }
 
-            const response = await axios.post('http://localhost:4000/api/coach/schedule', {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/coach/schedule', {
                 memberId: values.memberId,
                 appointmentDate: dayjs(values.appointmentDate).toISOString(),
                 duration: parseInt(values.duration),
@@ -161,7 +161,7 @@ const CoachAppointments = () => {
     const updateAppointmentStatus = async (appointmentId, status) => {
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.patch(`http://localhost:4000/api/coach/appointments/${appointmentId}`, {
+            const response = await axios.patch(`http://smokeking.wibu.me:4000/api/coach/appointments/${appointmentId}`, {
                 status
             }, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -180,7 +180,7 @@ const CoachAppointments = () => {
     const cancelAppointment = async (appointmentId) => {
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.post(`http://localhost:4000/api/chat/appointments/${appointmentId}/cancel`, {}, {
+            const response = await axios.post(`http://smokeking.wibu.me:4000/api/chat/appointments/${appointmentId}/cancel`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

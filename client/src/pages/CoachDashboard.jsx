@@ -157,7 +157,7 @@ const CoachDashboard = () => {
 
     const loadCoachProfile = useCallback(async (token) => {
         try {
-            const response = await axios.get('http://localhost:4000/api/coach/profile', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -179,7 +179,7 @@ const CoachDashboard = () => {
         try {
             console.log(`CoachDashboard render #${renderCount.current} - Loading members...`);
 
-            const response = await axios.get('http://localhost:4000/api/coach/members', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/members', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -214,7 +214,7 @@ const CoachDashboard = () => {
 
     const loadStats = useCallback(async (token) => {
         try {
-            const response = await axios.get('http://localhost:4000/api/coach/stats', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/stats', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -251,7 +251,7 @@ const CoachDashboard = () => {
             setMemberDetailsLoading(true);
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.get(`http://localhost:4000/api/coach/members/${memberId}/details`, {
+            const response = await axios.get(`http://smokeking.wibu.me:4000/api/coach/members/${memberId}/details`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -285,7 +285,7 @@ const CoachDashboard = () => {
             setSurveyLoading(true);
 
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get(`http://localhost:4000/api/coach/member-surveys/${member.id}`, {
+            const response = await axios.get(`http://smokeking.wibu.me:4000/api/coach/member-surveys/${member.id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -348,7 +348,7 @@ const CoachDashboard = () => {
                 try {
                     const token = localStorage.getItem('coachToken');
                     if (token) {
-                        await axios.post('http://localhost:4000/api/coach/logout', {}, {
+                        await axios.post('http://smokeking.wibu.me:4000/api/coach/logout', {}, {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             },
@@ -419,7 +419,7 @@ const CoachDashboard = () => {
         try {
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.put('http://localhost:4000/api/coach/profile', values, {
+            const response = await axios.put('http://smokeking.wibu.me:4000/api/coach/profile', values, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -545,12 +545,39 @@ const CoachDashboard = () => {
             title: 'Trạng thái',
             dataIndex: 'isActive',
             key: 'isActive',
-            render: (isActive) => (
-                <Badge
-                    status={isActive ? 'success' : 'default'}
-                    text={isActive ? 'Hoạt động' : 'Không hoạt động'}
-                />
-            ),
+            render: (isActive, record) => {
+                // Debug log để xem dữ liệu thực tế
+                console.log('Member status debug:', {
+                    member: record.fullName,
+                    isActive: isActive,
+                    isActiveType: typeof isActive,
+                    membership: record.membership
+                });
+
+                // Xử lý nhiều định dạng khác nhau của isActive
+                let isUserActive = false;
+                
+                if (typeof isActive === 'boolean') {
+                    isUserActive = isActive;
+                } else if (typeof isActive === 'string') {
+                    isUserActive = isActive === 'true' || isActive === '1';
+                } else if (typeof isActive === 'number') {
+                    isUserActive = isActive === 1;
+                }
+
+                // Có thể kết hợp với thông tin membership để xác định trạng thái
+                // Nếu có membership active thì coi như hoạt động
+                if (!isUserActive && record.membership && record.membership.planName) {
+                    isUserActive = true;
+                }
+
+                return (
+                    <Badge
+                        status={isUserActive ? 'success' : 'default'}
+                        text={isUserActive ? 'Hoạt động' : 'Không hoạt động'}
+                    />
+                );
+            },
         },
         {
             title: 'Gói dịch vụ',
@@ -1124,12 +1151,39 @@ const CoachDashboard = () => {
                                 title: 'Trạng thái',
                                 dataIndex: 'isActive',
                                 key: 'isActive',
-                                render: (isActive) => (
-                                    <Badge
-                                        status={isActive ? 'success' : 'default'}
-                                        text={isActive ? 'Hoạt động' : 'Không hoạt động'}
-                                    />
-                                ),
+                                render: (isActive, record) => {
+                                    // Debug log để xem dữ liệu thực tế
+                                    console.log('Progress tracking - Member status debug:', {
+                                        member: record.fullName,
+                                        isActive: isActive,
+                                        isActiveType: typeof isActive,
+                                        membership: record.membership
+                                    });
+
+                                    // Xử lý nhiều định dạng khác nhau của isActive
+                                    let isUserActive = false;
+                                    
+                                    if (typeof isActive === 'boolean') {
+                                        isUserActive = isActive;
+                                    } else if (typeof isActive === 'string') {
+                                        isUserActive = isActive === 'true' || isActive === '1';
+                                    } else if (typeof isActive === 'number') {
+                                        isUserActive = isActive === 1;
+                                    }
+
+                                    // Có thể kết hợp với thông tin membership để xác định trạng thái
+                                    // Nếu có membership active thì coi như hoạt động
+                                    if (!isUserActive && record.membership && record.membership.planName) {
+                                        isUserActive = true;
+                                    }
+
+                                    return (
+                                        <Badge
+                                            status={isUserActive ? 'success' : 'default'}
+                                            text={isUserActive ? 'Hoạt động' : 'Không hoạt động'}
+                                        />
+                                    );
+                                },
                             },
                             {
                                 title: 'Hành động',

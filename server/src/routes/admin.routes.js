@@ -4889,7 +4889,8 @@ router.post('/reject-cancellation/:requestId', protect, authorize('admin'), asyn
 
         try {
             // Check if cancellation request exists and is pending
-            const checkResult = await transaction.request()
+            const checkResult = await transa
+            ction.request()
                 .input('RequestId', requestId)
                 .query(`
                     SELECT cr.*, um.UserID, um.MembershipID, mp.Name as PlanName

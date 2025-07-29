@@ -86,7 +86,7 @@ const UserActivityTracking = () => {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.get('http://localhost:4000/api/admin/user-activity', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/user-activity', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -110,7 +110,7 @@ const UserActivityTracking = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.get('http://localhost:4000/api/admin/system-overview', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/system-overview', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -129,7 +129,7 @@ const UserActivityTracking = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.get(`http://localhost:4000/api/admin/user-progress-analysis/${userId}`, {
+            const response = await axios.get(`http://smokeking.wibu.me:4000/api/admin/user-progress-analysis/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },

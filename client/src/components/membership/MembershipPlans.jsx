@@ -2226,8 +2226,19 @@ const MembershipPlans = () => {
                     isPurchasable && !isGuestPlan ? (
                         <Button
                             type="primary"
-                            disabled={loading}
+                            size="large"
+                            block
                             onClick={() => handleSelectPlan(record)}
+                            disabled={loading}
+                            style={{
+                                height: '44px',
+                                borderRadius: '10px',
+                                fontWeight: 600,
+                                fontSize: '14px',
+                                background: '#d1d5db',
+                                border: 'none',
+                                color: 'white'
+                            }}
                         >
                             Mua gói
                         </Button>
@@ -2641,46 +2652,24 @@ const MembershipPlans = () => {
 
                                 if (isPurchasable && !isGuestPlan) {
                                     return (
-                                        <>
-                                            <Button
-                                                type="primary"
-                                                size="large"
-                                                block
-                                                onClick={() => handleSelectPlan(plan)}
-                                                disabled={loading}
-                                                style={{
-                                                    height: '44px',
-                                                    borderRadius: '10px',
-                                                    fontWeight: 600,
-                                                    fontSize: '14px',
-                                                    background: planTheme.gradient,
-                                                    border: 'none',
-                                                    color: 'white',
-                                                    marginBottom: '8px'
-                                                }}
-                                            >
-                                                Mua gói
-                                            </Button>
-                                            
-                                            <Button
-                                                type="default"
-                                                size="large"
-                                                block
-                                                onClick={() => handlePayOSPayment(plan)}
-                                                disabled={loading}
-                                                style={{
-                                                    height: '40px',
-                                                    borderRadius: '8px',
-                                                    fontWeight: 500,
-                                                    fontSize: '13px',
-                                                    border: '1px solid #22c55e',
-                                                    color: '#22c55e'
-                                                }}
-                                            >
-                                                <i className="fas fa-credit-card me-2"></i>
-                                                Thanh toán PayOS
-                                            </Button>
-                                        </>
+                                        <Button
+                                            type="primary"
+                                            size="large"
+                                            block
+                                            onClick={() => handleSelectPlan(plan)}
+                                            disabled={loading}
+                                            style={{
+                                                height: '44px',
+                                                borderRadius: '10px',
+                                                fontWeight: 600,
+                                                fontSize: '14px',
+                                                background: planTheme.gradient,
+                                                border: 'none',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            Mua gói
+                                        </Button>
                                     );
                                 } else {
                                     return (

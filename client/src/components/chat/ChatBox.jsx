@@ -225,10 +225,10 @@ const ChatBox = ({
             let apiUrl;
             if (conversationId) {
                 // Use conversation-based API for coach
-                apiUrl = `http://localhost:4000/api/chat/conversation/${conversationId}/messages`;
+                apiUrl = `/api/chat/conversation/${conversationId}/messages`;
             } else {
                 // Use member messages API for member
-                apiUrl = 'http://localhost:4000/api/chat/member/messages';
+                apiUrl = '/api/chat/member/messages';
             }
 
             console.log('🔄 Loading messages from:', apiUrl, 'User:', userData);
@@ -320,10 +320,10 @@ const ChatBox = ({
 
             if (conversationId) {
                 // Use conversation-based API for coaches with specific conversations
-                apiUrl = `http://localhost:4000/api/chat/conversation/${conversationId}/send`;
+                apiUrl = `/api/chat/conversation/${conversationId}/send`;
             } else {
                 // Use the general chat API for members or coaches without specific conversation
-                apiUrl = 'http://localhost:4000/api/chat/coach/chat/send';
+                apiUrl = '/api/chat/coach/chat/send';
                 // If receiverId is provided (for coach), add it to request data
                 if (receiverId) {
                     requestData.memberId = receiverId;
@@ -396,10 +396,10 @@ const ChatBox = ({
             let apiUrl;
             if (conversationId) {
                 // Send to specific conversation
-                apiUrl = `http://localhost:4000/api/chat/conversation/${conversationId}/send-with-file`;
+                apiUrl = `http://smokeking.wibu.me:4000/api/chat/conversation/${conversationId}/send-with-file`;
             } else {
                 // Auto-detect receiver (for member to coach)
-                apiUrl = 'http://localhost:4000/api/chat/send-with-file';
+                apiUrl = 'http://smokeking.wibu.me:4000/api/chat/send-with-file';
                 if (receiverId) {
                     formData.append('receiverId', receiverId);
                 }
@@ -453,9 +453,9 @@ const ChatBox = ({
             };
 
             if (conversationId) {
-                apiUrl = `http://localhost:4000/api/chat/conversation/${conversationId}/send`;
+                apiUrl = `http://smokeking.wibu.me:4000/api/chat/conversation/${conversationId}/send`;
             } else {
-                apiUrl = 'http://localhost:4000/api/chat/coach/chat/send';
+                apiUrl = 'http://smokeking.wibu.me:4000/api/chat/coach/chat/send';
                 if (receiverId) {
                     requestData.memberId = receiverId;
                 }
@@ -613,7 +613,7 @@ const ChatBox = ({
                                                     icon={<EyeOutlined />}
                                                     className={isCurrentUser ? 'text-white hover:bg-white hover:bg-opacity-20' : 'text-blue-500 hover:bg-blue-50'}
                                                     onClick={() => {
-                                                        const imageUrl = msg.FileURL?.startsWith('http') ? msg.FileURL : `http://localhost:4000${msg.FileURL}`;
+                                                        const imageUrl = msg.FileURL?.startsWith('http') ? msg.FileURL : `http://smokeking.wibu.me:4000${msg.FileURL}`;
                                                         Modal.info({
                                                             title: msg.FileName,
                                                             content: <Image src={imageUrl} alt={msg.FileName} />,
@@ -629,7 +629,7 @@ const ChatBox = ({
                                                 icon={<DownloadOutlined />}
                                                 className={isCurrentUser ? 'text-white hover:bg-white hover:bg-opacity-20' : 'text-blue-500 hover:bg-blue-50'}
                                                 onClick={() => {
-                                                    const fileUrl = msg.FileURL?.startsWith('http') ? msg.FileURL : `http://localhost:4000${msg.FileURL}`;
+                                                    const fileUrl = msg.FileURL?.startsWith('http') ? msg.FileURL : `http://smokeking.wibu.me:4000${msg.FileURL}`;
                                                     const link = document.createElement('a');
                                                     link.href = fileUrl;
                                                     link.download = msg.FileName;
