@@ -14,7 +14,7 @@ const AdminLogin = () => {
     const handleLogin = async (values) => {
         setLoading(true);
         try {
-            const response = await axios.post('http://localhost:4000/api/admin/login', {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/admin/login', {
                 email: values.email,
                 password: values.password
             }, {

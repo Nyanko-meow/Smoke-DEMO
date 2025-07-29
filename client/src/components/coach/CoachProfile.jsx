@@ -64,7 +64,7 @@ const CoachProfile = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get('http://localhost:4000/api/coach/profile', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/profile', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -102,7 +102,7 @@ const CoachProfile = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('coachToken');
-            const response = await axios.put('http://localhost:4000/api/coach/profile', values, {
+            const response = await axios.put('http://smokeking.wibu.me:4000/api/coach/profile', values, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -125,7 +125,7 @@ const CoachProfile = () => {
             formData.append('avatar', file);
 
             const token = localStorage.getItem('coachToken');
-            const response = await axios.post('http://localhost:4000/api/coach/upload-avatar', formData, {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/coach/upload-avatar', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
@@ -146,7 +146,7 @@ const CoachProfile = () => {
     const addCertification = async (values) => {
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.post('http://localhost:4000/api/coach/certifications', {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/coach/certifications', {
                 ...values,
                 issueDate: values.issueDate.toISOString(),
                 expiryDate: values.expiryDate ? values.expiryDate.toISOString() : null
@@ -169,7 +169,7 @@ const CoachProfile = () => {
     const addExperience = async (values) => {
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.post('http://localhost:4000/api/coach/experiences', {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/coach/experiences', {
                 ...values,
                 startDate: values.startDate.toISOString(),
                 endDate: values.endDate ? values.endDate.toISOString() : null

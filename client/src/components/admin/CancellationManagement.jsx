@@ -48,7 +48,7 @@ const CancellationManagement = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://localhost:4000/api/admin/pending-membership-cancellations', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/pending-membership-cancellations', {
                 headers: { 'Authorization': `Bearer ${token}` },
                 withCredentials: true
             });
@@ -89,7 +89,7 @@ const CancellationManagement = () => {
 
             const token = localStorage.getItem('adminToken');
             const response = await axios.post(
-                `http://localhost:4000/api/admin/approve-cancellation/${selectedRequest.CancellationRequestID}`,
+                `http://smokeking.wibu.me:4000/api/admin/approve-cancellation/${selectedRequest.CancellationRequestID}`,
                 {
                     approveRefund: true,
                     refundAmount: selectedRequest.RequestedRefundAmount,
@@ -133,7 +133,7 @@ const CancellationManagement = () => {
 
             const token = localStorage.getItem('adminToken');
             const response = await axios.post(
-                `http://localhost:4000/api/admin/reject-cancellation/${selectedRequest.CancellationRequestID}`,
+                `http://smokeking.wibu.me:4000/api/admin/reject-cancellation/${selectedRequest.CancellationRequestID}`,
                 values,
                 {
                     headers: { 'Authorization': `Bearer ${token}` },

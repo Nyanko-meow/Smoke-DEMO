@@ -650,14 +650,19 @@ router.post('/payos/webhook', async (req, res) => {
         const status = paymentData.code === '00' ? 'PAID' : 'FAILED';
         console.log(`💰 Payment status: ${status} (code: ${paymentData.code})`);
 
-        // Update payment status
-        const result = await payOSService.updatePaymentStatus(
-            paymentData.orderCode.toString(),
-            status,
-            paymentData
-        );
+        // Update payment status in database
+        await pool.request()
+            .input('TransactionID', paymentData.orderCode.toString())
+            .input('Status', status === 'PAID' ? 'confirmed' : 'failed')
+            .query(`
+                UPDATE Payments
+                SET Status = @Status
+                WHERE TransactionID = @TransactionID
+            `);
 
-        console.log('✅ Payment update completed:', result?.PaymentID);
+        console.log('✅ Payment status updated in DB');
+
+        // Optional: Trigger other logic like membership creation, email, etc.
 
         res.json({
             success: true,
@@ -666,7 +671,6 @@ router.post('/payos/webhook', async (req, res) => {
 
     } catch (error) {
         console.error('❌ PayOS webhook error:', error);
-        console.error('🔍 Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Webhook processing failed',

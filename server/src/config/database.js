@@ -6,10 +6,10 @@ const path = require('path');
 dotenv.config();
 
 const dbConfig = {
-    server: process.env.DB_SERVER ?? 'NGOCTAM',
-    database: process.env.DB_DATABASE ?? 'SMOKEKING5',
+    server: process.env.DB_SERVER ?? 'NYANKO',
+    database: process.env.DB_DATABASE ?? 'SMOKEKING',
     user: process.env.DB_USER ?? 'sa',
-    password: process.env.DB_PASSWORD ?? '123',
+    password: process.env.DB_PASSWORD ?? 'AkoTamaki2002',
     port: parseInt(process.env.DB_PORT || '1433'),
     options: {
         encrypt: process.env.DB_ENCRYPT === 'true' || false,

@@ -8,36 +8,21 @@ import {
     message,
     Menu,
     Badge,
-    Statistic,
-    Table,
-    Tag,
-    Space,
-    Button,
-    Empty,
     Spin
 } from 'antd';
 import {
     CalendarOutlined,
-    BarChartOutlined,
-    HeartOutlined,
     FireOutlined,
-    DollarOutlined,
-    ClockCircleOutlined,
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    EyeOutlined,
-
+    DollarOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Appointments from '../components/member/Appointments';
-import ProgressTracking from '../components/member/ProgressTracking';
-
 import AccessGuard from '../components/common/AccessGuard';
 import SavingsDisplay from '../components/common/SavingsDisplay';
 
 const { Content, Sider } = Layout;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const MemberDashboard = () => {
     const [activeMenu, setActiveMenu] = useState('appointments');
@@ -47,12 +32,8 @@ const MemberDashboard = () => {
 
     useEffect(() => {
         loadMemberInfo();
-
-        // Check if should open appointments tab from navbar
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('tab') === 'appointments') {
-            setActiveMenu('appointments');
-        }
+        // Mặc định vào mục lịch hẹn
+        setActiveMenu('appointments');
     }, []);
 
     const loadMemberInfo = async () => {
@@ -70,18 +51,15 @@ const MemberDashboard = () => {
             let progressData = null;
             let streakData = {};
 
-            // Get user profile
             try {
-                const profileResponse = await axios.get('http://localhost:4000/api/user/profile', {
+                const profileResponse = await axios.get('http://smokeking.wibu.me:4000/api/user/profile', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (profileResponse.data.success) {
                     userProfile = profileResponse.data.data.userInfo;
                 }
             } catch (profileError) {
-                console.error('Failed to load user profile:', profileError.response?.data?.message);
-                // Use fallback user data only if profile fails
+                console.error('Lỗi tải profile:', profileError.response?.data?.message);
                 userProfile = {
                     id: 1,
                     firstName: 'Member',
@@ -91,18 +69,15 @@ const MemberDashboard = () => {
                 };
             }
 
-            // Get progress data 
             try {
-                const progressResponse = await axios.get('http://localhost:4000/api/progress/summary', {
+                const progressResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/summary', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (progressResponse.data.success) {
                     progressData = progressResponse.data.data;
                 }
             } catch (progressError) {
-                console.error('Failed to load progress data:', progressError.response?.data?.message);
-                // Set empty progress data if API fails
+                console.error('Lỗi tải dữ liệu tiến trình:', progressError.response?.data?.message);
                 progressData = {
                     SmokeFreeDays: 0,
                     CigarettesNotSmoked: 0,
@@ -111,21 +86,18 @@ const MemberDashboard = () => {
                 };
             }
 
-            // Get streak information
             try {
-                const streakResponse = await axios.get('http://localhost:4000/api/progress/streak', {
+                const streakResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/streak', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (streakResponse.data.success) {
                     streakData = streakResponse.data.data;
                 }
             } catch (streakError) {
-                console.error('Failed to load streak data:', streakError.response?.data?.message);
+                console.error('Lỗi tải dữ liệu streak:', streakError.response?.data?.message);
                 streakData = { currentStreak: 0, longestStreak: 0 };
             }
 
-            // Set member info with real data
             if (userProfile && progressData) {
                 setMemberInfo({
                     id: userProfile.id,
@@ -143,8 +115,7 @@ const MemberDashboard = () => {
                     }
                 });
             } else {
-                // Only use fallback if both API calls fail
-                console.warn('Using fallback member data - API calls failed');
+                console.warn('Dùng dữ liệu mặc định - lỗi gọi API');
                 setMemberInfo({
                     id: 1,
                     firstName: 'Member',
@@ -163,7 +134,7 @@ const MemberDashboard = () => {
             }
 
         } catch (error) {
-            console.error('Error loading member info:', error);
+            console.error('Lỗi khi tải thông tin:', error);
             message.error('Không thể tải thông tin thành viên');
         } finally {
             setLoading(false);
@@ -175,23 +146,11 @@ const MemberDashboard = () => {
             key: 'appointments',
             icon: <CalendarOutlined />,
             label: 'Lịch hẹn tư vấn',
-        },
-        {
-            key: 'progress',
-            icon: <BarChartOutlined />,
-            label: 'Tiến trình cai thuốc',
-        },
+        }
     ];
 
     const renderContent = () => {
-        switch (activeMenu) {
-            case 'appointments':
-                return <Appointments />;
-            case 'progress':
-                return <ProgressTracking />;
-            default:
-                return <Appointments />;
-        }
+        return <Appointments />;
     };
 
     if (loading) {
@@ -213,7 +172,6 @@ const MemberDashboard = () => {
                             boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
                         }}
                     >
-                        {/* Member Stats */}
                         {memberInfo?.smokingStatus && (
                             <Card
                                 style={{
@@ -242,7 +200,6 @@ const MemberDashboard = () => {
                                         />
                                     </Col>
                                     <Col span={24}>
-                                        {/* Use unified SavingsDisplay component */}
                                         <SavingsDisplay
                                             title="Tiền tiết kiệm"
                                             displayType="money"
@@ -280,4 +237,4 @@ const MemberDashboard = () => {
     );
 };
 
-export default MemberDashboard; 
+export default MemberDashboard;

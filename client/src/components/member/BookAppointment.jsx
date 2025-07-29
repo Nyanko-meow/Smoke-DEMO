@@ -53,7 +53,7 @@ const BookAppointment = () => {
             setMembershipLoading(true);
             const token = localStorage.getItem('token');
 
-            const response = await axios.get('http://localhost:4000/api/membership/current', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/membership/current', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -111,7 +111,7 @@ const BookAppointment = () => {
                 return;
             }
 
-            const response = await axios.get('http://localhost:4000/api/user/assigned-coach', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/user/assigned-coach', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -154,7 +154,7 @@ const BookAppointment = () => {
     const loadMembershipInfo = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:4000/api/user/status', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/user/status', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -193,7 +193,7 @@ const BookAppointment = () => {
                 notes: values.notes || ''
             });
 
-            const response = await axios.post('http://localhost:4000/api/chat/appointment', {
+            const response = await axios.post('http://smokeking.wibu.me:4000/api/chat/appointment', {
                 receiverId: assignedCoach.id,
                 appointmentDate: appointmentDateTime,
                 duration: parseInt(values.duration),

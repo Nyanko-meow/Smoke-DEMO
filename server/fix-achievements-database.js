@@ -1,8 +1,8 @@
 const sql = require('mssql');
 
 const config = {
-    server: 'NGOCTAM',
-    database: 'SMOKEKING5',
+    server: 'NYANKO',
+    database: 'SMOKEKING',
     options: {
         encrypt: false,
         trustServerCertificate: true
@@ -11,7 +11,7 @@ const config = {
         type: 'default',
         options: {
             userName: 'sa',
-            password: '123'  // Use correct password from config
+            password: 'AkoTamaki2002'  // Use correct password from config
         }
     }
 };

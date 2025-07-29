@@ -41,7 +41,7 @@ const MemberList = ({ onStartConversation, existingConversations = [] }) => {
             const token = localStorage.getItem('token') || localStorage.getItem('coachToken');
 
             const response = await axios.get(
-                'http://localhost:4000/api/chat/coach/members',
+                'http://smokeking.wibu.me:4000/api/chat/coach/members',
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -66,7 +66,7 @@ const MemberList = ({ onStartConversation, existingConversations = [] }) => {
             const token = localStorage.getItem('token') || localStorage.getItem('coachToken');
 
             const response = await axios.post(
-                'http://localhost:4000/api/chat/coach/start-conversation',
+                'http://smokeking.wibu.me:4000/api/chat/coach/start-conversation',
                 { memberId },
                 {
                     headers: {

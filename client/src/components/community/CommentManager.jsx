@@ -69,7 +69,7 @@ const CommentManager = ({ comments, setComments, postId }) => {
 
         setUpdating(true);
         try {
-            const response = await axios.put(`http://localhost:4000/api/community/comments/${commentId}`, {
+            const response = await axios.put(`http://smokeking.wibu.me:4000/api/community/comments/${commentId}`, {
                 content: editText.trim()
             }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -112,7 +112,7 @@ const CommentManager = ({ comments, setComments, postId }) => {
 
     const handleDeleteComment = async (commentId) => {
         try {
-            const response = await axios.delete(`http://localhost:4000/api/community/comments/${commentId}`, {
+            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/community/comments/${commentId}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
 

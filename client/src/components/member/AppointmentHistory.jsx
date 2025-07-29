@@ -81,7 +81,7 @@ const AppointmentHistory = () => {
             setMembershipLoading(true);
             const token = localStorage.getItem('token');
 
-            const response = await axios.get('http://localhost:4000/api/membership/current', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/membership/current', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -132,7 +132,7 @@ const AppointmentHistory = () => {
             setLoading(true);
             const token = localStorage.getItem('token');
 
-            const response = await axios.get('http://localhost:4000/api/chat/appointments', {
+            const response = await axios.get('http://smokeking.wibu.me:4000/api/chat/appointments', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -154,7 +154,7 @@ const AppointmentHistory = () => {
 
             console.log('🚫 Cancelling appointment:', appointmentId);
 
-            const response = await axios.post(`http://localhost:4000/api/chat/appointments/${appointmentId}/cancel`, {}, {
+            const response = await axios.post(`http://smokeking.wibu.me:4000/api/chat/appointments/${appointmentId}/cancel`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

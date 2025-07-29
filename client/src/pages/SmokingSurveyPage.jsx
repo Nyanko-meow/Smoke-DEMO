@@ -9,7 +9,7 @@ const { Option } = Select;
 
 // Create axios instance with defaults
 const api = axios.create({
-    baseURL: 'http://localhost:4000', // Use direct server URL
+    baseURL: '', // Use relative path for proxy
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -117,7 +117,7 @@ const SmokingSurveyPage = () => {
             }
 
             // Use the authenticated endpoint that uses the correct user ID
-            const response = await axios.post('http://localhost:4000/api/survey-questions/answers',
+            const response = await axios.post('/api/survey-questions/answers',
                 { answers },
                 {
                     headers: {
