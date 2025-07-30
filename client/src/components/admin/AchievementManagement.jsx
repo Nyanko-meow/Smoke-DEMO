@@ -147,7 +147,7 @@ const AchievementManagement = () => {
                 throw new Error('Không tìm thấy token admin. Vui lòng đăng nhập lại.');
             }
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/achievements/public');
+            const response = await axios.get('http://localhost:4000/api/achievements/public');
             console.log('📊 Achievements response:', response.data);
 
             if (response.data.success) {
@@ -178,7 +178,7 @@ const AchievementManagement = () => {
                 return;
             }
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/users', {
+            const response = await axios.get('http://localhost:4000/api/admin/users', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -201,7 +201,7 @@ const AchievementManagement = () => {
             const token = localStorage.getItem('adminToken');
 
             // Get basic achievement stats
-            const achievementResponse = await axios.get('http://smokeking.wibu.me:4000/api/achievements/public');
+            const achievementResponse = await axios.get('http://localhost:4000/api/achievements/public');
             const achievements = achievementResponse.data.data || [];
 
             // Calculate stats (mock for now - you can implement proper endpoints)
@@ -267,7 +267,7 @@ const AchievementManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.post('http://smokeking.wibu.me:4000/api/achievements', {
+            const response = await axios.post('http://localhost:4000/api/achievements', {
                 name: values.name,
                 description: values.description,
                 iconURL: values.iconUrl,
@@ -301,7 +301,7 @@ const AchievementManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.put(`http://smokeking.wibu.me:4000/api/achievements/${selectedAchievement.AchievementID}`, {
+            const response = await axios.put(`http://localhost:4000/api/achievements/${selectedAchievement.AchievementID}`, {
                 name: values.name,
                 description: values.description,
                 iconURL: values.iconUrl,
@@ -336,7 +336,7 @@ const AchievementManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/achievements/${achievementId}`, {
+            const response = await axios.delete(`http://localhost:4000/api/achievements/${achievementId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -362,7 +362,7 @@ const AchievementManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.post(`http://smokeking.wibu.me:4000/api/admin/reset-user-achievements`, {
+            const response = await axios.post(`http://localhost:4000/api/admin/reset-user-achievements`, {
                 userId: selectedUser
             }, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -386,7 +386,7 @@ const AchievementManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.post(`http://smokeking.wibu.me:4000/api/admin/reset-all-achievements`, {}, {
+            const response = await axios.post(`http://localhost:4000/api/admin/reset-all-achievements`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -406,7 +406,7 @@ const AchievementManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.get(`http://smokeking.wibu.me:4000/api/admin/user-achievements/${userId}`, {
+            const response = await axios.get(`http://localhost:4000/api/admin/user-achievements/${userId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

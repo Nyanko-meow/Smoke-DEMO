@@ -90,7 +90,7 @@ const MemberProgressTracking = ({ memberId, onBack }) => {
             const token = localStorage.getItem('coachToken');
 
             const response = await axios.get(
-                `http://smokeking.wibu.me:4000/api/coach/members/${memberId}/progress?days=${selectedDays}`,
+                `http://localhost:4000/api/coach/members/${memberId}/progress?days=${selectedDays}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`

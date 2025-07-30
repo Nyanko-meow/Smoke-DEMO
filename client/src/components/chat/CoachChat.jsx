@@ -63,7 +63,7 @@ const CoachChat = ({ onBack }) => {
             console.log('🔍 Loading members for coach chat...');
 
             const response = await axios.get(
-                'http://smokeking.wibu.me:4000/api/chat/coach/members',
+                'http://localhost:4000/api/chat/coach/members',
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -109,7 +109,7 @@ const CoachChat = ({ onBack }) => {
 
             // Create new conversation
             const response = await axios.post(
-                'http://smokeking.wibu.me:4000/api/chat/coach/start-conversation',
+                'http://localhost:4000/api/chat/coach/start-conversation',
                 { memberId: member.UserID },
                 {
                     headers: {

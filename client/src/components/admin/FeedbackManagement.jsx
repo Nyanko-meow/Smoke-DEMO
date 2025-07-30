@@ -67,7 +67,7 @@ const FeedbackManagement = () => {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/feedbacks', {
+            const response = await axios.get('http://localhost:4000/api/admin/feedbacks', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -87,7 +87,7 @@ const FeedbackManagement = () => {
     const loadCoaches = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/coaches', {
+            const response = await axios.get('http://localhost:4000/api/admin/coaches', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -102,7 +102,7 @@ const FeedbackManagement = () => {
     const loadFeedbackStats = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/feedback-stats', {
+            const response = await axios.get('http://localhost:4000/api/admin/feedback-stats', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -139,7 +139,7 @@ const FeedbackManagement = () => {
         try {
             const token = localStorage.getItem('adminToken');
 
-            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/admin/feedbacks/${feedbackId}`, {
+            const response = await axios.delete(`http://localhost:4000/api/admin/feedbacks/${feedbackId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

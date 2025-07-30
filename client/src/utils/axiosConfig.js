@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Define API URL for export - use relative path for proxy
-export const API_URL = '/api';
+// Define API URL for export
+export const API_URL = 'http://localhost:4000/api';
 
 // Create axios instance
 const axiosInstance = axios.create({

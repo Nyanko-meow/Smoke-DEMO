@@ -70,7 +70,7 @@ const AchievementManagementSimple = () => {
             setLoading(true);
             setError(null);
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/achievements/public');
+            const response = await axios.get('http://localhost:4000/api/achievements/public');
 
             if (response.data.success) {
                 setAchievements(response.data.data || []);
@@ -92,7 +92,7 @@ const AchievementManagementSimple = () => {
     const loadUsers = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/users', {
+            const response = await axios.get('http://localhost:4000/api/admin/users', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -109,7 +109,7 @@ const AchievementManagementSimple = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get(`http://smokeking.wibu.me:4000/api/admin/user-achievements/${userId}`, {
+            const response = await axios.get(`http://localhost:4000/api/admin/user-achievements/${userId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -157,8 +157,8 @@ const AchievementManagementSimple = () => {
             console.log('🔑 Admin token:', token ? 'Found' : 'Not found');
 
             const url = editingAchievement
-                ? `http://smokeking.wibu.me:4000/api/achievements/${editingAchievement.AchievementID}`
-                : 'http://smokeking.wibu.me:4000/api/achievements';
+                ? `http://localhost:4000/api/achievements/${editingAchievement.AchievementID}`
+                : 'http://localhost:4000/api/achievements';
 
             const method = editingAchievement ? 'put' : 'post';
 
@@ -212,7 +212,7 @@ const AchievementManagementSimple = () => {
     const handleDeleteAchievement = async (achievementId) => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/achievements/${achievementId}`, {
+            const response = await axios.delete(`http://localhost:4000/api/achievements/${achievementId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -237,7 +237,7 @@ const AchievementManagementSimple = () => {
         try {
             setResetLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.post('http://smokeking.wibu.me:4000/api/admin/reset-user-achievements', {
+            const response = await axios.post('http://localhost:4000/api/admin/reset-user-achievements', {
                 userId: userId
             }, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -261,7 +261,7 @@ const AchievementManagementSimple = () => {
         try {
             setResetLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.post('http://smokeking.wibu.me:4000/api/admin/reset-all-achievements', {}, {
+            const response = await axios.post('http://localhost:4000/api/admin/reset-all-achievements', {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

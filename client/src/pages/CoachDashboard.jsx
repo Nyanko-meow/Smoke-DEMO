@@ -157,7 +157,7 @@ const CoachDashboard = () => {
 
     const loadCoachProfile = useCallback(async (token) => {
         try {
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/profile', {
+            const response = await axios.get('http://localhost:4000/api/coach/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -179,7 +179,7 @@ const CoachDashboard = () => {
         try {
             console.log(`CoachDashboard render #${renderCount.current} - Loading members...`);
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/members', {
+            const response = await axios.get('http://localhost:4000/api/coach/members', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -214,7 +214,7 @@ const CoachDashboard = () => {
 
     const loadStats = useCallback(async (token) => {
         try {
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/stats', {
+            const response = await axios.get('http://localhost:4000/api/coach/stats', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -251,7 +251,7 @@ const CoachDashboard = () => {
             setMemberDetailsLoading(true);
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.get(`http://smokeking.wibu.me:4000/api/coach/members/${memberId}/details`, {
+            const response = await axios.get(`http://localhost:4000/api/coach/members/${memberId}/details`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -285,7 +285,7 @@ const CoachDashboard = () => {
             setSurveyLoading(true);
 
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get(`http://smokeking.wibu.me:4000/api/coach/member-surveys/${member.id}`, {
+            const response = await axios.get(`http://localhost:4000/api/coach/member-surveys/${member.id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -348,7 +348,7 @@ const CoachDashboard = () => {
                 try {
                     const token = localStorage.getItem('coachToken');
                     if (token) {
-                        await axios.post('http://smokeking.wibu.me:4000/api/coach/logout', {}, {
+                        await axios.post('http://localhost:4000/api/coach/logout', {}, {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             },
@@ -419,7 +419,7 @@ const CoachDashboard = () => {
         try {
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.put('http://smokeking.wibu.me:4000/api/coach/profile', values, {
+            const response = await axios.put('http://localhost:4000/api/coach/profile', values, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

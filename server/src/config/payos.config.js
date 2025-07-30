@@ -16,7 +16,7 @@ const payOS = new PayOS(
 const PAYOS_CONFIG = {
     RETURN_URL: process.env.PAYOS_RETURN_URL || "http://localhost:3000/membership",
     CANCEL_URL: process.env.PAYOS_CANCEL_URL || "http://localhost:3000/payment-failed",
-    WEBHOOK_URL: process.env.PAYOS_WEBHOOK_URL || "http://smokeking.wibu.me:4000/api/payment/payos/webhook"
+    WEBHOOK_URL: process.env.PAYOS_WEBHOOK_URL || "http://localhost:4000/api/payment/payos/webhook"
 };
 
 module.exports = { 

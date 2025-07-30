@@ -68,7 +68,7 @@ const CoachSurveyView = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/member-surveys', {
+            const response = await axios.get('http://localhost:4000/api/coach/member-surveys', {
                 headers: { Authorization: `Bearer ${token}` },
                 params: {
                     page: pagination.current,
@@ -108,7 +108,7 @@ const CoachSurveyView = () => {
     const fetchSurveyOverview = async () => {
         try {
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/survey-overview', {
+            const response = await axios.get('http://localhost:4000/api/coach/survey-overview', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -128,7 +128,7 @@ const CoachSurveyView = () => {
             const token = localStorage.getItem('coachToken');
             console.log('🔑 Using token:', token ? 'Token exists' : 'No token found');
 
-            const url = `http://smokeking.wibu.me:4000/api/coach/member-surveys/${memberId}`;
+            const url = `http://localhost:4000/api/coach/member-surveys/${memberId}`;
             console.log('🌐 Requesting URL:', url);
 
             const response = await axios.get(url, {

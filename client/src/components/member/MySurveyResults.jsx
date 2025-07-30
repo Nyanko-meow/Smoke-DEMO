@@ -44,7 +44,7 @@ const MySurveyResults = () => {
                 return;
             }
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/survey-questions/my-survey-details', {
+            const response = await axios.get('http://localhost:4000/api/survey-questions/my-survey-details', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

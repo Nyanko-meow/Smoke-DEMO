@@ -51,7 +51,7 @@ const CommunityModeration = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/community-posts', {
+            const response = await axios.get('http://localhost:4000/api/admin/community-posts', {
                 headers: { 'Authorization': `Bearer ${token}` },
                 withCredentials: true
             });
@@ -70,7 +70,7 @@ const CommunityModeration = () => {
     const loadCommunityComments = async () => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/admin/community-comments', {
+            const response = await axios.get('http://localhost:4000/api/admin/community-comments', {
                 headers: { 'Authorization': `Bearer ${token}` },
                 withCredentials: true
             });
@@ -88,7 +88,7 @@ const CommunityModeration = () => {
         try {
             setDeletingPostId(postId);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/admin/community-posts/${postId}`, {
+            const response = await axios.delete(`http://localhost:4000/api/admin/community-posts/${postId}`, {
                 headers: { 'Authorization': `Bearer ${token}` },
                 withCredentials: true
             });
@@ -109,7 +109,7 @@ const CommunityModeration = () => {
         try {
             setDeletingCommentId(commentId);
             const token = localStorage.getItem('adminToken');
-            const response = await axios.delete(`http://smokeking.wibu.me:4000/api/admin/community-comments/${commentId}`, {
+            const response = await axios.delete(`http://localhost:4000/api/admin/community-comments/${commentId}`, {
                 headers: { 'Authorization': `Bearer ${token}` },
                 withCredentials: true
             });

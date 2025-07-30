@@ -54,7 +54,7 @@ const ConversationList = ({ onSelectConversation, selectedConversationId }) => {
             }
 
             const response = await axios.get(
-                'http://smokeking.wibu.me:4000/api/chat/coach/conversations',
+                'http://localhost:4000/api/chat/coach/conversations',
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`

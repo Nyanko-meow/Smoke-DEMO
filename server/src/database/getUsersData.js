@@ -10,8 +10,8 @@ const sql = require('mssql');
 // Database configuration with fallbacks
 const config = {
     user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || '12345',
-    server: process.env.DB_SERVER || 'localhost',
+    password: process.env.DB_PASSWORD || 'AkoTamaki2002',
+    server: process.env.DB_SERVER || 'NYANKO',
     database: process.env.DB_NAME || 'SMOKEKING',
     options: {
         trustServerCertificate: true,
