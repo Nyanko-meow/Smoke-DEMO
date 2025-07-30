@@ -154,14 +154,14 @@ const ProgressTracking = () => {
             const token = localStorage.getItem('memberToken') || localStorage.getItem('token');
 
             // Load progress summary data
-            const summaryResponse = await axios.get('http://localhost:4000/api/progress/summary', {
+            const summaryResponse = await axios.get('https://smokeking.wibu.me:4000/api/progress/summary', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
             // Load progress range data (last 30 days)
-            const rangeResponse = await axios.get('http://localhost:4000/api/progress/range', {
+            const rangeResponse = await axios.get('https://smokeking.wibu.me:4000/api/progress/range', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -172,7 +172,7 @@ const ProgressTracking = () => {
             });
 
             // Load streak information
-            const streakResponse = await axios.get('http://localhost:4000/api/progress/streak', {
+            const streakResponse = await axios.get('https://smokeking.wibu.me:4000/api/progress/streak', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

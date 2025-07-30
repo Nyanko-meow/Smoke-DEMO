@@ -109,7 +109,7 @@ const TokenDebugger = () => {
             message.success('Đã clear tất cả auth data cũ');
 
             // 2. Get new token for member
-            const response = await fetch('http://localhost:4000/api/test-login', {
+            const response = await fetch('https://smokeking.wibu.me:4000/api/test-login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -154,7 +154,7 @@ const TokenDebugger = () => {
             console.log('Testing new token...');
 
             // Test with coach feedback API
-            const testResponse = await fetch('http://localhost:4000/api/coach/feedback', {
+            const testResponse = await fetch('https://smokeking.wibu.me:4000/api/coach/feedback', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

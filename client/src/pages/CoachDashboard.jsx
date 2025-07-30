@@ -157,7 +157,7 @@ const CoachDashboard = () => {
 
     const loadCoachProfile = useCallback(async (token) => {
         try {
-            const response = await axios.get('http://localhost:4000/api/coach/profile', {
+            const response = await axios.get('https://smokeking.wibu.me:4000/api/coach/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },

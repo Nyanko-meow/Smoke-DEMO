@@ -35,7 +35,7 @@ const { TextArea } = Input;
 
 // Create axios instance with defaults
 const api = axios.create({
-    baseURL: 'http://localhost:4000',
+    baseURL: '', // Use relative path for proxy
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'

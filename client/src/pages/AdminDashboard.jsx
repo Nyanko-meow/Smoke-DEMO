@@ -165,7 +165,7 @@ const AdminDashboard = () => {
 
     const loadDashboardData = async (token) => {
         try {
-            const response = await axios.get('http://localhost:4000/api/admin/dashboard-stats', {
+                            const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/dashboard-stats', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -234,7 +234,7 @@ const AdminDashboard = () => {
                 try {
                     const token = localStorage.getItem('adminToken');
                     if (token) {
-                        await axios.post('http://localhost:4000/api/admin/logout', {}, {
+                        await axios.post('https://smokeking.wibu.me:4000/api/admin/logout', {}, {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             },
@@ -273,7 +273,7 @@ const AdminDashboard = () => {
                 return;
             }
 
-            const response = await axios.get('http://localhost:4000/api/admin/profile', {
+            const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -321,7 +321,7 @@ const AdminDashboard = () => {
     const handleUpdateProfile = async (values) => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.put('http://localhost:4000/api/admin/profile', values, {
+            const response = await axios.put('https://smokeking.wibu.me:4000/api/admin/profile', values, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -354,7 +354,7 @@ const AdminDashboard = () => {
     const handleChangePassword = async (values) => {
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await axios.put('http://localhost:4000/api/admin/change-password', values, {
+                            const response = await axios.put('https://smokeking.wibu.me:4000/api/admin/change-password', values, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -1078,7 +1078,7 @@ const AdminDashboard = () => {
 
                 console.log('Loading blog posts with token:', token.substring(0, 20) + '...');
 
-                const response = await axios.get('http://localhost:4000/api/admin/blog-posts', {
+                const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/blog-posts', {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
                 });
@@ -1120,7 +1120,7 @@ const AdminDashboard = () => {
 
                 console.log('Loading blog comments...');
 
-                const response = await axios.get('http://localhost:4000/api/admin/blog-comments', {
+                const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/blog-comments', {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
                 });
@@ -1149,6 +1149,10 @@ const AdminDashboard = () => {
         };
 
         useEffect(() => {
+            loadBlogPosts();
+        }, []);
+
+        useEffect(() => {
             if (activeTab === 'posts') {
                 loadBlogPosts();
             } else if (activeTab === 'comments') {
@@ -1160,7 +1164,7 @@ const AdminDashboard = () => {
         const handleCreatePost = async (values) => {
             try {
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.post('http://localhost:4000/api/admin/blog-posts', {
+                const response = await axios.post('https://smokeking.wibu.me:4000/api/admin/blog-posts', {
                     title: values.title,
                     content: values.content,
                     metaDescription: values.metaDescription,
@@ -1186,7 +1190,7 @@ const AdminDashboard = () => {
         const handleUpdatePost = async (values) => {
             try {
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.put(`http://localhost:4000/api/admin/blog-posts/${selectedPost.PostID}`, {
+                const response = await axios.put(`https://smokeking.wibu.me:4000/api/admin/blog-posts/${selectedPost.PostID}`, {
                     title: values.title,
                     content: values.content,
                     metaDescription: values.metaDescription,
@@ -1214,7 +1218,7 @@ const AdminDashboard = () => {
             try {
                 setLoading(true); // Hiển thị loading state
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.delete(`http://localhost:4000/api/admin/blog-posts/${postId}`, {
+                const response = await axios.delete(`https://smokeking.wibu.me:4000/api/admin/blog-posts/${postId}`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
                 });
@@ -1245,7 +1249,7 @@ const AdminDashboard = () => {
                     return;
                 }
 
-                const response = await axios.patch(`http://localhost:4000/api/admin/blog-posts/${postId}/status`, {
+                const response = await axios.patch(`https://smokeking.wibu.me:4000/api/admin/blog-posts/${postId}/status`, {
                     status: status
                 }, {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -1473,7 +1477,7 @@ const AdminDashboard = () => {
             try {
                 setCommentsLoading(true); // Hiển thị loading state cho comments
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.patch(`http://localhost:4000/api/admin/blog-comments/${commentId}/status`, {
+                const response = await axios.patch(`https://smokeking.wibu.me:4000/api/admin/blog-comments/${commentId}/status`, {
                     status: status
                 }, {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -2008,11 +2012,11 @@ const AdminDashboard = () => {
                 console.log(`CoachManagement render #${renderCount.current} - Loading data...`);
 
                 const [coachesResponse, membersResponse] = await Promise.all([
-                    axios.get('http://localhost:4000/api/admin/coaches', {
+                    axios.get('https://smokeking.wibu.me:4000/api/admin/coaches', {
                         headers: { 'Authorization': `Bearer ${token}` },
                         withCredentials: true
                     }),
-                    axios.get('http://localhost:4000/api/admin/members', {
+                    axios.get('https://smokeking.wibu.me:4000/api/admin/members', {
                         headers: { 'Authorization': `Bearer ${token}` },
                         withCredentials: true
                     })
@@ -2078,7 +2082,7 @@ const AdminDashboard = () => {
         const handleToggleCoachStatus = async (coachId, currentStatus) => {
             try {
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.patch(`http://localhost:4000/api/admin/coaches/${coachId}/toggle-status`, {}, {
+                const response = await axios.patch(`https://smokeking.wibu.me:4000/api/admin/coaches/${coachId}/toggle-status`, {}, {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
                 });
@@ -2105,7 +2109,7 @@ const AdminDashboard = () => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.post('http://localhost:4000/api/admin/assign-coach', {
+                const response = await axios.post('https://smokeking.wibu.me:4000/api/admin/assign-coach', {
                     memberID: values.memberID,
                     coachID: selectedCoach.UserID,
                     reason: values.reason
@@ -2136,7 +2140,7 @@ const AdminDashboard = () => {
         const handleRemoveAssignment = async (memberID) => {
             try {
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.delete(`http://localhost:4000/api/admin/assign-coach/${memberID}`, {
+                const response = await axios.delete(`https://smokeking.wibu.me:4000/api/admin/assign-coach/${memberID}`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
                 });
@@ -2160,7 +2164,7 @@ const AdminDashboard = () => {
 
                 // Load additional coach details if needed
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.get(`http://localhost:4000/api/admin/coaches/${coach.UserID}/details`, {
+                const response = await axios.get(`https://smokeking.wibu.me:4000/api/admin/coaches/${coach.UserID}/details`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                     withCredentials: true
                 });
@@ -2791,7 +2795,7 @@ const AdminDashboard = () => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.get('http://localhost:4000/api/admin/plans', {
+                const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/plans', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },
@@ -2836,7 +2840,7 @@ const AdminDashboard = () => {
                 onOk: async () => {
                     try {
                         const token = localStorage.getItem('adminToken');
-                        const response = await axios.delete(`http://localhost:4000/api/admin/plans/${planId}`, {
+                        const response = await axios.delete(`https://smokeking.wibu.me:4000/api/admin/plans/${planId}`, {
                             headers: {
                                 'Authorization': `Bearer ${token}`
                             },
@@ -2867,7 +2871,7 @@ const AdminDashboard = () => {
 
                 if (editingPlan) {
                     // Update existing plan
-                    response = await axios.put(`http://localhost:4000/api/admin/plans/${editingPlan.PlanID}`, values, {
+                    response = await axios.put(`https://smokeking.wibu.me:4000/api/admin/plans/${editingPlan.PlanID}`, values, {
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
@@ -2876,7 +2880,7 @@ const AdminDashboard = () => {
                     });
                 } else {
                     // Create new plan
-                    response = await axios.post('http://localhost:4000/api/admin/plans', values, {
+                    response = await axios.post('https://smokeking.wibu.me:4000/api/admin/plans', values, {
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
@@ -3132,7 +3136,7 @@ const AdminDashboard = () => {
                 console.log(`PaymentsManagement render #${renderCount.current} - Loading pending payments...`);
 
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.get('http://localhost:4000/api/admin/pending-payments', {
+                const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/pending-payments', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },
@@ -3170,7 +3174,7 @@ const AdminDashboard = () => {
         const loadConfirmationHistory = useCallback(async () => {
             try {
                 const token = localStorage.getItem('adminToken');
-                const response = await axios.get('http://localhost:4000/api/admin/payment-confirmations', {
+                const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/payment-confirmations', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },
@@ -3232,7 +3236,7 @@ const AdminDashboard = () => {
             try {
                 const token = localStorage.getItem('adminToken');
                 const response = await axios.post(
-                    `http://localhost:4000/api/admin/confirm-payment/${paymentId}`,
+                    `https://smokeking.wibu.me:4000/api/admin/confirm-payment/${paymentId}`,
                     { notes },
                     {
                         headers: {
@@ -3262,7 +3266,7 @@ const AdminDashboard = () => {
             try {
                 const token = localStorage.getItem('adminToken');
                 const response = await axios.post(
-                    `http://localhost:4000/api/admin/reject-payment/${paymentId}`,
+                    `https://smokeking.wibu.me:4000/api/admin/reject-payment/${paymentId}`,
                     { notes: reason },
                     {
                         headers: {
@@ -3292,7 +3296,7 @@ const AdminDashboard = () => {
             try {
                 const token = localStorage.getItem('adminToken');
                 const response = await axios.post(
-                    `http://localhost:4000/api/admin/confirm-cancellation/${cancellationId}`,
+                    `https://smokeking.wibu.me:4000/api/admin/confirm-cancellation/${cancellationId}`,
                     {},
                     {
                         headers: {
@@ -3947,7 +3951,7 @@ const AdminDashboard = () => {
                     year: selectedYear
                 });
 
-                const response = await axios.get('http://localhost:4000/api/admin/reports', {
+                const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/reports', {
                     headers: { 'Authorization': `Bearer ${token}` },
                     params: {
                         range: dateRange,
@@ -4020,7 +4024,7 @@ const AdminDashboard = () => {
 
                 try {
                     // Try server-side export first
-                    const response = await axios.get('http://localhost:4000/api/admin/reports/export', {
+                    const response = await axios.get('https://smokeking.wibu.me:4000/api/admin/reports/export', {
                         headers: { 'Authorization': `Bearer ${token}` },
                         params: {
                             range: dateRange,

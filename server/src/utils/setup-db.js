@@ -43,7 +43,7 @@ const createEnvFile = async () => {
 
         // Ask for database connection details
         const dbUser = await askQuestion('Database username', 'sa');
-        const dbPassword = await askQuestion('Database password', 'AkoTamaki2002');
+        const dbPassword = await askQuestion('Database password', '12345');
         const dbServer = await askQuestion('Database server', 'localhost');
         const dbDatabase = await askQuestion('Database name', 'SMOKEKING');
         const dbPort = await askQuestion('Database port', '1433');
