@@ -59,7 +59,7 @@ const CoachFeedbackView = () => {
             setLoading(true);
             const token = localStorage.getItem('coachToken');
 
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/coach/feedback', {
+            const response = await axios.get('http://localhost:4000/api/coach/feedback', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },

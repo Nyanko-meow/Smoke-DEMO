@@ -52,7 +52,7 @@ const MemberDashboard = () => {
             let streakData = {};
 
             try {
-                const profileResponse = await axios.get('http://smokeking.wibu.me:4000/api/user/profile', {
+                const profileResponse = await axios.get('http://localhost:4000/api/user/profile', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (profileResponse.data.success) {
@@ -70,7 +70,7 @@ const MemberDashboard = () => {
             }
 
             try {
-                const progressResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/summary', {
+                const progressResponse = await axios.get('http://localhost:4000/api/progress/summary', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (progressResponse.data.success) {
@@ -87,7 +87,7 @@ const MemberDashboard = () => {
             }
 
             try {
-                const streakResponse = await axios.get('http://smokeking.wibu.me:4000/api/progress/streak', {
+                const streakResponse = await axios.get('http://localhost:4000/api/progress/streak', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (streakResponse.data.success) {

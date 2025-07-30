@@ -42,7 +42,7 @@ const CoachFeedback = () => {
             const token = localStorage.getItem('token');
 
             // Lấy appointments đã completed và chưa có feedback
-            const response = await axios.get('http://smokeking.wibu.me:4000/api/chat/appointments/completed', {
+            const response = await axios.get('http://localhost:4000/api/chat/appointments/completed', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -85,7 +85,7 @@ const CoachFeedback = () => {
 
             console.log('📝 Submitting feedback:', feedbackData);
 
-            const response = await axios.post('http://smokeking.wibu.me:4000/api/chat/feedback', feedbackData, {
+            const response = await axios.post('http://localhost:4000/api/chat/feedback', feedbackData, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

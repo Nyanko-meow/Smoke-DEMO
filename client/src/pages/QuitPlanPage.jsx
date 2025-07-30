@@ -56,7 +56,7 @@ const { Step } = Steps;
 
 // Create axios instance with defaults
 const api = axios.create({
-    baseURL: '', // Use relative path for proxy
+    baseURL: 'http://localhost:4000',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
