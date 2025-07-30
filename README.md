@@ -175,10 +175,4 @@ For questions, bug reports, or feature requests, please open an issue on the [Gi
 
 ---
 
-## 📝 Changelog
-
-See `CHANGELOG.md` for release history and update notes.
-
----
-
 **© 2025 SWP391 - Group 7. All rights reserved.**
