@@ -55,7 +55,7 @@ smoking-cessation-platform/
 
 ```bash
 # Clone the repository
-git clone git@github.com:<your-username>/smoking-cessation-platform.git
+git clone https://github.com/Nyanko-meow/Smoke-DEMO
 cd smoking-cessation-platform
 
 # Install backend dependencies
@@ -93,7 +93,7 @@ cd ../client
 npm start
 ```
 
-- The backend will typically run on `http://localhost:5000`
+- The backend will typically run on `http://localhost:4000`
 - The frontend will run on `http://localhost:3000`
 
 ---
@@ -171,7 +171,7 @@ SOFTWARE.
 
 ## 📞 Support & Contact
 
-For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/<your-username>/smoking-cessation-platform) or contact the project maintainers.
+For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/Nyanko-meow/Smoke-DEMO) or contact the project maintainers.
 
 ---
 
