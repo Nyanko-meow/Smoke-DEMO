@@ -55,13 +55,9 @@ smoking-cessation-platform/
 
 ```bash
 # Clone the repository
-git clone git@github.com:<your-username>/smoking-cessation-platform.git
+git clone https://github.com/Nyanko-meow/Smoke-DEMO
 cd smoking-cessation-platform
 
-# Install all dependencies (recommended)
-npm run install-all
-
-# Or install separately:
 # Install backend dependencies
 cd server
 npm install
@@ -85,39 +81,8 @@ cp .env.example .env
 - Run the migration scripts in `/database` to set up tables and seed initial data.
 - Update your `/server/.env` with the correct database connection details.
 
-### Troubleshooting
-
-If you encounter connection issues:
-
-```bash
-# Test server connection
-npm run test-connection
-
-# Fix common issues automatically
-npm run fix-issues
-
-# Check troubleshooting guide
-cat TROUBLESHOOTING.md
-```
-
 ### Running Development Servers
 
-#### Option 1: Start Everything at Once (Recommended)
-```bash
-# Start both frontend and backend with one command
-npm start
-```
-
-#### Option 2: Start Separately
-```bash
-# Start the backend server
-npm run start-server
-
-# Start the frontend development server  
-npm run start-client
-```
-
-#### Option 3: Manual Start
 ```bash
 # Start the backend server
 cd server
@@ -128,7 +93,7 @@ cd ../client
 npm start
 ```
 
-- The backend will run on `http://localhost:4000`
+- The backend will typically run on `http://localhost:4000`
 - The frontend will run on `http://localhost:3000`
 
 ---
@@ -206,13 +171,7 @@ SOFTWARE.
 
 ## 📞 Support & Contact
 
-For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/<your-username>/smoking-cessation-platform) or contact the project maintainers.
-
----
-
-## 📝 Changelog
-
-See `CHANGELOG.md` for release history and update notes.
+For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/Nyanko-meow/Smoke-DEMO) or contact the project maintainers.
 
 ---
 
