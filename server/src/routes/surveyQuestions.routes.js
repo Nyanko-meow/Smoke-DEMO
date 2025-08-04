@@ -295,6 +295,9 @@ router.post('/answers', protect, async (req, res) => {
             }
         }
 
+        // Giới hạn FTND score tối đa là 10 điểm (chuẩn FTND)
+        totalScore = Math.min(totalScore, 10);
+        
         // Calculate addiction level
         let addictionLevel, addictionLevelDescription;
         if (totalScore >= 0 && totalScore <= 3) {

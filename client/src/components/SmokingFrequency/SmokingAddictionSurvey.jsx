@@ -193,7 +193,7 @@ const SmokingAddictionSurvey = () => {
         return (cigarettesPerDay / 20) * yearsSmoked;
     };
 
-    // Tính điểm FTND từ câu trả lời
+    // Tính điểm FTND từ câu trả lời (giới hạn tối đa 10 điểm - chuẩn FTND)
     const calculateFTNDScore = (answers) => {
         let totalScore = 0;
         
@@ -207,7 +207,7 @@ const SmokingAddictionSurvey = () => {
             }
         });
         
-        return totalScore;
+        return Math.min(totalScore, 10);
     };
 
     // Phân loại mức độ nghiện dựa trên điểm FTND
@@ -299,12 +299,13 @@ const SmokingAddictionSurvey = () => {
             // Lấy số điếu/ngày từ câu trả lời
             const cigarettesPerDay = getCigarettesPerDayFromAnswer(values.cigarettesPerDay);
             
-            // Tính toán các chỉ số
-            const packYear = calculatePackYear(cigarettesPerDay, values.yearsSmoked);
+            // Tính toán các chỉ số (format yearsSmoked thành integer)
+            const yearsSmoked = Math.floor(values.yearsSmoked || 5);
+            const packYear = calculatePackYear(cigarettesPerDay, yearsSmoked);
             const addictionLevel = getAddictionLevelByFTND(ftndScore);
             const successProbability = calculateSuccessProbability(
                 cigarettesPerDay,
-                values.yearsSmoked,
+                yearsSmoked,
                 packYear,
                 values.age,
                 values.motivation,
@@ -330,6 +331,7 @@ const SmokingAddictionSurvey = () => {
                 dailySavings: Math.round(savings.daily),
                 monthlySavings: Math.round(savings.monthly),
                 yearlySavings: Math.round(savings.yearly),
+                yearsSmoked, // Override với giá trị integer
                 submittedAt: new Date().toISOString()
             };
 
@@ -352,7 +354,7 @@ const SmokingAddictionSurvey = () => {
     const showResultsModal = () => {
         if (!surveyData) return;
 
-        const addictionLevel = getAddictionLevelByFTND(surveyData.ftndScore || 0);
+        const addictionLevel = getAddictionLevelByFTND(Math.min(surveyData.ftndScore || 0, 10));
         const selectedRange = CIGARETTE_PRICE_RANGES.find(range => range.id === surveyData.priceRangeId);
 
         Modal.info({
@@ -365,7 +367,7 @@ const SmokingAddictionSurvey = () => {
                             <Card size="small">
                                 <Title level={5}>📊 Điểm FTND</Title>
                                 <Text strong style={{ fontSize: '24px', color: '#1890ff' }}>
-                                    {surveyData.ftndScore || 0}/10
+                                    {Math.min(surveyData.ftndScore || 0, 10)}/10
                                 </Text>
                                 <br />
                                 <Text type="secondary">
@@ -381,7 +383,7 @@ const SmokingAddictionSurvey = () => {
                                 </Text>
                                 <br />
                                 <Text type="secondary">
-                                    Công thức: ({surveyData.cigarettesPerDayCalculated || 15} ÷ 20) × {surveyData.yearsSmoked} năm
+                                    Công thức: ({surveyData.cigarettesPerDayCalculated || 15} ÷ 20) × {Math.floor(surveyData.yearsSmoked || 0)} năm
                                 </Text>
                             </Card>
                         </Col>
@@ -528,16 +530,30 @@ const SmokingAddictionSurvey = () => {
                                 <Form.Item
                                     name="yearsSmoked"
                                     label="Số năm đã hút thuốc"
+                                    dependencies={['age']}
                                     rules={[
                                         { required: true, message: 'Vui lòng nhập số năm hút thuốc' },
-                                        { type: 'number', min: 0.5, max: 70, message: 'Số năm phải từ 0.5-70' }
+                                        { type: 'number', min: 1, max: 70, message: 'Số năm phải từ 1-70' },
+                                        ({ getFieldValue }) => ({
+                                            validator(_, value) {
+                                                const age = getFieldValue('age');
+                                                if (!value || !age) {
+                                                    return Promise.resolve();
+                                                }
+                                                if (value >= age) {
+                                                    return Promise.reject(new Error('Số năm hút thuốc phải nhỏ hơn tuổi của bạn!'));
+                                                }
+                                                return Promise.resolve();
+                                            },
+                                        }),
                                     ]}
                                 >
                                     <InputNumber
                                         style={{ width: '100%' }}
                                         placeholder="Ví dụ: 5"
                                         addonAfter="năm"
-                                        step={0.5}
+                                        step={1}
+                                        precision={0}
                                     />
                                 </Form.Item>
                             </Col>

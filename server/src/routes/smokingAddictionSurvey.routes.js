@@ -98,7 +98,7 @@ router.post('/', protect, async (req, res) => {
         await ensureTablesExist();
 
         const {
-            ftndScore,
+            ftndScore: rawFtndScore,
             cigarettesPerDayCalculated,
             packYear,
             addictionLevel,
@@ -116,6 +116,9 @@ router.post('/', protect, async (req, res) => {
             motivation,
             ...rawAnswers
         } = req.body;
+
+        // Giới hạn FTND score tối đa là 10 điểm (chuẩn FTND)
+        const ftndScore = Math.min(rawFtndScore || 0, 10);
 
         console.log('💾 Saving smoking addiction survey for user:', req.user.UserID);
         console.log('📊 Survey data received:', {
@@ -685,7 +688,13 @@ router.get('/my-results', protect, async (req, res) => {
             });
         }
 
-        const surveyResult = resultQuery.recordset[0];
+        const rawSurveyResult = resultQuery.recordset[0];
+        
+        // Giới hạn FTNDScore tối đa 10 điểm (chuẩn FTND) 
+        const surveyResult = {
+            ...rawSurveyResult,
+            FTNDScore: Math.min(rawSurveyResult.FTNDScore || 0, 10)
+        };
 
         // Get answers from SmokingAddictionSurveyAnswers
         const answersQuery = await pool.request()

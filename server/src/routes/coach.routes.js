@@ -3253,7 +3253,7 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
             FullName: `${member.FirstName} ${member.LastName}`,
             Avatar: member.Avatar,
             CreatedAt: member.CreatedAt,
-            FTNDScore: member.FTNDScore,
+            FTNDScore: Math.min(member.FTNDScore || 0, 10),
             AddictionLevel: member.AddictionLevel,
             SuccessProbability: member.SuccessProbability,
             MonthlySavings: member.MonthlySavings,
@@ -3367,7 +3367,13 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
             });
         }
 
-        const surveyData = surveyResult.recordset[0];
+        const rawSurveyData = surveyResult.recordset[0];
+        
+        // Giới hạn FTNDScore tối đa 10 điểm (chuẩn FTND)
+        const surveyData = {
+            ...rawSurveyData,
+            FTNDScore: Math.min(rawSurveyData.FTNDScore || 0, 10)
+        };
 
         console.log('📊 Found smoking addiction survey data:', {
             ResultID: surveyData.ResultID,

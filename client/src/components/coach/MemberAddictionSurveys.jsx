@@ -79,10 +79,10 @@ const renderDetailedUserInfo = (user) => {
                             <div style={{ 
                                 fontSize: '24px', 
                                 fontWeight: 'bold',
-                                color: user.FTNDScore <= 3 ? '#52c41a' : 
-                                       user.FTNDScore <= 6 ? '#faad14' : '#ff4d4f'
+                                color: Math.min(user.FTNDScore || 0, 10) <= 3 ? '#52c41a' : 
+                                       Math.min(user.FTNDScore || 0, 10) <= 6 ? '#faad14' : '#ff4d4f'
                             }}>
-                                {user.FTNDScore || 0}/10
+                                {Math.min(user.FTNDScore || 0, 10)}/10
                             </div>
                         </div>
                     </Col>
@@ -207,15 +207,16 @@ const renderDetailedUserInfo = (user) => {
 const renderAdviceBasedOnProfile = (user) => {
     const advices = [];
     
-    // Khuyến nghị dựa trên FTND
-    if (user.FTNDScore > 7) {
+    // Khuyến nghị dựa trên FTND (giới hạn tối đa 10 điểm)
+    const ftndScore = Math.min(user.FTNDScore || 0, 10);
+    if (ftndScore > 7) {
         advices.push({
             type: 'warning',
             title: 'Nghiện nicotine cao',
             content: 'Cần hỗ trợ y tế chuyên sâu, có thể cần thuốc thay thế nicotine',
             priority: 'Cao'
         });
-    } else if (user.FTNDScore > 4) {
+    } else if (ftndScore > 4) {
         advices.push({
             type: 'info',
             title: 'Nghiện nicotine trung bình',

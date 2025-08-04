@@ -91,10 +91,10 @@ const calculateAddictionScore = (answers) => {
     }
 
     return {
-        totalScore: parseFloat(totalScore.toFixed(1)),
+        totalScore: Math.min(parseFloat(totalScore.toFixed(1)), 10), // Giới hạn tối đa 10 điểm
         addictionLevel,
         answeredQuestions,
-        maxPossibleScore: 10.5
+        maxPossibleScore: 10.0 // Chuẩn FTND score là 0-10
     };
 };
 

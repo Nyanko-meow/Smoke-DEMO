@@ -328,10 +328,10 @@ const CoachSurveyView = () => {
                                 <div style={{ 
                                     fontSize: '24px', 
                                     fontWeight: 'bold',
-                                    color: data.FTNDScore <= 3 ? '#52c41a' : 
-                                           data.FTNDScore <= 6 ? '#faad14' : '#ff4d4f'
+                                    color: Math.min(data.FTNDScore || 0, 10) <= 3 ? '#52c41a' : 
+                                           Math.min(data.FTNDScore || 0, 10) <= 6 ? '#faad14' : '#ff4d4f'
                                 }}>
-                                    {data.FTNDScore || 0}/10
+                                    {Math.min(data.FTNDScore || 0, 10)}/10
                                 </div>
                             </div>
                         </Col>

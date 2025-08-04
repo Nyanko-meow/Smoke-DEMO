@@ -436,11 +436,12 @@ const SmokingSurveyPage = () => {
                                     MonthlySavings: surveyData.MonthlySavings
                                 });
                                 
-                                // Format to match component expectations
-                                const addictionLevel = calculateAddictionLevel(surveyData.FTNDScore || 0);
+                                // Format to match component expectations (giới hạn FTND tối đa 10)
+                                const ftndScore = Math.min(surveyData.FTNDScore || 0, 10);
+                                const addictionLevel = calculateAddictionLevel(ftndScore);
                                 
                                 const resultData = {
-                                    totalScore: Number(surveyData.FTNDScore) || 0,
+                                    totalScore: ftndScore,
                                     addictionLevel,
                                     packYear: Number(surveyData.PackYear) || 0,
                                     successProbability: Number(surveyData.SuccessProbability) || 50,
@@ -452,7 +453,7 @@ const SmokingSurveyPage = () => {
                                     packagePrice: Number(surveyData.PackagePrice) || 0,
                                     priceRange: String(surveyData.PriceRange) || '',
                                     age: Number(surveyData.Age) || 0,
-                                    yearsSmoked: Number(surveyData.YearsSmoked) || 0,
+                                    yearsSmoked: Math.floor(Number(surveyData.YearsSmoked) || 0),
                                     motivation: String(surveyData.Motivation) || '',
                                     answers: surveyData.rawAnswers || {}
                                 };
@@ -619,7 +620,10 @@ const SmokingSurveyPage = () => {
                 }
             });
 
-            console.log('Calculated total score:', totalScore);
+            // Giới hạn FTND score tối đa 10 điểm (chuẩn FTND)
+            totalScore = Math.min(totalScore, 10);
+            
+            console.log('Calculated total score (limited to 10):', totalScore);
             console.log('Submitting answers:', answers);
 
             // Get the token from localStorage to authenticate the request
@@ -638,7 +642,7 @@ const SmokingSurveyPage = () => {
             const addictionLevel = calculateAddictionLevel(totalScore);
             
             // Get additional info from form
-            const yearsSmoked = values.yearsSmoked || 5;
+            const yearsSmoked = Math.floor(values.yearsSmoked || 5);
             const age = values.age || 30;
             const cigarettesPerDay = getCigarettesPerDayFromScore(values['3']);
             const actualPrice = customPrice || selectedPriceRange?.defaultPrice || 25000;
@@ -1523,16 +1527,30 @@ const SmokingSurveyPage = () => {
                                     <Form.Item
                                         name="yearsSmoked"
                                         label="Số năm đã hút thuốc"
+                                        dependencies={['age']}
                                         rules={[
                                             { required: true, message: 'Vui lòng nhập số năm hút thuốc' },
-                                            { type: 'number', min: 0.5, max: 70, message: 'Số năm phải từ 0.5-70' }
+                                            { type: 'number', min: 1, max: 70, message: 'Số năm phải từ 1-70' },
+                                            ({ getFieldValue }) => ({
+                                                validator(_, value) {
+                                                    const age = getFieldValue('age');
+                                                    if (!value || !age) {
+                                                        return Promise.resolve();
+                                                    }
+                                                    if (value >= age) {
+                                                        return Promise.reject(new Error('Số năm hút thuốc phải nhỏ hơn tuổi của bạn!'));
+                                                    }
+                                                    return Promise.resolve();
+                                                },
+                                            }),
                                         ]}
                                     >
                                         <InputNumber
                                             style={{ width: '100%' }}
                                             placeholder="Ví dụ: 5"
                                             addonAfter="năm"
-                                            step={0.5}
+                                            step={1}
+                                            precision={0}
                                         />
                                     </Form.Item>
                                 </Col>
