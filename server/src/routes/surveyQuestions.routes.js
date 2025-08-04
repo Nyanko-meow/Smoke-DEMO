@@ -191,14 +191,14 @@ router.post('/answers', protect, async (req, res) => {
         console.log('Authenticated submit answers endpoint called for user:', req.user.id);
         console.log('Received answers:', answers);
 
-        // Get user's active membership
+        // Get user's active membership (including pending_cancellation)
         const membershipCheck = await pool.request()
             .input('userID', req.user.id)
             .query(`
                 SELECT TOP 1 um.MembershipID, um.StartDate, um.EndDate
                 FROM UserMemberships um
                 WHERE um.UserID = @userID 
-                AND um.Status = 'active'
+                AND um.Status IN ('active', 'pending_cancellation')
                 AND um.EndDate > GETDATE()
                 ORDER BY um.StartDate DESC
             `);
@@ -295,9 +295,6 @@ router.post('/answers', protect, async (req, res) => {
             }
         }
 
-        // Giới hạn FTND score tối đa là 10 điểm (chuẩn FTND)
-        totalScore = Math.min(totalScore, 10);
-        
         // Calculate addiction level
         let addictionLevel, addictionLevelDescription;
         if (totalScore >= 0 && totalScore <= 3) {
@@ -537,14 +534,14 @@ router.get('/check-eligibility-public', async (req, res) => {
 
         const userID = decoded.id;
 
-        // Get user's active membership
+        // Get user's active membership (including pending_cancellation)
         const membershipCheck = await pool.request()
             .input('userID', userID)
             .query(`
                 SELECT TOP 1 um.MembershipID, um.StartDate, um.EndDate, um.Status
                 FROM UserMemberships um
                 WHERE um.UserID = @userID 
-                AND um.Status = 'active'
+                AND um.Status IN ('active', 'pending_cancellation')
                 AND um.EndDate > GETDATE()
                 ORDER BY um.StartDate DESC
             `);
@@ -587,14 +584,14 @@ router.get('/check-eligibility-public', async (req, res) => {
  */
 router.get('/check-eligibility', protect, async (req, res) => {
     try {
-        // Get user's active membership
+        // Get user's active membership (including pending_cancellation)
         const membershipCheck = await pool.request()
             .input('userID', req.user.id)
             .query(`
                 SELECT TOP 1 um.MembershipID, um.StartDate, um.EndDate, um.Status
                 FROM UserMemberships um
                 WHERE um.UserID = @userID 
-                AND um.Status = 'active'
+                AND um.Status IN ('active', 'pending_cancellation')
                 AND um.EndDate > GETDATE()
                 ORDER BY um.StartDate DESC
             `);

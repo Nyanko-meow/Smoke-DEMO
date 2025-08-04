@@ -693,7 +693,7 @@ router.get('/members', protect, authorize('coach'), async (req, res) => {
                         AND qp.Status = 'active'
                 ) qp_latest ON u.UserID = qp_latest.UserID AND qp_latest.rn = 1
                 LEFT JOIN UserMemberships um ON u.UserID = um.UserID 
-                    AND um.Status = 'active' 
+                    AND um.Status IN ('active', 'pending_cancellation') 
                     AND um.EndDate > GETDATE()
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 LEFT JOIN (
@@ -828,7 +828,7 @@ router.get('/stats', protect, authorize('coach'), async (req, res) => {
                 WHERE u.Role IN ('guest', 'member')
                     AND qp.CoachID = @CoachID
                     AND qp.Status = 'active'
-                    AND um.Status = 'active'
+                    AND um.Status IN ('active', 'pending_cancellation')
                     AND um.EndDate > GETDATE()
                     AND u.IsActive = 1
             `);
@@ -952,7 +952,7 @@ router.get('/members/:id/details', protect, authorize('coach'), async (req, res)
                     DATEDIFF(day, GETDATE(), um.EndDate) as DaysRemaining
                 FROM Users u
                 LEFT JOIN UserMemberships um ON u.UserID = um.UserID 
-                    AND um.Status = 'active' 
+                    AND um.Status IN ('active', 'pending_cancellation') 
                     AND um.EndDate > GETDATE()
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE u.UserID = @UserID AND u.Role IN ('guest', 'member')
@@ -1189,7 +1189,7 @@ router.get('/members/:id/progress', protect, authorize('coach'), async (req, res
                     mp.Name as PlanName
                 FROM Users u
                 LEFT JOIN UserMemberships um ON u.UserID = um.UserID 
-                    AND um.Status = 'active' 
+                    AND um.Status IN ('active', 'pending_cancellation') 
                     AND um.EndDate > GETDATE()
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE u.UserID = @UserID
@@ -1381,7 +1381,7 @@ router.get('/test-member-details/:id?', protect, authorize('coach'), async (req,
                     mp.Name as PlanName, mp.Price as PlanPrice, mp.Features,
                     qp.StartDate as QuitPlanStart, qp.TargetDate as QuitPlanTarget, qp.Reason
                 FROM Users u
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID  
                 LEFT JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.Status = 'active'
                 WHERE u.UserID = @UserID
@@ -1781,7 +1781,7 @@ router.post('/schedule', protect, authorize('coach'), async (req, res) => {
                        um.Status as MembershipStatus, um.EndDate as MembershipEndDate,
                        mp.Name as PlanName
                 FROM Users u
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE u.UserID = @MemberID AND u.Role IN ('member', 'guest')
             `);
@@ -1955,7 +1955,7 @@ router.get('/appointments', protect, authorize('coach'), async (req, res) => {
                 mp.Name as MembershipPlan
             FROM ConsultationAppointments ca
             INNER JOIN Users u ON ca.MemberID = u.UserID
-            LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+            LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
             LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
             WHERE ca.CoachID = @CoachID
         `;
@@ -2848,7 +2848,7 @@ router.get('/member-surveys', protect, authorize('coach'), async (req, res) => {
                     COUNT(usa.QuestionID) as TotalAnswers
                 FROM Users u
                 INNER JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.CoachID = @coachId AND qp.Status = 'active'
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN UserSurveyAnswers usa ON u.UserID = usa.UserID
                 WHERE u.Role IN ('member', 'guest')
                 ${searchCondition}
@@ -2933,7 +2933,7 @@ router.get('/member-surveys/:memberId', protect, authorize('coach'), async (req,
                     um.EndDate as MembershipEndDate
                 FROM Users u
                 INNER JOIN QuitPlans qp ON u.UserID = qp.UserID
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 WHERE u.UserID = @memberId 
                 AND u.Role IN ('member', 'guest')
                 AND qp.CoachID = @coachId
@@ -3171,9 +3171,6 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
     try {
         const { page = 1, limit = 10, search = '' } = req.query;
         const offset = (page - 1) * limit;
-        const coachId = req.user.UserID; // Lấy ID của coach hiện tại
-
-        console.log(`🔍 Coach ${coachId} requesting member addiction surveys with params:`, { page, limit, search });
 
         let query = `
             SELECT 
@@ -3204,13 +3201,11 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
                 sasr.SubmittedAt as lastUpdated
             FROM Users u
             INNER JOIN SmokingAddictionSurveyResults sasr ON u.UserID = sasr.UserID
-            INNER JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.CoachID = @CoachId AND qp.Status = 'active'
             WHERE u.Role IN ('guest', 'member') 
             AND u.IsActive = 1
         `;
 
         const request = pool.request()
-            .input('CoachId', coachId)
             .input('Limit', parseInt(limit))
             .input('Offset', offset);
 
@@ -3229,13 +3224,11 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
             SELECT COUNT(DISTINCT u.UserID) as Total
             FROM Users u
             INNER JOIN SmokingAddictionSurveyResults sasr ON u.UserID = sasr.UserID
-            INNER JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.CoachID = @CoachId AND qp.Status = 'active'
             WHERE u.Role IN ('guest', 'member') 
             AND u.IsActive = 1
         `;
 
-        const countRequest = pool.request()
-            .input('CoachId', coachId);
+        const countRequest = pool.request();
         if (search) {
             countQuery += ` AND (u.FirstName LIKE @Search OR u.LastName LIKE @Search OR u.Email LIKE @Search)`;
             countRequest.input('Search', `%${search}%`);
@@ -3253,7 +3246,7 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
             FullName: `${member.FirstName} ${member.LastName}`,
             Avatar: member.Avatar,
             CreatedAt: member.CreatedAt,
-            FTNDScore: Math.min(member.FTNDScore || 0, 10),
+            FTNDScore: member.FTNDScore,
             AddictionLevel: member.AddictionLevel,
             SuccessProbability: member.SuccessProbability,
             MonthlySavings: member.MonthlySavings,
@@ -3273,8 +3266,6 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
             lastUpdated: member.lastUpdated
         }));
 
-        console.log(`📊 Found ${members.length} assigned members with addiction surveys for coach ${coachId}, total: ${total}`);
-
         res.json({
             success: true,
             data: {
@@ -3286,7 +3277,7 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
                     totalPages: Math.ceil(total / limit)
                 }
             },
-            message: `Đã lấy danh sách ${members.length} members được phân công thành công`
+            message: `Đã lấy danh sách ${members.length} members thành công`
         });
 
     } catch (error) {
@@ -3299,50 +3290,24 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
     }
 });
 
-// Get detailed survey data for a specific member - CHỈ USER ĐƯỢC PHÂN CÔNG
+// Get detailed survey data for a specific member
 router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, res) => {
     try {
         const { memberId } = req.params;
-        const coachId = req.user.UserID;
 
-        console.log(`🔍 Coach ${coachId} requesting smoking addiction survey for member ${memberId}`);
-
-        // Kiểm tra member có được assign cho coach này không
-        const assignmentCheck = await pool.request()
-            .input('memberId', parseInt(memberId))
-            .input('coachId', coachId)
-            .query(`
-                SELECT u.UserID
-                FROM Users u
-                INNER JOIN QuitPlans qp ON u.UserID = qp.UserID
-                WHERE u.UserID = @memberId 
-                AND u.Role IN ('member', 'guest')
-                AND qp.CoachID = @coachId
-                AND qp.Status = 'active'
-            `);
-
-        if (assignmentCheck.recordset.length === 0) {
-            return res.status(403).json({
-                success: false,
-                message: 'Bạn không có quyền xem khảo sát của thành viên này'
-            });
-        }
-
-        // Lấy survey results từ SmokingAddictionSurveyResults
+        // Get survey results
         const surveyResult = await pool.request()
-            .input('UserID', parseInt(memberId))
+            .input('UserID', memberId)
             .query(`
                 SELECT TOP 1
                     sasr.ResultID,
                     sasr.UserID,
-                    sasr.MembershipID,
                     sasr.FTNDScore,
                     sasr.CigarettesPerDay,
                     sasr.PackYear,
                     sasr.AddictionLevel,
                     sasr.AddictionSeverity,
                     sasr.SuccessProbability,
-                    sasr.PriceRangeId,
                     sasr.PackageName,
                     sasr.PackagePrice,
                     sasr.PriceRange,
@@ -3352,9 +3317,7 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
                     sasr.Age,
                     sasr.YearsSmoked,
                     sasr.Motivation,
-                    sasr.SubmittedAt,
-                    sasr.CreatedAt,
-                    sasr.UpdatedAt
+                    sasr.SubmittedAt
                 FROM SmokingAddictionSurveyResults sasr
                 WHERE sasr.UserID = @UserID
                 ORDER BY sasr.SubmittedAt DESC
@@ -3363,25 +3326,11 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
         if (surveyResult.recordset.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Thành viên này chưa thực hiện khảo sát nghiện thuốc lá'
+                message: 'Không tìm thấy dữ liệu khảo sát cho member này'
             });
         }
 
-        const rawSurveyData = surveyResult.recordset[0];
-        
-        // Giới hạn FTNDScore tối đa 10 điểm (chuẩn FTND)
-        const surveyData = {
-            ...rawSurveyData,
-            FTNDScore: Math.min(rawSurveyData.FTNDScore || 0, 10)
-        };
-
-        console.log('📊 Found smoking addiction survey data:', {
-            ResultID: surveyData.ResultID,
-            FTNDScore: surveyData.FTNDScore,
-            PackYear: surveyData.PackYear,
-            SuccessProbability: surveyData.SuccessProbability,
-            MonthlySavings: surveyData.MonthlySavings
-        });
+        const surveyData = surveyResult.recordset[0];
 
         res.json({
             success: true,
@@ -3390,7 +3339,7 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
         });
 
     } catch (error) {
-        console.error('Error getting member smoking addiction survey:', error);
+        console.error('Error getting member survey data:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi khi lấy dữ liệu khảo sát',

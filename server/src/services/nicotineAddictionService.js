@@ -91,10 +91,10 @@ const calculateAddictionScore = (answers) => {
     }
 
     return {
-        totalScore: Math.min(parseFloat(totalScore.toFixed(1)), 10), // Giới hạn tối đa 10 điểm
+        totalScore: parseFloat(totalScore.toFixed(1)),
         addictionLevel,
         answeredQuestions,
-        maxPossibleScore: 10.0 // Chuẩn FTND score là 0-10
+        maxPossibleScore: 10.5
     };
 };
 
@@ -105,7 +105,7 @@ const calculateAddictionScore = (answers) => {
  */
 const checkSurveyEligibility = async (userId) => {
     try {
-        // Check if user has active membership
+        // Check if user has active membership (including pending_cancellation)
         const membershipQuery = `
             SELECT TOP 1 
                 um.MembershipID,
@@ -115,7 +115,7 @@ const checkSurveyEligibility = async (userId) => {
             FROM UserMemberships um
             JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
             WHERE um.UserID = @UserID 
-            AND um.Status IN ('active', 'confirmed')
+            AND um.Status IN ('active', 'confirmed', 'pending_cancellation')
             AND um.EndDate > GETDATE()
             ORDER BY um.EndDate DESC
         `;

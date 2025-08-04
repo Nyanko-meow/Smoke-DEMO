@@ -34,7 +34,7 @@ const checkUserMembershipAccess = async (req, res, next) => {
             FROM UserMemberships um
             JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
             WHERE um.UserID = @UserID 
-            AND um.Status IN ('active', 'confirmed')
+            AND um.Status IN ('active', 'confirmed', 'pending_cancellation')
             AND um.EndDate > GETDATE()
             ORDER BY um.EndDate DESC
         `;
@@ -488,7 +488,7 @@ router.post('/', auth, requireActivated, async (req, res) => {
                     SELECT TOP 1 um.MembershipID
                     FROM UserMemberships um
                     WHERE um.UserID = @UserID 
-                    AND um.Status IN ('active', 'confirmed')
+                    AND um.Status IN ('active', 'confirmed', 'pending_cancellation')
                     AND um.EndDate > GETDATE()
                     ORDER BY um.EndDate DESC
                 `;

@@ -90,8 +90,8 @@ const AppointmentHistory = () => {
             if (response.data.success && response.data.data) {
                 const membership = response.data.data;
 
-                // Check if membership is active and not expired
-                const isActive = membership.Status === 'active' &&
+                // Check if membership is active (including pending_cancellation) and not expired
+                const isActive = (membership.Status === 'active' || membership.Status === 'pending_cancellation') &&
                     new Date(membership.EndDate) > new Date();
 
                 setMembershipStatus({

@@ -98,7 +98,7 @@ router.post('/', protect, async (req, res) => {
         await ensureTablesExist();
 
         const {
-            ftndScore: rawFtndScore,
+            ftndScore,
             cigarettesPerDayCalculated,
             packYear,
             addictionLevel,
@@ -116,9 +116,6 @@ router.post('/', protect, async (req, res) => {
             motivation,
             ...rawAnswers
         } = req.body;
-
-        // Giới hạn FTND score tối đa là 10 điểm (chuẩn FTND)
-        const ftndScore = Math.min(rawFtndScore || 0, 10);
 
         console.log('💾 Saving smoking addiction survey for user:', req.user.UserID);
         console.log('📊 Survey data received:', {
@@ -182,14 +179,14 @@ router.post('/', protect, async (req, res) => {
 
         console.log('✅ Sanitized data:', sanitizedData);
 
-        // Get user's active membership
+        // Get user's active membership (including pending_cancellation)
         const membershipCheck = await pool.request()
             .input('userID', req.user.UserID)
             .query(`
                 SELECT TOP 1 um.MembershipID
                 FROM UserMemberships um
                 WHERE um.UserID = @userID 
-                AND um.Status = 'active'
+                AND um.Status IN ('active', 'pending_cancellation')
                 AND um.EndDate > GETDATE()
                 ORDER BY um.StartDate DESC
             `);
@@ -688,13 +685,7 @@ router.get('/my-results', protect, async (req, res) => {
             });
         }
 
-        const rawSurveyResult = resultQuery.recordset[0];
-        
-        // Giới hạn FTNDScore tối đa 10 điểm (chuẩn FTND) 
-        const surveyResult = {
-            ...rawSurveyResult,
-            FTNDScore: Math.min(rawSurveyResult.FTNDScore || 0, 10)
-        };
+        const surveyResult = resultQuery.recordset[0];
 
         // Get answers from SmokingAddictionSurveyAnswers
         const answersQuery = await pool.request()

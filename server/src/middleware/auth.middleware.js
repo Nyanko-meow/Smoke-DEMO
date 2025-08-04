@@ -10,31 +10,24 @@ if (!process.env.JWT_SECRET) {
 
 // Protect routes middleware
 const auth = async (req, res, next) => {
-    console.log('\n🔒 ========== AUTH MIDDLEWARE ==========');
-    console.log('📍 REQUEST:', req.method, req.originalUrl);
-    console.log('🌐 User-Agent:', req.headers['user-agent']);
-    console.log('📧 Headers:', JSON.stringify(req.headers, null, 2));
-    
     try {
         // Get token from header
         let token;
 
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
-            console.log('✅ Token from Authorization header:', token.substring(0, 10) + '...', 'Length:', token.length);
+            console.log('Token from Authorization header:', token.substring(0, 10) + '...');
         } else if (req.cookies && req.cookies.token) {
             token = req.cookies.token;
-            console.log('🍪 Token from cookies:', token.substring(0, 10) + '...', 'Length:', token.length);
+            console.log('Token from cookies:', token.substring(0, 10) + '...');
         }
 
         // Check if token exists
         if (!token) {
-            console.log('❌ No auth token provided in request:', {
+            console.log('No auth token provided in request:', {
                 headers: req.headers.authorization ? 'Has Authorization header' : 'No Authorization header',
-                cookies: req.cookies ? 'Has cookies' : 'No cookies',
-                allHeaders: Object.keys(req.headers)
+                cookies: req.cookies ? 'Has cookies' : 'No cookies'
             });
-            console.log('🔒 ========== AUTH FAILED ==========\n');
             return res.status(401).json({
                 success: false,
                 message: 'Not authorized to access this route'
@@ -65,14 +58,11 @@ const auth = async (req, res, next) => {
             // Important: Make sure 'id' is available for compatibility
             req.user.id = req.user.UserID;
 
-            console.log('✅ User authenticated:', {
+            console.log('User authenticated:', {
                 id: req.user.id,
                 email: req.user.Email,
-                role: req.user.Role,
-                firstName: req.user.FirstName,
-                lastName: req.user.LastName
+                role: req.user.Role
             });
-            console.log('🔒 ========== AUTH SUCCESS ==========\n');
 
             next();
         } catch (error) {
