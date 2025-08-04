@@ -3290,24 +3290,50 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
     }
 });
 
-// Get detailed survey data for a specific member
+// Get detailed survey data for a specific member - CHỈ USER ĐƯỢC PHÂN CÔNG
 router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, res) => {
     try {
         const { memberId } = req.params;
+        const coachId = req.user.UserID;
 
-        // Get survey results
+        console.log(`🔍 Coach ${coachId} requesting smoking addiction survey for member ${memberId}`);
+
+        // Kiểm tra member có được assign cho coach này không
+        const assignmentCheck = await pool.request()
+            .input('memberId', parseInt(memberId))
+            .input('coachId', coachId)
+            .query(`
+                SELECT u.UserID
+                FROM Users u
+                INNER JOIN QuitPlans qp ON u.UserID = qp.UserID
+                WHERE u.UserID = @memberId 
+                AND u.Role IN ('member', 'guest')
+                AND qp.CoachID = @coachId
+                AND qp.Status = 'active'
+            `);
+
+        if (assignmentCheck.recordset.length === 0) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền xem khảo sát của thành viên này'
+            });
+        }
+
+        // Lấy survey results từ SmokingAddictionSurveyResults
         const surveyResult = await pool.request()
-            .input('UserID', memberId)
+            .input('UserID', parseInt(memberId))
             .query(`
                 SELECT TOP 1
                     sasr.ResultID,
                     sasr.UserID,
+                    sasr.MembershipID,
                     sasr.FTNDScore,
                     sasr.CigarettesPerDay,
                     sasr.PackYear,
                     sasr.AddictionLevel,
                     sasr.AddictionSeverity,
                     sasr.SuccessProbability,
+                    sasr.PriceRangeId,
                     sasr.PackageName,
                     sasr.PackagePrice,
                     sasr.PriceRange,
@@ -3317,7 +3343,9 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
                     sasr.Age,
                     sasr.YearsSmoked,
                     sasr.Motivation,
-                    sasr.SubmittedAt
+                    sasr.SubmittedAt,
+                    sasr.CreatedAt,
+                    sasr.UpdatedAt
                 FROM SmokingAddictionSurveyResults sasr
                 WHERE sasr.UserID = @UserID
                 ORDER BY sasr.SubmittedAt DESC
@@ -3326,11 +3354,19 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
         if (surveyResult.recordset.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy dữ liệu khảo sát cho member này'
+                message: 'Thành viên này chưa thực hiện khảo sát nghiện thuốc lá'
             });
         }
 
         const surveyData = surveyResult.recordset[0];
+
+        console.log('📊 Found smoking addiction survey data:', {
+            ResultID: surveyData.ResultID,
+            FTNDScore: surveyData.FTNDScore,
+            PackYear: surveyData.PackYear,
+            SuccessProbability: surveyData.SuccessProbability,
+            MonthlySavings: surveyData.MonthlySavings
+        });
 
         res.json({
             success: true,
@@ -3339,7 +3375,7 @@ router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, 
         });
 
     } catch (error) {
-        console.error('Error getting member survey data:', error);
+        console.error('Error getting member smoking addiction survey:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi khi lấy dữ liệu khảo sát',

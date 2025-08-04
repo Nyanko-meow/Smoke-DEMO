@@ -69,7 +69,12 @@ import AppointmentCalendar from '../components/coach/AppointmentCalendar';
 import CoachFeedbackView from '../components/coach/CoachFeedbackView';
 import CoachSurveyView from '../components/coach/CoachSurveyView';
 import MemberAddictionSurveys from '../components/coach/MemberAddictionSurveys';
+import MenuGuide from '../components/coach/MenuGuide';
 import '../components/coach/CoachDashboard.css';
+
+// Debug import
+console.log('✅ MemberAddictionSurveys imported:', typeof MemberAddictionSurveys);
+console.log('✅ MenuGuide imported:', typeof MenuGuide);
 
 const { Header, Content, Sider } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -87,6 +92,9 @@ const CoachDashboard = () => {
     });
     const [collapsed, setCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState('dashboard');
+    
+    // Debug activeTab changes
+    console.log('🎯 CoachDashboard activeTab:', activeTab);
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
     const [editForm] = Form.useForm();
@@ -507,11 +515,6 @@ const CoachDashboard = () => {
             key: 'survey',
             icon: <FileTextOutlined />,
             label: 'Khảo sát',
-        },
-        {
-            key: 'addiction-survey',
-            icon: <FormOutlined />,
-            label: 'Khảo sát nghiện thuốc',
         },
         {
             type: 'divider',
@@ -1242,26 +1245,43 @@ const CoachDashboard = () => {
     };
 
     const renderContent = () => {
+        console.log('🎨 RENDERING CONTENT FOR TAB:', activeTab);
         switch (activeTab) {
             case 'dashboard':
+                console.log('📊 Rendering dashboard');
                 return renderDashboard();
             case 'profile':
+                console.log('👤 Rendering profile');
                 return renderProfile();
             case 'members':
+                console.log('👥 Rendering members');
                 return renderMembers();
             case 'progress':
+                console.log('📈 Rendering progress');
                 return renderProgressTracking();
             case 'chat':
+                console.log('💬 Rendering chat');
                 return <CoachChat />;
             case 'appointments':
+                console.log('📅 Rendering appointments');
                 return renderAppointments();
             case 'feedback':
+                console.log('⭐ Rendering feedback');
                 return <CoachFeedbackView />;
             case 'survey':
-                return <CoachSurveyView />;
-            case 'addiction-survey':
-                return <MemberAddictionSurveys />;
+                console.log('📝 Rendering survey with MemberAddictionSurveys');
+                try {
+                    return <MemberAddictionSurveys />;
+                } catch (error) {
+                    console.error('❌ ERROR RENDERING MemberAddictionSurveys:', error);
+                    return <div style={{padding: '20px', background: '#ffebee', border: '1px solid #f44336'}}>
+                        <h3>Component Error</h3>
+                        <p>Failed to load MemberAddictionSurveys: {error.message}</p>
+                        <pre>{error.stack}</pre>
+                    </div>;
+                }
             default:
+                console.log('🏠 Rendering default dashboard');
                 return renderDashboard();
         }
     };
@@ -1284,8 +1304,6 @@ const CoachDashboard = () => {
                 return 'Đánh giá từ thành viên';
             case 'survey':
                 return 'Khảo sát';
-            case 'addiction-survey':
-                return 'Khảo sát nghiện thuốc lá';
             default:
                 return 'Dashboard';
         }
@@ -1309,8 +1327,6 @@ const CoachDashboard = () => {
                 return 'Xem và quản lý tất cả đánh giá từ các thành viên đã tư vấn. Theo dõi thống kê và cải thiện chất lượng dịch vụ.';
             case 'survey':
                 return 'Xem và quản lý tất cả khảo sát đã thực hiện. Theo dõi thống kê và cải thiện chất lượng dịch vụ.';
-            case 'addiction-survey':
-                return 'Theo dõi và quản lý thông tin khảo sát mức độ nghiện thuốc lá của các thành viên. Xem xác suất thành công và đưa ra khuyến nghị tư vấn.';
             default:
                 return `Chào mừng bạn trở lại, ${getCoachDisplayName()}! Đây là trang quản lý dành cho huấn luyện viên.`;
         }
@@ -1429,9 +1445,12 @@ const CoachDashboard = () => {
                             selectedKeys={[activeTab]}
                             items={sidebarMenuItems}
                             onClick={({ key }) => {
+                                console.log('🔥 MENU CLICKED:', key);
                                 if (key === 'logout') {
+                                    console.log('🚪 Logout clicked');
                                     handleLogout();
                                 } else {
+                                    console.log('🎯 Setting activeTab to:', key);
                                     setActiveTab(key);
                                 }
                             }}

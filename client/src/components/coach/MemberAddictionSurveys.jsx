@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table,
     Input,
@@ -18,7 +18,9 @@ import {
     Divider,
     Alert,
     Timeline,
-    Tabs
+    Tabs,
+    Spin,
+    Descriptions
 } from 'antd';
 import {
     SearchOutlined,
@@ -38,6 +40,7 @@ import {
 } from '@ant-design/icons';
 import axiosInstance from '../../utils/axiosConfig';
 import moment from 'moment';
+// import logger from '../../utils/debugLogger';
 import {
     getAddictionLevel,
     getHealthRiskLevel,
@@ -53,169 +56,148 @@ const { TabPane } = Tabs;
 
 // Thêm component hiển thị chi tiết user
 const renderDetailedUserInfo = (user) => {
+    const formatNumber = (num) => {
+        return new Intl.NumberFormat('vi-VN').format(num || 0);
+    };
+
     return (
         <div>
-            {/* Header thông tin cơ bản */}
-            <Card style={{ marginBottom: 16 }}>
-                <Row gutter={[16, 16]}>
-                    <Col span={6}>
-                        <Statistic 
-                            title="Xác Suất Thành Công" 
-                            value={user.SuccessProbability || 50} 
-                            suffix="%" 
-                            valueStyle={{ 
-                                color: user.SuccessProbability > 70 ? '#3f8600' : 
-                                       user.SuccessProbability > 50 ? '#faad14' : '#cf1322' 
-                            }}
-                        />
-                        <Progress 
-                            percent={user.SuccessProbability || 50} 
-                            strokeColor={
-                                user.SuccessProbability > 70 ? '#3f8600' : 
-                                user.SuccessProbability > 50 ? '#faad14' : '#cf1322'
-                            }
-                            size="small"
-                        />
+            {/* Kết quả chi tiết - Main Stats */}
+            <Card 
+                title={
+                    <Space>
+                        <TrophyOutlined style={{ color: '#fa8c16' }} />
+                        <span>Kết quả chi tiết</span>
+                    </Space>
+                }
+                style={{ marginBottom: 24 }}
+            >
+                <Row gutter={[16, 24]}>
+                    <Col xs={24} sm={12} md={8}>
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '8px' }}>Tổng điểm FTND</div>
+                            <div style={{ 
+                                fontSize: '24px', 
+                                fontWeight: 'bold',
+                                color: user.FTNDScore <= 3 ? '#52c41a' : 
+                                       user.FTNDScore <= 6 ? '#faad14' : '#ff4d4f'
+                            }}>
+                                {user.FTNDScore || 0}/10
+                            </div>
+                        </div>
                     </Col>
-                    <Col span={6}>
-                        <Statistic 
-                            title="Điểm FTND" 
-                            value={user.FTNDScore || 0} 
-                            suffix="/10"
-                            valueStyle={{ 
-                                color: user.FTNDScore <= 3 ? '#3f8600' : 
-                                       user.FTNDScore <= 6 ? '#faad14' : '#cf1322' 
-                            }}
-                        />
-                        <Text type="secondary">{user.AddictionLevel}</Text>
+                    <Col xs={24} sm={12} md={8}>
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '8px' }}>Pack-Year</div>
+                            <div style={{ 
+                                fontSize: '24px', 
+                                fontWeight: 'bold',
+                                color: '#722ed1'
+                            }}>
+                                {user.PackYear || 0}
+                            </div>
+                        </div>
                     </Col>
-                    <Col span={6}>
-                        <Statistic 
-                            title="Pack-Year" 
-                            value={user.PackYear || 0} 
-                            precision={1}
-                            valueStyle={{ color: user.PackYear > 20 ? '#cf1322' : '#1890ff' }}
-                        />
-                        <Text type="secondary">Mức độ nghiện sâu</Text>
+                    <Col xs={24} sm={12} md={8}>
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '8px' }}>Xác suất thành công</div>
+                            <div style={{ 
+                                fontSize: '24px', 
+                                fontWeight: 'bold',
+                                color: user.SuccessProbability > 70 ? '#52c41a' : 
+                                       user.SuccessProbability > 50 ? '#faad14' : '#ff4d4f'
+                            }}>
+                                {user.SuccessProbability || 0}%
+                            </div>
+                        </div>
                     </Col>
-                    <Col span={6}>
-                        <Statistic 
-                            title="Tuổi / Năm hút" 
-                            value={`${user.Age || 0} / ${user.YearsSmoked || 0}`} 
-                            valueStyle={{ color: '#722ed1' }}
-                        />
-                        <Text type="secondary">tuổi / năm</Text>
+                    <Col xs={24} sm={12}>
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '8px' }}>Mức độ nghiện</div>
+                            <Tag 
+                                color={
+                                    user.AddictionLevel?.includes('cao') || user.AddictionLevel?.includes('high') ? 'red' :
+                                    user.AddictionLevel?.includes('trung bình') || user.AddictionLevel?.includes('medium') ? 'orange' : 'green'
+                                }
+                                style={{ fontSize: '14px', padding: '4px 12px' }}
+                            >
+                                {user.AddictionLevel || 'Chưa xác định'}
+                            </Tag>
+                        </div>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                        <div style={{ textAlign: 'center', padding: '16px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '8px' }}>Tiết kiệm/tháng</div>
+                            <div style={{ 
+                                fontSize: '20px', 
+                                fontWeight: 'bold',
+                                color: '#fa8c16'
+                            }}>
+                                {formatNumber(user.MonthlySavings)}đ
+                            </div>
+                        </div>
                     </Col>
                 </Row>
             </Card>
 
-            {/* Thông tin tiết kiệm chi tiết */}
-            <Card title="💰 Dự Báo Tiết Kiệm" style={{ marginBottom: 16 }}>
+            {/* Dự báo tiết kiệm tiền */}
+            <Card 
+                title={
+                    <Space>
+                        <DollarCircleOutlined style={{ color: '#52c41a' }} />
+                        <span>💰 Dự báo tiết kiệm tiền</span>
+                    </Space>
+                }
+                style={{ marginBottom: 24 }}
+            >
                 <Row gutter={[16, 16]}>
-                    <Col span={8}>
-                        <Card size="small" style={{ textAlign: 'center', backgroundColor: '#f6ffed' }}>
-                            <Statistic 
-                                title="Hàng Ngày" 
-                                value={user.DailySavings || 0} 
-                                suffix="đ"
-                                precision={0}
-                                valueStyle={{ color: '#52c41a', fontSize: '18px' }}
-                            />
-                        </Card>
+                    <Col xs={12} sm={6}>
+                        <div style={{ textAlign: 'center', padding: '12px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '4px' }}>Ngày:</div>
+                            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#52c41a' }}>
+                                {formatNumber(user.DailySavings)}đ
+                            </div>
+                        </div>
                     </Col>
-                    <Col span={8}>
-                        <Card size="small" style={{ textAlign: 'center', backgroundColor: '#fff7e6' }}>
-                            <Statistic 
-                                title="Hàng Tháng" 
-                                value={user.MonthlySavings || 0} 
-                                suffix="đ"
-                                precision={0}
-                                valueStyle={{ color: '#fa8c16', fontSize: '18px' }}
-                            />
-                        </Card>
+                    <Col xs={12} sm={6}>
+                        <div style={{ textAlign: 'center', padding: '12px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '4px' }}>Tuần:</div>
+                            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fa8c16' }}>
+                                {formatNumber((user.DailySavings || 0) * 7)}đ
+                            </div>
+                        </div>
                     </Col>
-                    <Col span={8}>
-                        <Card size="small" style={{ textAlign: 'center', backgroundColor: '#f0f5ff' }}>
-                            <Statistic 
-                                title="Hàng Năm" 
-                                value={user.YearlySavings || 0} 
-                                suffix="đ"
-                                precision={0}
-                                valueStyle={{ color: '#1890ff', fontSize: '18px' }}
-                            />
-                        </Card>
+                    <Col xs={12} sm={6}>
+                        <div style={{ textAlign: 'center', padding: '12px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '4px' }}>Tháng:</div>
+                            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
+                                {formatNumber(user.MonthlySavings)}đ
+                            </div>
+                        </div>
+                    </Col>
+                    <Col xs={12} sm={6}>
+                        <div style={{ textAlign: 'center', padding: '12px' }}>
+                            <div style={{ color: '#8c8c8c', marginBottom: '4px' }}>Năm:</div>
+                            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#722ed1' }}>
+                                {formatNumber(user.YearlySavings)}đ
+                            </div>
+                        </div>
                     </Col>
                 </Row>
                 
-                <Divider />
-                
-                <Row gutter={[16, 16]}>
-                    <Col span={12}>
-                        <Text strong>Loại thuốc: </Text>
-                        <Tag color="blue">{user.PackageName || 'Chưa xác định'}</Tag>
-                        <br />
-                        <Text type="secondary">
-                            {user.PriceRange} - {(user.PackagePrice || 0).toLocaleString()}đ/gói
-                        </Text>
-                    </Col>
-                    <Col span={12}>
-                        <Text strong>Số điếu/ngày: </Text>
-                        <Tag color={user.CigarettesPerDay > 20 ? 'red' : user.CigarettesPerDay > 10 ? 'orange' : 'green'}>
-                            {user.CigarettesPerDay || 0} điếu
-                        </Tag>
-                        <br />
-                        <Text type="secondary">Mức tiêu thụ</Text>
-                    </Col>
-                </Row>
-            </Card>
-
-            {/* Phân tích rủi ro và khuyến nghị */}
-            <Card title="📊 Phân Tích Chuyên Sâu" style={{ marginBottom: 16 }}>
-                <Tabs defaultActiveKey="risk">
-                    <TabPane tab="Phân Tích Rủi Ro" key="risk">
-                        <Timeline>
-                            <Timeline.Item 
-                                color={user.FTNDScore <= 3 ? 'green' : user.FTNDScore <= 6 ? 'orange' : 'red'}
-                                dot={user.FTNDScore <= 3 ? <SmileOutlined /> : user.FTNDScore <= 6 ? <MehOutlined /> : <FrownOutlined />}
-                            >
-                                <Text strong>Mức độ nghiện nicotine: </Text>
-                                <Tag color={user.FTNDScore <= 3 ? 'green' : user.FTNDScore <= 6 ? 'orange' : 'red'}>
-                                    {user.AddictionLevel}
-                                </Tag>
-                                <br />
-                                <Text type="secondary">{user.AddictionSeverity}</Text>
-                            </Timeline.Item>
-                            
-                            <Timeline.Item 
-                                color={user.PackYear < 10 ? 'green' : user.PackYear < 20 ? 'orange' : 'red'}
-                                dot={<HeartOutlined />}
-                            >
-                                <Text strong>Rủi ro sức khỏe: </Text>
-                                <Tag color={user.PackYear < 10 ? 'green' : user.PackYear < 20 ? 'orange' : 'red'}>
-                                    {user.PackYear < 10 ? 'Thấp' : user.PackYear < 20 ? 'Trung bình' : 'Cao'}
-                                </Tag>
-                                <br />
-                                <Text type="secondary">Dựa trên Pack-Year: {user.PackYear}</Text>
-                            </Timeline.Item>
-                            
-                            <Timeline.Item 
-                                color={user.SuccessProbability > 70 ? 'green' : user.SuccessProbability > 50 ? 'orange' : 'red'}
-                                dot={<TrophyOutlined />}
-                            >
-                                <Text strong>Khả năng thành công: </Text>
-                                <Tag color={user.SuccessProbability > 70 ? 'green' : user.SuccessProbability > 50 ? 'orange' : 'red'}>
-                                    {user.SuccessProbability > 70 ? 'Cao' : user.SuccessProbability > 50 ? 'Trung bình' : 'Thấp'}
-                                </Tag>
-                                <br />
-                                <Text type="secondary">Động lực: {user.Motivation}</Text>
-                            </Timeline.Item>
-                        </Timeline>
-                    </TabPane>
-                    
-                    <TabPane tab="Khuyến Nghị" key="advice">
-                        {renderAdviceBasedOnProfile(user)}
-                    </TabPane>
-                </Tabs>
+                {user.PackageName && (
+                    <div style={{ 
+                        marginTop: 16, 
+                        padding: '12px', 
+                        backgroundColor: '#fafafa', 
+                        borderRadius: '6px',
+                        textAlign: 'center',
+                        fontSize: '13px',
+                        color: '#666'
+                    }}>
+                        Dựa trên: {user.PackageName} - {formatNumber(user.PackagePrice)}đ/gói
+                    </div>
+                )}
             </Card>
         </div>
     );
@@ -292,6 +274,19 @@ const renderAdviceBasedOnProfile = (user) => {
 };
 
 const MemberAddictionSurveys = () => {
+    console.log('\n🔥 ========== MEMBER ADDICTION SURVEYS COMPONENT ==========');
+    console.log('🚀 Component initialized at:', new Date().toISOString());
+    console.log('🔑 Token check:', {
+        hasToken: !!localStorage.getItem('coachToken'),
+        tokenLength: localStorage.getItem('coachToken')?.length,
+        tokenPreview: localStorage.getItem('coachToken')?.substring(0, 30) + '...'
+    });
+    console.log('👤 User check:', localStorage.getItem('coachUser'));
+    console.log('🌍 Current URL:', window.location.href);
+    console.log('🔥 ========================================\n');
+    
+    // logger.info('🚀 MemberAddictionSurveys component initialized');
+    
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
@@ -306,19 +301,28 @@ const MemberAddictionSurveys = () => {
     const [memberDetailVisible, setMemberDetailVisible] = useState(false);
     const [memberDetailLoading, setMemberDetailLoading] = useState(false);
     const [memberSurveyData, setMemberSurveyData] = useState(null);
-    const [memberProgressData, setMemberProgressData] = useState(null);
 
     // Statistics
     const [statistics, setStatistics] = useState(null);
 
-    useEffect(() => {
-        fetchMembers();
-        fetchOverview();
-    }, [pagination.current, pagination.pageSize, searchText]);
-
-    const fetchMembers = async () => {
+    const fetchMembers = useCallback(async () => {
         setLoading(true);
         try {
+            // Debug token before making request
+            const token = localStorage.getItem('coachToken'); // Sửa từ 'token' thành 'coachToken'
+            console.log('🔍 Token check before fetchMembers', {
+                hasToken: !!token,
+                tokenLength: token?.length,
+                tokenPreview: token?.substring(0, 20) + '...'
+            });
+
+            if (!token) {
+                console.error('❌ No token found, redirecting to login');
+                message.error('Phiên đăng nhập đã hết hạn');
+                window.location.href = '/coach/login'; // Sửa redirect URL
+                return;
+            }
+
             const response = await axiosInstance.get('/coach/member-addiction-surveys', {
                 params: {
                     page: pagination.current,
@@ -333,22 +337,75 @@ const MemberAddictionSurveys = () => {
                 total: response.data.data.pagination?.total || 0
             }));
         } catch (error) {
-            console.error('Error fetching members:', error);
-            message.error('Không thể tải danh sách members');
+            console.error('Error fetching members', { error: error.message, response: error.response?.data });
+            if (error.response?.status === 401) {
+                message.error('Phiên đăng nhập đã hết hạn');
+                localStorage.clear();
+                window.location.href = '/coach/login'; // Sửa redirect URL
+            } else {
+                message.error('Không thể tải danh sách members');
+            }
             setMembers([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [pagination.current, pagination.pageSize, searchText]);
 
-    const fetchOverview = async () => {
+    const fetchOverview = useCallback(async () => {
         try {
+            // Debug token before making request
+            const token = localStorage.getItem('coachToken'); // Sửa từ 'token' thành 'coachToken'
+            console.log('🔍 Token check before fetchOverview', {
+                hasToken: !!token,
+                tokenLength: token?.length,
+                tokenPreview: token?.substring(0, 20) + '...'
+            });
+
+            if (!token) {
+                console.error('❌ No token found for overview, redirecting to login');
+                message.error('Phiên đăng nhập đã hết hạn');
+                window.location.href = '/coach/login'; // Sửa redirect URL
+                return;
+            }
+
             const response = await axiosInstance.get('/coach/addiction-overview');
             setStatistics(response.data);
         } catch (error) {
-            console.error('Error fetching overview:', error);
+            console.error('Error fetching overview', { error: error.message, response: error.response?.data });
+            if (error.response?.status === 401) {
+                message.error('Phiên đăng nhập đã hết hạn');
+                localStorage.clear();
+                window.location.href = '/coach/login'; // Sửa redirect URL
+            }
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        console.log('🔄 useEffect triggered with dependencies', {
+            fetchMembers: typeof fetchMembers,
+            fetchOverview: typeof fetchOverview,
+            pagination: pagination,
+            searchText
+        });
+        
+        // Add small delay to ensure token is available
+        const timer = setTimeout(() => {
+            console.log('🚀 Starting addiction survey data fetch...');
+            console.log('🔑 Token status', {
+                hasToken: !!localStorage.getItem('coachToken'),
+                tokenLength: localStorage.getItem('coachToken')?.length,
+                user: localStorage.getItem('coachUser') ? JSON.parse(localStorage.getItem('coachUser')) : null
+            });
+            
+            fetchMembers();
+            fetchOverview();
+        }, 100);
+
+        return () => {
+            console.log('🧹 useEffect cleanup');
+            clearTimeout(timer);
+        };
+    }, [fetchMembers, fetchOverview]);
 
     const handleSearch = (value) => {
         setSearchText(value);
@@ -361,14 +418,13 @@ const MemberAddictionSurveys = () => {
         setMemberDetailLoading(true);
 
         try {
-            // Fetch survey data
+            // Chỉ fetch survey data, bỏ progress data
             const surveyResponse = await axiosInstance.get(`/coach/member-survey/${member.UserID}`);
             
-            // Fetch progress data  
-            const progressResponse = await axiosInstance.get(`/coach/member-progress/${member.UserID}`);
-
+            console.log('🔍 Survey Response:', surveyResponse.data);
+            console.log('🔍 Survey Data:', surveyResponse.data.data);
+            
             setMemberSurveyData(surveyResponse.data);
-            setMemberProgressData(progressResponse.data);
         } catch (error) {
             console.error('Error fetching member details:', error);
             message.error('Không thể tải chi tiết member');
@@ -474,17 +530,6 @@ const MemberAddictionSurveys = () => {
             )
         },
         {
-            title: 'Tiến trình',
-            key: 'progress',
-            render: (_, record) => (
-                <div>
-                    <Text>Ngày không hút: <Text strong>{record.smokeFreeDays || 0}</Text></Text>
-                    <br />
-                    <Text>Tiết kiệm: <Text strong>{(record.actualMoneySaved || 0).toLocaleString()}đ</Text></Text>
-                </div>
-            ),
-        },
-        {
             title: 'Cập nhật lần cuối',
             dataIndex: 'lastUpdated',
             key: 'lastUpdated',
@@ -506,107 +551,50 @@ const MemberAddictionSurveys = () => {
     ];
 
     const renderMemberDetail = () => {
-        if (!memberSurveyData || !memberProgressData) {
+        if (!memberSurveyData || !memberSurveyData.data) {
             return <Empty description="Không có dữ liệu khảo sát" />;
         }
 
-        // Sử dụng renderDetailedUserInfo cho detailed view
-        return (
-            <Tabs defaultActiveKey="detailed">
-                <TabPane tab="📊 Chi Tiết Đầy Đủ" key="detailed">
-                    {renderDetailedUserInfo(memberSurveyData)}
-                </TabPane>
-                
-                <TabPane tab="📈 Tiến Trình" key="progress">
-                    <Row gutter={[16, 16]}>
-                        <Col xs={24} sm={6}>
-                            <Statistic
-                                title="Ngày không hút thuốc"
-                                value={memberProgressData.smokeFreeDays || 0}
-                                valueStyle={{ color: '#52c41a' }}
-                                prefix="📅"
-                            />
-                        </Col>
-                        <Col xs={24} sm={6}>
-                            <Statistic
-                                title="Tiền đã tiết kiệm"
-                                value={calculateActualSavings(
-                                    memberProgressData.smokeFreeDays || 0, 
-                                    memberSurveyData.DailySavings || 0
-                                )}
-                                formatter={(value) => `${value.toLocaleString()}đ`}
-                                valueStyle={{ color: '#fa8c16' }}
-                                prefix={<DollarCircleOutlined />}
-                            />
-                        </Col>
-                        <Col xs={24} sm={6}>
-                            <Statistic
-                                title="Điếu thuốc đã tránh"
-                                value={calculateCigarettesNotSmoked(
-                                    memberProgressData.smokeFreeDays || 0,
-                                    memberSurveyData.CigarettesPerDay || 0
-                                )}
-                                valueStyle={{ color: '#1890ff' }}
-                                prefix="🚭"
-                            />
-                        </Col>
-                        <Col xs={24} sm={6}>
-                            <Statistic
-                                title="Xác suất thành công"
-                                value={memberSurveyData.SuccessProbability}
-                                suffix="%"
-                                valueStyle={{ color: '#722ed1' }}
-                                prefix={<TrophyOutlined />}
-                            />
-                        </Col>
-                    </Row>
-                </TabPane>
-
-                <TabPane tab="💡 Khuyến Nghị" key="recommendations">
-                    <Card title="🎯 Khuyến Nghị Cho Coach">
-                        <Space direction="vertical" style={{ width: '100%' }}>
-                            {memberSurveyData.SuccessProbability > 70 && (
-                                <Alert
-                                    message="Member có tiềm năng thành công cao"
-                                    description="Hãy duy trì động lực và khuyến khích member tiếp tục. Có thể tập trung vào việc chia sẻ thành tích để tăng cường tự tin."
-                                    type="success"
-                                    showIcon
-                                />
-                            )}
-                            
-                            {memberSurveyData.SuccessProbability <= 50 && (
-                                <Alert
-                                    message="Member cần hỗ trợ thêm"
-                                    description="Nên tăng cường tư vấn 1-1, đưa ra kế hoạch chi tiết hơn và theo dõi sát sao hơn. Có thể cần thay đổi phương pháp tiếp cận."
-                                    type="warning"
-                                    showIcon
-                                />
-                            )}
-
-                            {memberSurveyData.FTNDScore >= 7 && (
-                                <Alert
-                                    message="Mức độ nghiện cao"
-                                    description="Member có mức độ nghiện nặng, cần kiên nhẫn và hỗ trợ chuyên sâu. Nên tập trung vào việc giảm dần thay vì bỏ ngay."
-                                    type="error"
-                                    showIcon
-                                />
-                            )}
-
-                            <Alert
-                                message="Tập trung vào động lực tài chính"
-                                description={`Member có thể tiết kiệm ${(memberSurveyData.MonthlySavings || 0).toLocaleString()}đ/tháng. Hãy nhắc nhở họ về lợi ích tài chính này thường xuyên.`}
-                                type="info"
-                                showIcon
-                            />
-                        </Space>
-                    </Card>
-                </TabPane>
-            </Tabs>
-        );
+        // Pass đúng data từ API response
+        return renderDetailedUserInfo(memberSurveyData.data);
     };
+
+    console.log('🎨 MemberAddictionSurveys rendering with state', {
+        membersCount: members.length,
+        loading,
+        hasStatistics: !!statistics,
+        searchText,
+        pagination
+    });
 
     return (
         <div style={{ padding: '24px' }}>
+            {/* Debug Panel */}
+            <div style={{ 
+                position: 'fixed', 
+                top: '10px', 
+                right: '10px', 
+                background: '#f0f0f0', 
+                padding: '10px',
+                borderRadius: '5px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                zIndex: 9999,
+                fontSize: '12px'
+            }}>
+                <div>🔍 Debug Status</div>
+                <div>Token: {localStorage.getItem('coachToken') ? '✅' : '❌'}</div>
+                <div>Members: {members.length}</div>
+                <div>Loading: {loading ? '🔄' : '✅'}</div>
+                <div style={{ marginTop: '5px' }}>
+                    <Button size="small" onClick={() => console.log('Export logs disabled')}>
+                        📥 Download Logs
+                    </Button>
+                    <Button size="small" onClick={() => console.log('Clear logs disabled')} style={{ marginLeft: '5px' }}>
+                        🗑️ Clear
+                    </Button>
+                </div>
+            </div>
+
             {/* Header */}
             <div style={{ marginBottom: '24px' }}>
                 <Title level={2}>🚭 Khảo Sát Mức Độ Nghiện Thuốc Lá</Title>
@@ -689,25 +677,21 @@ const MemberAddictionSurveys = () => {
 
             {/* Member Detail Modal */}
             <Modal
-                title={`Chi tiết khảo sát - ${selectedMember?.FullName || selectedMember?.Username}`}
-                visible={memberDetailVisible}
+                title={`Chi tiết khảo sát - ${selectedMember?.FirstName} ${selectedMember?.LastName}`}
+                open={memberDetailVisible}
                 onCancel={() => {
                     setMemberDetailVisible(false);
                     setSelectedMember(null);
                     setMemberSurveyData(null);
-                    setMemberProgressData(null);
+                    // Bỏ: setMemberProgressData(null);
                 }}
                 footer={null}
                 width={1200}
                 style={{ top: 20 }}
             >
-                {memberDetailLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                        Đang tải dữ liệu...
-                    </div>
-                ) : (
-                    renderMemberDetail()
-                )}
+                <Spin spinning={memberDetailLoading}>
+                    {renderMemberDetail()}
+                </Spin>
             </Modal>
         </div>
     );
