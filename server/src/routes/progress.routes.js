@@ -84,7 +84,27 @@ router.post('/', protect, checkMembershipAccess, async (req, res) => {
             });
         }
 
-        // Get user's smoking info for calculations
+        // 🔥 NEW: Get user's smoking info from SmokingAddictionSurveyResults FIRST (more accurate)
+        console.log('💰 Getting savings data from survey results for user:', req.user.UserID);
+        
+        const surveyResults = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 
+                    DailySavings,
+                    MonthlySavings,
+                    YearlySavings,
+                    CigarettesPerDay,
+                    PackagePrice,
+                    PriceRange,
+                    PackageName,
+                    SubmittedAt
+                FROM SmokingAddictionSurveyResults 
+                WHERE UserID = @UserID 
+                ORDER BY SubmittedAt DESC
+            `);
+
+        // Fallback to SmokingStatus if no survey data
         const smokingInfo = await pool.request()
             .input('UserID', req.user.UserID)
             .query(`
@@ -96,45 +116,84 @@ router.post('/', protect, checkMembershipAccess, async (req, res) => {
 
         let moneySaved = 0;
         let daysSmokeFree = 0;
+        let calculationSource = 'default';
 
-        if (smokingInfo.recordset.length > 0) {
+        // 🎯 PRIORITY 1: Use survey data (most accurate)
+        if (surveyResults.recordset.length > 0) {
+            const surveyData = surveyResults.recordset[0];
+            calculationSource = 'survey';
+            
+            console.log('✅ Using survey data for savings calculation:', {
+                DailySavings: surveyData.DailySavings,
+                CigarettesPerDay: surveyData.CigarettesPerDay,
+                PackagePrice: surveyData.PackagePrice
+            });
+
+            const baselineCigarettesPerDay = surveyData.CigarettesPerDay || 10;
+            const cigarettePrice = surveyData.PackagePrice ? (surveyData.PackagePrice / 20) : 1500; // Assume 20 cigarettes per pack
+            
+            // Calculate based on survey baseline vs actual consumption
+            if (cigarettesSmoked <= baselineCigarettesPerDay) {
+                // User smoked less than or equal to baseline - calculate savings
+                const cigarettesNotSmoked = baselineCigarettesPerDay - cigarettesSmoked;
+                moneySaved = cigarettesNotSmoked * cigarettePrice;
+                
+                // Alternative: Use pre-calculated daily savings from survey when full day smoke-free
+                if (cigarettesSmoked === 0) {
+                    moneySaved = Math.max(moneySaved, surveyData.DailySavings || 0);
+                }
+            } else {
+                // User smoked more than baseline - no savings, possibly extra cost
+                moneySaved = 0;
+            }
+
+        } 
+        // 🎯 PRIORITY 2: Use SmokingStatus data
+        else if (smokingInfo.recordset.length > 0) {
             const { CigarettesPerDay, CigarettePrice } = smokingInfo.recordset[0];
+            calculationSource = 'smoking_status';
+            
+            console.log('⚠️ Using SmokingStatus data for savings calculation');
 
-            // Improved calculation: Use standard pricing if not set
-            // Standard: 1 pack = 20 cigarettes = 30,000 VNĐ → 1 cigarette = 1,500 VNĐ
             const standardCigarettePrice = CigarettePrice || 1500;
-            const baselineCigarettesPerDay = CigarettesPerDay || 10; // Default to half pack per day
+            const baselineCigarettesPerDay = CigarettesPerDay || 10;
 
-            // Calculate money saved for this day
             const cigarettesNotSmoked = Math.max(0, baselineCigarettesPerDay - cigarettesSmoked);
             moneySaved = cigarettesNotSmoked * standardCigarettePrice;
 
-            // Calculate total smoke-free days
-            const smokeFreeQuery = await pool.request()
-                .input('UserID', req.user.UserID)
-                .query(`
-                    SELECT COUNT(*) as SmokeFreeDays
-                    FROM ProgressTracking 
-                    WHERE UserID = @UserID AND CigarettesSmoked = 0
-                `);
-
-            daysSmokeFree = smokeFreeQuery.recordset[0].SmokeFreeDays;
-            if (cigarettesSmoked === 0) {
-                daysSmokeFree += 1; // Add current day if smoke-free
-            }
-        } else {
-            // Default calculation if no smoking status is set
-            // Assume standard baseline: 10 cigarettes per day (half pack) at 1500 VNĐ per cigarette
+        } 
+        // 🎯 PRIORITY 3: Default calculation
+        else {
+            calculationSource = 'default';
+            console.log('⚠️ Using default values for savings calculation');
+            
             const defaultCigarettesPerDay = 10;
             const defaultCigarettePrice = 1500;
 
             const cigarettesNotSmoked = Math.max(0, defaultCigarettesPerDay - cigarettesSmoked);
             moneySaved = cigarettesNotSmoked * defaultCigarettePrice;
-
-            if (cigarettesSmoked === 0) {
-                daysSmokeFree = 1;
-            }
         }
+
+        // Calculate total smoke-free days
+        const smokeFreeQuery = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT COUNT(*) as SmokeFreeDays
+                FROM ProgressTracking 
+                WHERE UserID = @UserID AND CigarettesSmoked = 0
+            `);
+
+        daysSmokeFree = smokeFreeQuery.recordset[0].SmokeFreeDays;
+        if (cigarettesSmoked === 0) {
+            daysSmokeFree += 1; // Add current day if smoke-free
+        }
+
+        console.log('💰 Final calculation:', {
+            source: calculationSource,
+            cigarettesSmoked,
+            moneySaved,
+            daysSmokeFree
+        });
 
         // Sử dụng currentMembership từ middleware checkMembershipAccess
         const currentMembershipID = req.currentMembership.MembershipID;
@@ -361,7 +420,26 @@ router.get('/summary', protect, filterByCurrentMembership, async (req, res) => {
 
         const result = await request.query(query);
 
-        // Get user's baseline smoking info
+        // 🔥 NEW: Get baseline from SmokingAddictionSurveyResults FIRST (more accurate)
+        console.log('💰 Getting baseline data from survey results for summary calculation');
+        
+        const surveyResults = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 
+                    DailySavings,
+                    MonthlySavings,
+                    YearlySavings,
+                    CigarettesPerDay,
+                    PackagePrice,
+                    PriceRange,
+                    PackageName
+                FROM SmokingAddictionSurveyResults 
+                WHERE UserID = @UserID 
+                ORDER BY SubmittedAt DESC
+            `);
+
+        // Fallback to SmokingStatus
         const smokingInfo = await pool.request()
             .input('UserID', req.user.UserID)
             .query(`
@@ -375,22 +453,52 @@ router.get('/summary', protect, filterByCurrentMembership, async (req, res) => {
         let totalSavings = summaryData.TotalMoneySaved || 0;
         let potentialCigarettes = 0;
 
-        if (smokingInfo.recordset.length > 0 && summaryData.TotalDaysTracked > 0) {
-            const { CigarettesPerDay, CigarettePrice } = smokingInfo.recordset[0];
+        // 🎯 PRIORITY 1: Use survey data for more accurate calculations
+        if (surveyResults.recordset.length > 0 && summaryData.TotalDaysTracked > 0) {
+            const surveyData = surveyResults.recordset[0];
+            
+            console.log('✅ Using survey data for summary calculation:', {
+                DailySavings: surveyData.DailySavings,
+                CigarettesPerDay: surveyData.CigarettesPerDay,
+                PackagePrice: surveyData.PackagePrice
+            });
 
-            // Use standard pricing and baseline from survey data
-            const standardCigarettePrice = CigarettePrice || 1500; // 1 cigarette = 1500 VNĐ
-            const baselineCigarettesPerDay = CigarettesPerDay || 10; // Default half pack per day
+            const baselineCigarettesPerDay = surveyData.CigarettesPerDay || 10;
+            const cigarettePrice = surveyData.PackagePrice ? (surveyData.PackagePrice / 20) : 1500;
 
             potentialCigarettes = summaryData.TotalDaysTracked * baselineCigarettesPerDay;
 
-            // Recalculate total savings with improved formula
+            // Enhanced calculation using survey data
+            const cigarettesNotSmoked = potentialCigarettes - (summaryData.TotalCigarettesSmoked || 0);
+            
+            // Use survey's daily savings as reference for totally smoke-free periods
+            const perfectSavings = summaryData.SmokeFreeDays * (surveyData.DailySavings || 0);
+            const calculatedSavings = cigarettesNotSmoked * cigarettePrice;
+            
+            // Take the higher value for accuracy
+            totalSavings = Math.max(totalSavings, perfectSavings, calculatedSavings);
+            
+        } 
+        // 🎯 PRIORITY 2: Use SmokingStatus data
+        else if (smokingInfo.recordset.length > 0 && summaryData.TotalDaysTracked > 0) {
+            const { CigarettesPerDay, CigarettePrice } = smokingInfo.recordset[0];
+
+            console.log('⚠️ Using SmokingStatus data for summary calculation');
+
+            const standardCigarettePrice = CigarettePrice || 1500;
+            const baselineCigarettesPerDay = CigarettesPerDay || 10;
+
+            potentialCigarettes = summaryData.TotalDaysTracked * baselineCigarettesPerDay;
             const cigarettesNotSmoked = potentialCigarettes - (summaryData.TotalCigarettesSmoked || 0);
             totalSavings = Math.max(totalSavings, cigarettesNotSmoked * standardCigarettePrice);
-        } else {
-            // Use default values if no smoking info available
-            const defaultCigarettesPerDay = 10; // Half pack per day
-            const defaultCigarettePrice = 1500; // Standard price per cigarette
+            
+        } 
+        // 🎯 PRIORITY 3: Default calculation
+        else if (summaryData.TotalDaysTracked > 0) {
+            console.log('⚠️ Using default values for summary calculation');
+            
+            const defaultCigarettesPerDay = 10;
+            const defaultCigarettePrice = 1500;
 
             potentialCigarettes = summaryData.TotalDaysTracked * defaultCigarettesPerDay;
             const cigarettesNotSmoked = potentialCigarettes - (summaryData.TotalCigarettesSmoked || 0);
@@ -812,6 +920,491 @@ router.get('/savings', protect, filterByCurrentMembership, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Lỗi tính toán tiền tiết kiệm'
+        });
+    }
+});
+
+// 🔥 NEW: Get calculation source info - shows where savings calculations come from
+router.get('/calculation-source', protect, filterByCurrentMembership, async (req, res) => {
+    try {
+        console.log('📊 Getting calculation source info for user:', req.user.UserID);
+
+        // Check survey data
+        const surveyResults = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 
+                    DailySavings,
+                    MonthlySavings,
+                    YearlySavings,
+                    CigarettesPerDay,
+                    PackagePrice,
+                    PriceRange,
+                    PackageName,
+                    SubmittedAt
+                FROM SmokingAddictionSurveyResults 
+                WHERE UserID = @UserID 
+                ORDER BY SubmittedAt DESC
+            `);
+
+        // Check smoking status
+        const smokingInfo = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 CigarettesPerDay, CigarettePrice, LastUpdated
+                FROM SmokingStatus 
+                WHERE UserID = @UserID 
+                ORDER BY LastUpdated DESC
+            `);
+
+        let calculationSource = {
+            source: 'default',
+            sourceDescription: 'Giá trị chuẩn thị trường',
+            accuracy: 'Ước tính cơ bản',
+            details: {
+                cigarettesPerDay: 10,
+                cigarettePrice: 1500,
+                dailyCost: 15000,
+                description: '10 điếu/ngày × 1.500 VNĐ/điếu = 15.000 VNĐ/ngày'
+            },
+            lastUpdated: null,
+            recommendations: [
+                'Làm khảo sát nghiện nicotine để có ước tính chính xác hơn',
+                'Cập nhật thông tin hút thuốc trong hồ sơ cá nhân'
+            ]
+        };
+
+        // Priority 1: Survey data (most accurate)
+        if (surveyResults.recordset.length > 0) {
+            const surveyData = surveyResults.recordset[0];
+            calculationSource = {
+                source: 'survey',
+                sourceDescription: 'Kết quả khảo sát nghiện nicotine',
+                accuracy: 'Chính xác cao - Dựa trên đánh giá cá nhân',
+                details: {
+                    cigarettesPerDay: surveyData.CigarettesPerDay,
+                    packagePrice: surveyData.PackagePrice,
+                    packageName: surveyData.PackageName,
+                    priceRange: surveyData.PriceRange,
+                    dailySavings: surveyData.DailySavings,
+                    monthlySavings: surveyData.MonthlySavings,
+                    yearlySavings: surveyData.YearlySavings,
+                    cigarettePrice: surveyData.PackagePrice ? (surveyData.PackagePrice / 20) : null,
+                    description: `${surveyData.CigarettesPerDay} điếu/ngày từ ${surveyData.PackageName} (${surveyData.PriceRange})`
+                },
+                lastUpdated: surveyData.SubmittedAt,
+                recommendations: [
+                    'Dữ liệu từ khảo sát nghiện nicotine đang được sử dụng',
+                    'Làm lại khảo sát nếu thói quen hút thuốc có thay đổi đáng kể'
+                ]
+            };
+        }
+        // Priority 2: Smoking status
+        else if (smokingInfo.recordset.length > 0) {
+            const smoking = smokingInfo.recordset[0];
+            calculationSource = {
+                source: 'smoking_status',
+                sourceDescription: 'Thông tin hút thuốc từ hồ sơ',
+                accuracy: 'Chính xác trung bình - Dựa trên thông tin đã nhập',
+                details: {
+                    cigarettesPerDay: smoking.CigarettesPerDay,
+                    cigarettePrice: smoking.CigarettePrice,
+                    dailyCost: smoking.CigarettesPerDay * smoking.CigarettePrice,
+                    description: `${smoking.CigarettesPerDay} điếu/ngày × ${smoking.CigarettePrice?.toLocaleString('vi-VN')} VNĐ/điếu`
+                },
+                lastUpdated: smoking.LastUpdated,
+                recommendations: [
+                    'Làm khảo sát nghiện nicotine để có ước tính chính xác hơn',
+                    'Cập nhật thông tin hút thuốc nếu có thay đổi'
+                ]
+            };
+        }
+
+        res.json({
+            success: true,
+            data: calculationSource
+        });
+
+    } catch (error) {
+        console.error('❌ Error getting calculation source:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi lấy thông tin nguồn tính toán'
+        });
+    }
+});
+
+// 🎯 NEW: Calculate success rate for current membership based on progress data
+router.get('/success-rate', protect, filterByCurrentMembership, async (req, res) => {
+    try {
+        console.log('📊 Calculating success rate for user:', req.user.UserID);
+
+        // Nếu không có active membership, return 0
+        if (req.noActiveMembership) {
+            return res.json({
+                success: true,
+                data: {
+                    successRate: 0,
+                    confidence: 'low',
+                    message: 'Cần có gói membership để tính tỉ lệ thành công',
+                    factors: {}
+                }
+            });
+        }
+
+        // Get user's baseline from survey
+        const surveyResults = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 
+                    CigarettesPerDay as BaselineCigarettes,
+                    SuccessProbability as InitialProbability,
+                    SubmittedAt
+                FROM SmokingAddictionSurveyResults 
+                WHERE UserID = @UserID 
+                ORDER BY SubmittedAt DESC
+            `);
+
+        // Get all progress data for current membership
+        let progressQuery = `
+            SELECT 
+                Date,
+                CigarettesSmoked,
+                CravingLevel,
+                EmotionNotes,
+                DATEDIFF(day, MIN(Date) OVER(), Date) as DayNumber
+            FROM ProgressTracking
+            WHERE UserID = @UserID
+        `;
+
+        const request = pool.request().input('UserID', req.user.UserID);
+
+        // Filter by current membership if available
+        if (req.currentMembershipID) {
+            progressQuery += ` AND MembershipID = @MembershipID`;
+            request.input('MembershipID', req.currentMembershipID);
+        }
+
+        progressQuery += ` ORDER BY Date ASC`;
+
+        const progressResult = await request.query(progressQuery);
+        const progressData = progressResult.recordset;
+
+        console.log('📊 Found', progressData.length, 'progress entries');
+
+        if (progressData.length === 0) {
+            return res.json({
+                success: true,
+                data: {
+                    successRate: 0,
+                    confidence: 'low',
+                    message: 'Chưa có dữ liệu tiến trình để tính toán',
+                    factors: {},
+                    daysTracked: 0
+                }
+            });
+        }
+
+        // Set baseline (from survey or default)
+        let baselineCigarettes = 10; // Default
+        let initialProbability = 50; // Default
+
+        if (surveyResults.recordset.length > 0) {
+            baselineCigarettes = surveyResults.recordset[0].BaselineCigarettes || 10;
+            initialProbability = surveyResults.recordset[0].InitialProbability || 50;
+        }
+
+        console.log('📊 Baseline:', { baselineCigarettes, initialProbability });
+
+        // 🧮 CALCULATE SUCCESS FACTORS
+
+        // 1. Cigarette Reduction Factor (40% weight)
+        const totalDays = progressData.length;
+        const recentDays = Math.min(7, totalDays); // Last 7 days or all if less
+        const recentData = progressData.slice(-recentDays);
+        
+        const averageRecentCigarettes = recentData.reduce((sum, day) => sum + day.CigarettesSmoked, 0) / recentDays;
+        const cigaretteReduction = Math.max(0, (baselineCigarettes - averageRecentCigarettes) / baselineCigarettes);
+        const cigaretteFactor = Math.min(100, cigaretteReduction * 100);
+
+        // 2. Craving Control Factor (30% weight)
+        const averageCraving = progressData.reduce((sum, day) => sum + day.CravingLevel, 0) / totalDays;
+        const cravingFactor = Math.max(0, (10 - averageCraving) / 10 * 100);
+
+        // 3. Consistency Factor (20% weight) 
+        const smokeFreeDays = progressData.filter(day => day.CigarettesSmoked === 0).length;
+        const smokeFreeRate = smokeFreeDays / totalDays;
+        const consistencyFactor = smokeFreeRate * 100;
+
+        // 4. Improvement Trend Factor (10% weight)
+        let trendFactor = 50; // Neutral default
+        if (totalDays >= 3) {
+            const firstHalf = progressData.slice(0, Math.floor(totalDays / 2));
+            const secondHalf = progressData.slice(Math.floor(totalDays / 2));
+            
+            const firstHalfAvg = firstHalf.reduce((sum, day) => sum + day.CigarettesSmoked, 0) / firstHalf.length;
+            const secondHalfAvg = secondHalf.reduce((sum, day) => sum + day.CigarettesSmoked, 0) / secondHalf.length;
+            
+            const improvement = Math.max(0, (firstHalfAvg - secondHalfAvg) / baselineCigarettes);
+            trendFactor = Math.min(100, 50 + improvement * 100);
+        }
+
+        // 🎯 CALCULATE WEIGHTED SUCCESS RATE
+        const weightedSuccessRate = (
+            cigaretteFactor * 0.4 +
+            cravingFactor * 0.3 +
+            consistencyFactor * 0.2 +
+            trendFactor * 0.1
+        );
+
+        // Adjust based on initial survey probability
+        const surveyWeight = surveyResults.recordset.length > 0 ? 0.2 : 0;
+        const finalSuccessRate = Math.round(
+            weightedSuccessRate * (1 - surveyWeight) + 
+            initialProbability * surveyWeight
+        );
+
+        // Determine confidence level
+        let confidence = 'low';
+        if (totalDays >= 14) confidence = 'high';
+        else if (totalDays >= 7) confidence = 'medium';
+
+        // Create detailed breakdown
+        const factors = {
+            cigaretteReduction: {
+                score: Math.round(cigaretteFactor),
+                weight: '40%',
+                description: `Giảm từ ${baselineCigarettes} xuống ${averageRecentCigarettes.toFixed(1)} điếu/ngày`,
+                baseline: baselineCigarettes,
+                current: Math.round(averageRecentCigarettes * 10) / 10
+            },
+            cravingControl: {
+                score: Math.round(cravingFactor),
+                weight: '30%',
+                description: `Mức thèm trung bình: ${averageCraving.toFixed(1)}/10`,
+                averageCraving: Math.round(averageCraving * 10) / 10
+            },
+            consistency: {
+                score: Math.round(consistencyFactor),
+                weight: '20%',
+                description: `${smokeFreeDays}/${totalDays} ngày không hút thuốc`,
+                smokeFreeDays,
+                totalDays,
+                smokeFreeRate: Math.round(smokeFreeRate * 100)
+            },
+            trend: {
+                score: Math.round(trendFactor),
+                weight: '10%',
+                description: totalDays >= 3 ? 'Xu hướng cải thiện theo thời gian' : 'Cần thêm dữ liệu để đánh giá xu hướng'
+            }
+        };
+
+        // Generate insights and recommendations
+        const insights = [];
+        const recommendations = [];
+
+        if (cigaretteFactor >= 70) {
+            insights.push('✅ Giảm thuốc lá rất tốt');
+        } else if (cigaretteFactor >= 40) {
+            insights.push('⚠️ Có tiến bộ trong việc giảm thuốc');
+            recommendations.push('Cố gắng giảm thêm số điếu hút mỗi ngày');
+        } else {
+            insights.push('❌ Cần cải thiện việc giảm thuốc lá');
+            recommendations.push('Hãy đặt mục tiêu giảm ít nhất 1-2 điếu mỗi tuần');
+        }
+
+        if (cravingFactor >= 60) {
+            insights.push('✅ Kiểm soát cơn thèm tốt');
+        } else {
+            insights.push('⚠️ Cần cải thiện kiểm soát cơn thèm');
+            recommendations.push('Thực hành kỹ thuật thở sâu và thiền định');
+        }
+
+        if (consistencyFactor >= 30) {
+            insights.push('✅ Có nhiều ngày không hút thuốc');
+        } else {
+            recommendations.push('Cố gắng tạo ra nhiều ngày hoàn toàn không hút thuốc');
+        }
+
+        res.json({
+            success: true,
+            data: {
+                successRate: finalSuccessRate,
+                confidence,
+                daysTracked: totalDays,
+                factors,
+                insights,
+                recommendations,
+                calculation: {
+                    method: 'Weighted average của 4 yếu tố chính',
+                    formula: 'Giảm thuốc (40%) + Kiểm soát thèm (30%) + Nhất quán (20%) + Xu hướng (10%)',
+                    dataSource: surveyResults.recordset.length > 0 ? 'Khảo sát + Tiến trình' : 'Chỉ tiến trình',
+                    lastUpdated: new Date().toISOString()
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error calculating success rate:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi tính toán tỉ lệ thành công'
+        });
+    }
+});
+
+// 🎯 NEW: Calculate daily success rates for progress history
+router.get('/daily-success-rates', protect, filterByCurrentMembership, async (req, res) => {
+    try {
+        console.log('📊 Calculating daily success rates for user:', req.user.UserID);
+
+        // Nếu không có active membership, return empty
+        if (req.noActiveMembership) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        // Get user's baseline from survey
+        const surveyResults = await pool.request()
+            .input('UserID', req.user.UserID)
+            .query(`
+                SELECT TOP 1 
+                    CigarettesPerDay as BaselineCigarettes,
+                    SuccessProbability as InitialProbability
+                FROM SmokingAddictionSurveyResults 
+                WHERE UserID = @UserID 
+                ORDER BY SubmittedAt DESC
+            `);
+
+        // Get all progress data for current membership
+        let progressQuery = `
+            SELECT 
+                Date,
+                CigarettesSmoked,
+                CravingLevel,
+                EmotionNotes,
+                MoneySaved
+            FROM ProgressTracking
+            WHERE UserID = @UserID
+        `;
+
+        const request = pool.request().input('UserID', req.user.UserID);
+
+        // Filter by current membership if available
+        if (req.currentMembershipID) {
+            progressQuery += ` AND MembershipID = @MembershipID`;
+            request.input('MembershipID', req.currentMembershipID);
+        }
+
+        progressQuery += ` ORDER BY Date ASC`;
+
+        const progressResult = await request.query(progressQuery);
+        const progressData = progressResult.recordset;
+
+        if (progressData.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        // Set baseline (from survey or default)
+        let baselineCigarettes = 10; // Default
+        if (surveyResults.recordset.length > 0) {
+            baselineCigarettes = surveyResults.recordset[0].BaselineCigarettes || 10;
+        }
+
+        // Calculate success rate for each day (cumulative)
+        const dailyRates = [];
+
+        progressData.forEach((currentDay, index) => {
+            // Get data up to current day (cumulative)
+            const dataUpToNow = progressData.slice(0, index + 1);
+            const totalDays = dataUpToNow.length;
+
+            // 1. Cigarette Reduction Factor (40% weight)
+            const recentDays = Math.min(7, totalDays);
+            const recentData = dataUpToNow.slice(-recentDays);
+            const averageRecentCigarettes = recentData.reduce((sum, day) => sum + day.CigarettesSmoked, 0) / recentDays;
+            const cigaretteReduction = Math.max(0, (baselineCigarettes - averageRecentCigarettes) / baselineCigarettes);
+            const cigaretteFactor = Math.min(100, cigaretteReduction * 100);
+
+            // 2. Craving Control Factor (30% weight)
+            const averageCraving = dataUpToNow.reduce((sum, day) => sum + day.CravingLevel, 0) / totalDays;
+            const cravingFactor = Math.max(0, (10 - averageCraving) / 10 * 100);
+
+            // 3. Consistency Factor (20% weight)
+            const smokeFreeDays = dataUpToNow.filter(day => day.CigarettesSmoked === 0).length;
+            const smokeFreeRate = smokeFreeDays / totalDays;
+            const consistencyFactor = smokeFreeRate * 100;
+
+            // 4. Improvement Trend Factor (10% weight)
+            let trendFactor = 50; // Neutral default
+            if (totalDays >= 3) {
+                const firstHalf = dataUpToNow.slice(0, Math.floor(totalDays / 2));
+                const secondHalf = dataUpToNow.slice(Math.floor(totalDays / 2));
+                
+                const firstHalfAvg = firstHalf.reduce((sum, day) => sum + day.CigarettesSmoked, 0) / firstHalf.length;
+                const secondHalfAvg = secondHalf.reduce((sum, day) => sum + day.CigarettesSmoked, 0) / secondHalf.length;
+                
+                const improvement = Math.max(0, (firstHalfAvg - secondHalfAvg) / baselineCigarettes);
+                trendFactor = Math.min(100, 50 + improvement * 100);
+            }
+
+            // Calculate weighted success rate for this day
+            const dailySuccessRate = Math.round(
+                cigaretteFactor * 0.4 +
+                cravingFactor * 0.3 +
+                consistencyFactor * 0.2 +
+                trendFactor * 0.1
+            );
+
+            // Determine trend compared to previous day
+            let trend = 'stable';
+            let trendChange = 0;
+            if (index > 0) {
+                const previousRate = dailyRates[index - 1].successRate;
+                trendChange = dailySuccessRate - previousRate;
+                if (trendChange > 2) trend = 'up';
+                else if (trendChange < -2) trend = 'down';
+            }
+
+            dailyRates.push({
+                date: currentDay.Date,
+                successRate: dailySuccessRate,
+                trend: trend,
+                trendChange: trendChange,
+                daysTracked: totalDays,
+                factors: {
+                    cigaretteReduction: Math.round(cigaretteFactor),
+                    cravingControl: Math.round(cravingFactor),
+                    consistency: Math.round(consistencyFactor),
+                    trend: Math.round(trendFactor)
+                },
+                dailyData: {
+                    cigarettesSmoked: currentDay.CigarettesSmoked,
+                    cravingLevel: currentDay.CravingLevel,
+                    isSmokeFree: currentDay.CigarettesSmoked === 0,
+                    averageRecentCigarettes: Math.round(averageRecentCigarettes * 10) / 10,
+                    smokeFreeRate: Math.round(smokeFreeRate * 100)
+                }
+            });
+        });
+
+        res.json({
+            success: true,
+            data: dailyRates,
+            baseline: baselineCigarettes,
+            totalDays: progressData.length
+        });
+
+    } catch (error) {
+        console.error('❌ Error calculating daily success rates:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi tính toán tỉ lệ thành công hàng ngày'
         });
     }
 });
