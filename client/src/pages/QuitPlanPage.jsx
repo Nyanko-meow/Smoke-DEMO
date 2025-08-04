@@ -405,8 +405,8 @@ const QuitPlanPage = () => {
                 setPlanTemplate(response.data.planTemplate || []);
                 setPaymentInfo(response.data.paymentInfo || null);
 
-                // If user has existing plans, populate the form with the latest active plan
-                const activePlans = response.data.data.filter(plan => plan.Status === 'active');
+                // If user has existing plans, populate the form with the latest active plan (including pending_cancellation)
+                const activePlans = response.data.data.filter(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation');
                 if (activePlans.length > 0) {
                     const latestPlan = activePlans[0];
                     form.setFieldsValue({
@@ -498,12 +498,15 @@ const QuitPlanPage = () => {
         const [logsLoading, setLogsLoading] = useState(true);
         const [logForm] = Form.useForm();
         const [logSubmitting, setLogSubmitting] = useState(false);
-        const [successRate, setSuccessRate] = useState(null);
-        const [successLoading, setSuccessLoading] = useState(false);
+        // Success rate states disabled - no longer showing success rate analysis
+        // const [successRate, setSuccessRate] = useState(null);
+        // const [successLoading, setSuccessLoading] = useState(false);
         // Removed dailySuccessRates state - now calculating inline for better performance
 
-        // Only show logs for members with active plans
-        const activePlans = existingPlans.filter(plan => plan.Status === 'active');
+        // Only show logs for members with active plans (including pending_cancellation)
+        const activePlans = existingPlans.filter(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation');
+        
+        // Debug logging removed - Success Rate Analysis disabled
 
         const loadProgressData = async () => {
             if (activePlans.length === 0) {
@@ -535,33 +538,10 @@ const QuitPlanPage = () => {
 
         useEffect(() => {
             loadProgressData();
-            loadSuccessRate();
+            // loadSuccessRate(); // Disabled - no longer showing success rate analysis
         }, [activePlans.length]);
 
-        const loadSuccessRate = async () => {
-            if (activePlans.length === 0) {
-                setSuccessLoading(false);
-                return;
-            }
-
-            try {
-                setSuccessLoading(true);
-                const response = await api.get('/api/progress/success-rate');
-                console.log('✅ Success rate response:', response.data);
-
-                if (response.data.success) {
-                    setSuccessRate(response.data.data);
-                } else {
-                    console.log('⚠️ No success rate data available');
-                    setSuccessRate(null);
-                }
-            } catch (error) {
-                console.error('❌ Error loading success rate:', error);
-                setSuccessRate(null);
-            } finally {
-                setSuccessLoading(false);
-            }
-        };
+        // loadSuccessRate function removed - Success Rate Analysis disabled
 
         // Removed loadDailySuccessRates - now calculating inline for better performance
 
@@ -585,7 +565,7 @@ const QuitPlanPage = () => {
                     message.success('🎉 Đã ghi lại tiến trình hôm nay!');
                     logForm.resetFields();
                     loadProgressData(); // Reload progress data 
-                    loadSuccessRate(); // Reload success rate
+                    // loadSuccessRate(); // Reload success rate - DISABLED
                     // Daily success rates now calculated inline - no need to reload
                 } else {
                     message.error(response.data.message || 'Lỗi khi ghi lại tiến trình');
@@ -834,8 +814,8 @@ const QuitPlanPage = () => {
                     </Form>
                 </Card>
 
-                {/* Success Rate Analysis */}
-                {successRate && (
+                {/* Success Rate Analysis - DISABLED */}
+                {false && (
                     <Card
                         title={
                             <div className="flex items-center">
@@ -1798,11 +1778,11 @@ const QuitPlanPage = () => {
                                             </Row>
                                         </Col>
 
-                                        {/* Show active plan at top if exists */}
-                                        {existingPlans.length > 0 && existingPlans.some(plan => plan.Status === 'active') && (
+                                        {/* Show active plan at top if exists (including pending_cancellation) */}
+                                        {existingPlans.length > 0 && existingPlans.some(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation') && (
                                             <Col span={24}>
                                                 {(() => {
-                                                    const activePlan = existingPlans.find(plan => plan.Status === 'active');
+                                                    const activePlan = existingPlans.find(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation');
                                                     const daysToTarget = calculateDaysToTarget(activePlan.TargetDate);
                                                     const totalDays = dayjs(activePlan.TargetDate).diff(dayjs(activePlan.StartDate), 'day');
                                                     const passedDays = dayjs().diff(dayjs(activePlan.StartDate), 'day');
@@ -2108,14 +2088,14 @@ const QuitPlanPage = () => {
                                                             color: '#1d4ed8',
                                                             fontWeight: 600
                                                         }}>
-                                                            {existingPlans.some(plan => plan.Status === 'active') ? 
+                                                            {existingPlans.some(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation') ? 
                                                                 'Kế hoạch cai thuốc chi tiết' : 
                                                                 'Lịch sử kế hoạch cai thuốc'
                                                             }
                                                         </Title>
                                                     </div>
                                                     <Text style={{ color: '#1e40af', fontSize: '14px' }}>
-                                                        {existingPlans.some(plan => plan.Status === 'active') ? 
+                                                        {existingPlans.some(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation') ? 
                                                             'Chi tiết kế hoạch cai thuốc hiện tại và lịch sử của bạn.' :
                                                             'Đây là những kế hoạch cai thuốc mà bạn đã tạo trước đây. Bạn có thể xem chi tiết và tạo kế hoạch mới.'
                                                         }
@@ -2127,7 +2107,7 @@ const QuitPlanPage = () => {
                                                     data-plan-details
                                                     renderItem={(plan) => {
                                                         const daysToTarget = calculateDaysToTarget(plan.TargetDate);
-                                                        const isActive = plan.Status === 'active';
+                                                        const isActive = plan.Status === 'active' || plan.Status === 'pending_cancellation';
                                                         return (
                                                             <List.Item style={{ padding: 0, marginBottom: '16px' }}>
                                                                 <Card
