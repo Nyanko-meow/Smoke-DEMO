@@ -3171,6 +3171,9 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
     try {
         const { page = 1, limit = 10, search = '' } = req.query;
         const offset = (page - 1) * limit;
+        const coachId = req.user.UserID; // Lấy ID của coach hiện tại
+
+        console.log(`🔍 Coach ${coachId} requesting member addiction surveys with params:`, { page, limit, search });
 
         let query = `
             SELECT 
@@ -3201,11 +3204,13 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
                 sasr.SubmittedAt as lastUpdated
             FROM Users u
             INNER JOIN SmokingAddictionSurveyResults sasr ON u.UserID = sasr.UserID
+            INNER JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.CoachID = @CoachId AND qp.Status = 'active'
             WHERE u.Role IN ('guest', 'member') 
             AND u.IsActive = 1
         `;
 
         const request = pool.request()
+            .input('CoachId', coachId)
             .input('Limit', parseInt(limit))
             .input('Offset', offset);
 
@@ -3224,11 +3229,13 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
             SELECT COUNT(DISTINCT u.UserID) as Total
             FROM Users u
             INNER JOIN SmokingAddictionSurveyResults sasr ON u.UserID = sasr.UserID
+            INNER JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.CoachID = @CoachId AND qp.Status = 'active'
             WHERE u.Role IN ('guest', 'member') 
             AND u.IsActive = 1
         `;
 
-        const countRequest = pool.request();
+        const countRequest = pool.request()
+            .input('CoachId', coachId);
         if (search) {
             countQuery += ` AND (u.FirstName LIKE @Search OR u.LastName LIKE @Search OR u.Email LIKE @Search)`;
             countRequest.input('Search', `%${search}%`);
@@ -3266,6 +3273,8 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
             lastUpdated: member.lastUpdated
         }));
 
+        console.log(`📊 Found ${members.length} assigned members with addiction surveys for coach ${coachId}, total: ${total}`);
+
         res.json({
             success: true,
             data: {
@@ -3277,7 +3286,7 @@ router.get('/member-addiction-surveys', protect, authorize('coach'), async (req,
                     totalPages: Math.ceil(total / limit)
                 }
             },
-            message: `Đã lấy danh sách ${members.length} members thành công`
+            message: `Đã lấy danh sách ${members.length} members được phân công thành công`
         });
 
     } catch (error) {

@@ -603,50 +603,6 @@ const MemberAddictionSurveys = () => {
                 </Paragraph>
             </div>
 
-            {/* Statistics */}
-            {statistics && (
-                <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-                    <Col xs={24} sm={6}>
-                        <Card>
-                            <Statistic
-                                title="Tổng số members"
-                                value={statistics.totalMembers || 0}
-                                prefix={<TeamOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={6}>
-                        <Card>
-                            <Statistic
-                                title="Đã khảo sát"
-                                value={statistics.completedSurveys || 0}
-                                prefix={<FileTextOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={6}>
-                        <Card>
-                            <Statistic
-                                title="Xác suất TB"
-                                value={statistics.averageSuccessRate || 0}
-                                suffix="%"
-                                prefix={<TrophyOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={6}>
-                        <Card>
-                            <Statistic
-                                title="Tổng tiết kiệm"
-                                value={statistics.totalMoneySaved || 0}
-                                formatter={(value) => `${value.toLocaleString()}đ`}
-                                prefix={<DollarCircleOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                </Row>
-            )}
-
             {/* Search and Table */}
             <Card>
                 <div style={{ marginBottom: '16px' }}>

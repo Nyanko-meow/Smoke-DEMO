@@ -22,7 +22,8 @@ import {
     notification,
     Badge,
     Steps,
-    Checkbox
+    Checkbox,
+    Tooltip
 } from 'antd';
 import {
     CalendarOutlined,
@@ -1095,41 +1096,76 @@ const QuitPlanPage = () => {
 
                                                     {/* Success Rate Badge */}
                                                     {dailyRate ? (
-                                                        <div style={{
-                                                            background: dailyRate.successRate >= 70 ? 
-                                                                'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)' :
-                                                                dailyRate.successRate >= 50 ? 
-                                                                'linear-gradient(135deg, #faad14 0%, #d48806 100%)' :
-                                                                'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
-                                                            color: 'white',
-                                                            padding: '4px 12px',
-                                                            borderRadius: '20px',
-                                                            fontSize: '13px',
-                                                            fontWeight: '600',
-                                                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px'
-                                                        }}>
-                                                            <TrophyOutlined style={{ fontSize: '12px' }} />
-                                                            {dailyRate.successRate}%
-                                                        </div>
+                                                        <Tooltip 
+                                                            title={
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                                                                        🏆 Tỷ lệ thành công: {dailyRate.successRate}%
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px' }}>
+                                                                        Tỷ lệ thành công trong việc cai thuốc dựa trên:
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                                                                        • Số ngày không hút thuốc
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px' }}>
+                                                                        • Mức độ tuân thủ kế hoạch
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px' }}>
+                                                                        • Tiến độ đạt mục tiêu
+                                                                    </div>
+                                                                    <div style={{ fontSize: '11px', marginTop: '6px', opacity: 0.8 }}>
+                                                                        {dailyRate.successRate >= 70 ? '🟢 Xuất sắc! Tiếp tục phát huy!' : 
+                                                                         dailyRate.successRate >= 50 ? '🟡 Khá tốt, cần cải thiện thêm' : 
+                                                                         '🔴 Cần nỗ lực hơn để đạt mục tiêu'}
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            placement="top"
+                                                        >
+                                                            <div style={{
+                                                                background: dailyRate.successRate >= 70 ? 
+                                                                    'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)' :
+                                                                    dailyRate.successRate >= 50 ? 
+                                                                    'linear-gradient(135deg, #faad14 0%, #d48806 100%)' :
+                                                                    'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
+                                                                color: 'white',
+                                                                padding: '4px 12px',
+                                                                borderRadius: '20px',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                cursor: 'pointer'
+                                                            }}>
+                                                                <TrophyOutlined style={{ fontSize: '12px' }} />
+                                                                {dailyRate.successRate}%
+                                                            </div>
+                                                        </Tooltip>
                                                     ) : (
-                                                        <div style={{
-                                                            background: 'linear-gradient(135deg, #8c8c8c 0%, #595959 100%)',
-                                                            color: 'white',
-                                                            padding: '4px 12px',
-                                                            borderRadius: '20px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px'
-                                                        }}>
-                                                            <TrophyOutlined style={{ fontSize: '11px' }} />
-                                                            Tính toán...
-                                                        </div>
+                                                        <Tooltip 
+                                                            title="Đang tính toán tỷ lệ thành công dựa trên dữ liệu cai thuốc của bạn..."
+                                                            placement="top"
+                                                        >
+                                                            <div style={{
+                                                                background: 'linear-gradient(135deg, #8c8c8c 0%, #595959 100%)',
+                                                                color: 'white',
+                                                                padding: '4px 12px',
+                                                                borderRadius: '20px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                cursor: 'pointer'
+                                                            }}>
+                                                                <TrophyOutlined style={{ fontSize: '11px' }} />
+                                                                Tính toán...
+                                                            </div>
+                                                        </Tooltip>
                                                     )}
                                                 </div>
                                             )}
