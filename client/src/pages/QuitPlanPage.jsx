@@ -22,7 +22,8 @@ import {
     notification,
     Badge,
     Steps,
-    Checkbox
+    Checkbox,
+    Tooltip
 } from 'antd';
 import {
     CalendarOutlined,
@@ -404,8 +405,8 @@ const QuitPlanPage = () => {
                 setPlanTemplate(response.data.planTemplate || []);
                 setPaymentInfo(response.data.paymentInfo || null);
 
-                // If user has existing plans, populate the form with the latest active plan
-                const activePlans = response.data.data.filter(plan => plan.Status === 'active');
+                // If user has existing plans, populate the form with the latest active plan (including pending_cancellation)
+                const activePlans = response.data.data.filter(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation');
                 if (activePlans.length > 0) {
                     const latestPlan = activePlans[0];
                     form.setFieldsValue({
@@ -497,9 +498,15 @@ const QuitPlanPage = () => {
         const [logsLoading, setLogsLoading] = useState(true);
         const [logForm] = Form.useForm();
         const [logSubmitting, setLogSubmitting] = useState(false);
+        // Success rate states disabled - no longer showing success rate analysis
+        // const [successRate, setSuccessRate] = useState(null);
+        // const [successLoading, setSuccessLoading] = useState(false);
+        // Removed dailySuccessRates state - now calculating inline for better performance
 
-        // Only show logs for members with active plans
-        const activePlans = existingPlans.filter(plan => plan.Status === 'active');
+        // Only show logs for members with active plans (including pending_cancellation)
+        const activePlans = existingPlans.filter(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation');
+        
+        // Debug logging removed - Success Rate Analysis disabled
 
         const loadProgressData = async () => {
             if (activePlans.length === 0) {
@@ -531,7 +538,12 @@ const QuitPlanPage = () => {
 
         useEffect(() => {
             loadProgressData();
+            // loadSuccessRate(); // Disabled - no longer showing success rate analysis
         }, [activePlans.length]);
+
+        // loadSuccessRate function removed - Success Rate Analysis disabled
+
+        // Removed loadDailySuccessRates - now calculating inline for better performance
 
         const handleProgressSubmit = async (values) => {
             try {
@@ -552,7 +564,9 @@ const QuitPlanPage = () => {
                 if (response.data.success) {
                     message.success('🎉 Đã ghi lại tiến trình hôm nay!');
                     logForm.resetFields();
-                    loadProgressData(); // Reload progress data
+                    loadProgressData(); // Reload progress data 
+                    // loadSuccessRate(); // Reload success rate - DISABLED
+                    // Daily success rates now calculated inline - no need to reload
                 } else {
                     message.error(response.data.message || 'Lỗi khi ghi lại tiến trình');
                 }
@@ -567,6 +581,135 @@ const QuitPlanPage = () => {
             } finally {
                 setLogSubmitting(false);
             }
+        };
+
+        // 🔥 NEW: Calculate success rate for a specific day (inline calculation)
+        const calculateDailySuccessRate = (currentDate, allLogs) => {
+            if (!allLogs || allLogs.length === 0) {
+                console.log('⚠️ No logs available for calculation');
+                return null;
+            }
+
+            // Get logs up to current date (cumulative)
+            const currentDateStr = dayjs(currentDate).format('YYYY-MM-DD');
+            const logsUpToDate = allLogs
+                .filter(log => dayjs(log.Date).format('YYYY-MM-DD') <= currentDateStr)
+                .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+            if (logsUpToDate.length === 0) return null;
+
+            const totalDays = logsUpToDate.length;
+            const baselineCigarettes = 10; // Default baseline
+
+            // 1. Cigarette Reduction Factor (40% weight)
+            const recentDays = Math.min(7, totalDays);
+            const recentData = logsUpToDate.slice(-recentDays);
+            const averageRecentCigarettes = recentData.reduce((sum, log) => sum + log.CigarettesSmoked, 0) / recentDays;
+            const cigaretteReduction = Math.max(0, (baselineCigarettes - averageRecentCigarettes) / baselineCigarettes);
+            const cigaretteFactor = Math.min(100, cigaretteReduction * 100);
+
+            // 2. Craving Control Factor (30% weight)
+            const averageCraving = logsUpToDate.reduce((sum, log) => sum + log.CravingLevel, 0) / totalDays;
+            const cravingFactor = Math.max(0, (10 - averageCraving) / 10 * 100);
+
+            // 3. Consistency Factor (20% weight)
+            const smokeFreeDays = logsUpToDate.filter(log => log.CigarettesSmoked === 0).length;
+            const smokeFreeRate = smokeFreeDays / totalDays;
+            const consistencyFactor = smokeFreeRate * 100;
+
+            // 4. Improvement Trend Factor (10% weight)
+            let trendFactor = 50; // Neutral default
+            if (totalDays >= 3) {
+                const firstHalf = logsUpToDate.slice(0, Math.floor(totalDays / 2));
+                const secondHalf = logsUpToDate.slice(Math.floor(totalDays / 2));
+                
+                const firstHalfAvg = firstHalf.reduce((sum, log) => sum + log.CigarettesSmoked, 0) / firstHalf.length;
+                const secondHalfAvg = secondHalf.reduce((sum, log) => sum + log.CigarettesSmoked, 0) / secondHalf.length;
+                
+                const improvement = Math.max(0, (firstHalfAvg - secondHalfAvg) / baselineCigarettes);
+                trendFactor = Math.min(100, 50 + improvement * 100);
+            }
+
+            // Calculate weighted success rate
+            const successRate = Math.round(
+                cigaretteFactor * 0.4 +
+                cravingFactor * 0.3 +
+                consistencyFactor * 0.2 +
+                trendFactor * 0.1
+            );
+
+            // 🔍 DETAILED DEBUG for first day
+            if (totalDays === 1) {
+                const currentLog = logsUpToDate[0];
+                console.log('🧮 DETAILED CALCULATION BREAKDOWN for', dayjs(currentDate).format('DD/MM/YYYY'));
+                console.log('📊 Dữ liệu ngày:', {
+                    cigarettesSmoked: currentLog.CigarettesSmoked,
+                    cravingLevel: currentLog.CravingLevel,
+                    totalDays
+                });
+                console.log('🎯 1. Cigarette Reduction Factor (40% weight):');
+                console.log(`   📉 Baseline: ${baselineCigarettes} điếu/ngày`);
+                console.log(`   📈 Hôm nay: ${currentLog.CigarettesSmoked} điếu`);
+                console.log(`   🧮 Giảm được: ${baselineCigarettes - currentLog.CigarettesSmoked} điếu`);
+                console.log(`   📊 Tỉ lệ giảm: ${cigaretteReduction.toFixed(2)} = ${cigaretteFactor.toFixed(1)}%`);
+                console.log(`   ⚖️ Có trọng số 40%: ${(cigaretteFactor * 0.4).toFixed(1)} điểm`);
+                
+                console.log('🎯 2. Craving Control Factor (30% weight):');
+                console.log(`   🔥 Mức thèm hôm nay: ${currentLog.CravingLevel}/10`);
+                console.log(`   📊 Kiểm soát được: ${(10 - currentLog.CravingLevel)}/10 = ${cravingFactor.toFixed(1)}%`);
+                console.log(`   ⚖️ Có trọng số 30%: ${(cravingFactor * 0.3).toFixed(1)} điểm`);
+                
+                console.log('🎯 3. Consistency Factor (20% weight):');
+                console.log(`   🚭 Ngày không hút: ${smokeFreeDays}/${totalDays} ngày`);
+                console.log(`   📊 Tỉ lệ nhất quán: ${consistencyFactor.toFixed(1)}%`);
+                console.log(`   ⚖️ Có trọng số 20%: ${(consistencyFactor * 0.2).toFixed(1)} điểm`);
+                
+                console.log('🎯 4. Improvement Trend Factor (10% weight):');
+                console.log(`   📈 Ngày đầu tiên - dùng mức trung tính: ${trendFactor}%`);
+                console.log(`   ⚖️ Có trọng số 10%: ${(trendFactor * 0.1).toFixed(1)} điểm`);
+                
+                console.log('🏆 TỔNG KẾT:');
+                console.log(`   🧮 Công thức: ${cigaretteFactor.toFixed(1)}×0.4 + ${cravingFactor.toFixed(1)}×0.3 + ${consistencyFactor.toFixed(1)}×0.2 + ${trendFactor}×0.1`);
+                console.log(`   🧮 = ${(cigaretteFactor * 0.4).toFixed(1)} + ${(cravingFactor * 0.3).toFixed(1)} + ${(consistencyFactor * 0.2).toFixed(1)} + ${(trendFactor * 0.1).toFixed(1)}`);
+                console.log(`   🏆 = ${successRate}%`);
+            }
+
+            return {
+                successRate,
+                daysTracked: totalDays,
+                factors: {
+                    cigaretteReduction: Math.round(cigaretteFactor),
+                    cravingControl: Math.round(cravingFactor),
+                    consistency: Math.round(consistencyFactor),
+                    trend: Math.round(trendFactor)
+                }
+            };
+        };
+
+        // Calculate trend compared to previous day
+        const calculateTrend = (currentDate, allLogs) => {
+            const sortedLogs = allLogs
+                .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            
+            const currentIndex = sortedLogs.findIndex(log => 
+                dayjs(log.Date).format('YYYY-MM-DD') === dayjs(currentDate).format('YYYY-MM-DD')
+            );
+
+            if (currentIndex <= 0) return { trend: 'stable', trendChange: 0 };
+
+            const currentRate = calculateDailySuccessRate(currentDate, allLogs);
+            const previousDate = sortedLogs[currentIndex - 1].Date;
+            const previousRate = calculateDailySuccessRate(previousDate, allLogs);
+
+            if (!currentRate || !previousRate) return { trend: 'stable', trendChange: 0 };
+
+            const trendChange = currentRate.successRate - previousRate.successRate;
+            let trend = 'stable';
+            
+            if (trendChange > 2) trend = 'up';
+            else if (trendChange < -2) trend = 'down';
+
+            return { trend, trendChange };
         };
 
         // Show message if no active plans
@@ -671,6 +814,174 @@ const QuitPlanPage = () => {
                     </Form>
                 </Card>
 
+                {/* Success Rate Analysis - DISABLED */}
+                {false && (
+                    <Card
+                        title={
+                            <div className="flex items-center">
+                                <TrophyOutlined className="mr-2 text-yellow-500" />
+                                <span>Tỉ lệ thành công cai nghiện</span>
+                                <Tag color={
+                                    successRate.confidence === 'high' ? 'green' : 
+                                    successRate.confidence === 'medium' ? 'orange' : 'red'
+                                } style={{ marginLeft: '12px' }}>
+                                    {successRate.confidence === 'high' ? 'Độ tin cậy cao' :
+                                     successRate.confidence === 'medium' ? 'Độ tin cậy trung bình' : 'Độ tin cậy thấp'}
+                                </Tag>
+                            </div>
+                        }
+                        className="shadow-md"
+                        loading={successLoading}
+                        style={{ marginBottom: '24px' }}
+                    >
+                        {/* Main Success Rate Display */}
+                        <div style={{
+                            background: `linear-gradient(135deg, ${successRate.successRate >= 70 ? '#f6ffed' : successRate.successRate >= 50 ? '#fff7e6' : '#fff1f0'} 0%, ${successRate.successRate >= 70 ? '#d1fae5' : successRate.successRate >= 50 ? '#fef3c7' : '#fecaca'} 100%)`,
+                            borderRadius: '16px',
+                            padding: '24px',
+                            marginBottom: '24px',
+                            textAlign: 'center',
+                            border: `2px solid ${successRate.successRate >= 70 ? '#10b981' : successRate.successRate >= 50 ? '#f59e0b' : '#ef4444'}`
+                        }}>
+                            <div style={{
+                                fontSize: '48px',
+                                fontWeight: 'bold',
+                                color: successRate.successRate >= 70 ? '#065f46' : successRate.successRate >= 50 ? '#92400e' : '#7f1d1d',
+                                marginBottom: '8px'
+                            }}>
+                                {successRate.successRate}%
+                            </div>
+                            <Text style={{
+                                fontSize: '18px',
+                                color: successRate.successRate >= 70 ? '#065f46' : successRate.successRate >= 50 ? '#92400e' : '#7f1d1d',
+                                fontWeight: 600
+                            }}>
+                                Tỉ lệ thành công ước tính
+                            </Text>
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                                Dựa trên {successRate.daysTracked} ngày tiến trình
+                            </div>
+                        </div>
+
+                        {/* Factors Breakdown */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <Title level={5} style={{ marginBottom: '16px', color: '#374151' }}>
+                                📊 Phân tích chi tiết
+                            </Title>
+                            
+                            <Row gutter={[12, 12]}>
+                                {Object.entries(successRate.factors).map(([key, factor]) => (
+                                    <Col xs={24} sm={12} key={key}>
+                                        <div style={{
+                                            background: 'rgba(255, 255, 255, 0.8)',
+                                            borderRadius: '12px',
+                                            padding: '16px',
+                                            border: '1px solid #e5e7eb'
+                                        }}>
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: '8px'
+                                            }}>
+                                                <Text strong style={{ fontSize: '14px' }}>
+                                                    {key === 'cigaretteReduction' ? '🚬 Giảm thuốc lá' :
+                                                     key === 'cravingControl' ? '💭 Kiểm soát thèm' :
+                                                     key === 'consistency' ? '✅ Nhất quán' : '📈 Xu hướng'}
+                                                </Text>
+                                                <div style={{
+                                                    background: factor.score >= 70 ? '#10b981' : factor.score >= 50 ? '#f59e0b' : '#ef4444',
+                                                    color: 'white',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600
+                                                }}>
+                                                    {factor.score}%
+                                                </div>
+                                            </div>
+                                            <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                {factor.description}
+                                            </Text>
+                                            <div style={{
+                                                fontSize: '11px',
+                                                color: '#9ca3af',
+                                                marginTop: '4px'
+                                            }}>
+                                                Trọng số: {factor.weight}
+                                            </div>
+                                        </div>
+                                    </Col>
+                                ))}
+                            </Row>
+                        </div>
+
+                        {/* Insights and Recommendations */}
+                        {successRate.insights && successRate.insights.length > 0 && (
+                            <div style={{ marginBottom: '16px' }}>
+                                <Title level={5} style={{ marginBottom: '12px', color: '#374151' }}>
+                                    💡 Nhận xét
+                                </Title>
+                                <div style={{
+                                    background: '#f8f9ff',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    border: '1px solid #d6e4ff'
+                                }}>
+                                    {successRate.insights.map((insight, index) => (
+                                        <div key={index} style={{
+                                            marginBottom: index < successRate.insights.length - 1 ? '8px' : '0',
+                                            fontSize: '14px'
+                                        }}>
+                                            {insight}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {successRate.recommendations && successRate.recommendations.length > 0 && (
+                            <div>
+                                <Title level={5} style={{ marginBottom: '12px', color: '#374151' }}>
+                                    🎯 Khuyến nghị
+                                </Title>
+                                <div style={{
+                                    background: '#fefce8',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    border: '1px solid #fde047'
+                                }}>
+                                    {successRate.recommendations.map((rec, index) => (
+                                        <div key={index} style={{
+                                            marginBottom: index < successRate.recommendations.length - 1 ? '8px' : '0',
+                                            fontSize: '14px'
+                                        }}>
+                                            • {rec}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Calculation Method Info */}
+                        <div style={{
+                            marginTop: '16px',
+                            padding: '12px',
+                            backgroundColor: '#f1f5f9',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1'
+                        }}>
+                            <Text style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic' }}>
+                                📊 <strong>Phương pháp tính:</strong> {successRate.calculation?.formula}
+                                <br />
+                                💾 <strong>Nguồn dữ liệu:</strong> {successRate.calculation?.dataSource}
+                                <br />
+                                ⏰ Cập nhật: {new Date(successRate.calculation?.lastUpdated).toLocaleString('vi-VN')}
+                            </Text>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Progress History */}
                 <Card
                     title={
@@ -685,38 +996,159 @@ const QuitPlanPage = () => {
                     {logs.length > 0 ? (
                         <List
                             dataSource={logs}
-                            renderItem={(log) => (
-                                <List.Item style={{ padding: 0, marginBottom: '16px' }}>
-                                    <Card
-                                        className="w-full"
-                                        style={{
-                                            borderRadius: '12px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            border: '1px solid #f0f0f0'
-                                        }}
-                                        bodyStyle={{ padding: '20px' }}
-                                    >
-                                        {/* Header với ngày */}
+                            renderItem={(log) => {
+                                // 🔥 Calculate success rate for this day
+                                const dailyRate = calculateDailySuccessRate(log.Date, logs);
+                                const trendInfo = calculateTrend(log.Date, logs);
+                                
+                                console.log('📊 Daily rate for', dayjs(log.Date).format('DD/MM/YYYY'), ':', dailyRate, 'Trend:', trendInfo);
+                                
+                                return (
+                                    <List.Item style={{ padding: 0, marginBottom: '16px' }}>
+                                        <Card
+                                            className="w-full"
+                                            style={{
+                                                borderRadius: '12px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                border: '1px solid #f0f0f0'
+                                            }}
+                                            bodyStyle={{ padding: '20px' }}
+                                        >
+                                        {/* Header với ngày và success rate */}
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
+                                            justifyContent: 'space-between',
                                             marginBottom: '16px',
                                             paddingBottom: '12px',
                                             borderBottom: '1px solid #f0f0f0'
                                         }}>
-                                            <CalendarOutlined style={{
-                                                fontSize: '16px',
-                                                color: '#1890ff',
-                                                marginRight: '8px'
-                                            }} />
-                                            <Title level={5} style={{
-                                                margin: 0,
-                                                color: '#1890ff',
-                                                fontSize: '16px',
-                                                fontWeight: '600'
-                                            }}>
-                                                {dayjs(log.Date).format('DD/MM/YYYY')}
-                                            </Title>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <CalendarOutlined style={{
+                                                    fontSize: '16px',
+                                                    color: '#1890ff',
+                                                    marginRight: '8px'
+                                                }} />
+                                                <Title level={5} style={{
+                                                    margin: 0,
+                                                    color: '#1890ff',
+                                                    fontSize: '16px',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    {dayjs(log.Date).format('DD/MM/YYYY')}
+                                                </Title>
+                                            </div>
+
+                                            {/* Success Rate Indicator */}
+                                            {dailyRate && (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px'
+                                                }}>
+                                                    {/* Trend Arrow */}
+                                                    {trendInfo.trend === 'up' && (
+                                                        <div style={{
+                                                            color: '#52c41a',
+                                                            fontSize: '14px',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            ↗ +{trendInfo.trendChange}%
+                                                        </div>
+                                                    )}
+                                                    {trendInfo.trend === 'down' && (
+                                                        <div style={{
+                                                            color: '#ff4d4f',
+                                                            fontSize: '14px',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            ↘ {trendInfo.trendChange}%
+                                                        </div>
+                                                    )}
+                                                    {trendInfo.trend === 'stable' && dailyRate && dailyRate.daysTracked > 1 && (
+                                                        <div style={{
+                                                            color: '#8c8c8c',
+                                                            fontSize: '12px'
+                                                        }}>
+                                                            → ổn định
+                                                        </div>
+                                                    )}
+
+                                                    {/* Success Rate Badge */}
+                                                    {dailyRate ? (
+                                                        <Tooltip 
+                                                            title={
+                                                                <div>
+                                                                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                                                                        🏆 Tỷ lệ thành công: {dailyRate.successRate}%
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px' }}>
+                                                                        Tỷ lệ thành công trong việc cai thuốc dựa trên:
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                                                                        • Số ngày không hút thuốc
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px' }}>
+                                                                        • Mức độ tuân thủ kế hoạch
+                                                                    </div>
+                                                                    <div style={{ fontSize: '12px' }}>
+                                                                        • Tiến độ đạt mục tiêu
+                                                                    </div>
+                                                                    <div style={{ fontSize: '11px', marginTop: '6px', opacity: 0.8 }}>
+                                                                        {dailyRate.successRate >= 70 ? '🟢 Xuất sắc! Tiếp tục phát huy!' : 
+                                                                         dailyRate.successRate >= 50 ? '🟡 Khá tốt, cần cải thiện thêm' : 
+                                                                         '🔴 Cần nỗ lực hơn để đạt mục tiêu'}
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            placement="top"
+                                                        >
+                                                            <div style={{
+                                                                background: dailyRate.successRate >= 70 ? 
+                                                                    'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)' :
+                                                                    dailyRate.successRate >= 50 ? 
+                                                                    'linear-gradient(135deg, #faad14 0%, #d48806 100%)' :
+                                                                    'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
+                                                                color: 'white',
+                                                                padding: '4px 12px',
+                                                                borderRadius: '20px',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                cursor: 'pointer'
+                                                            }}>
+                                                                <TrophyOutlined style={{ fontSize: '12px' }} />
+                                                                {dailyRate.successRate}%
+                                                            </div>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Tooltip 
+                                                            title="Đang tính toán tỷ lệ thành công dựa trên dữ liệu cai thuốc của bạn..."
+                                                            placement="top"
+                                                        >
+                                                            <div style={{
+                                                                background: 'linear-gradient(135deg, #8c8c8c 0%, #595959 100%)',
+                                                                color: 'white',
+                                                                padding: '4px 12px',
+                                                                borderRadius: '20px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                cursor: 'pointer'
+                                                            }}>
+                                                                <TrophyOutlined style={{ fontSize: '11px' }} />
+                                                                Tính toán...
+                                                            </div>
+                                                        </Tooltip>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Thống kê chính */}
@@ -826,7 +1258,7 @@ const QuitPlanPage = () => {
                                                         color: '#666',
                                                         fontWeight: '500'
                                                     }}>
-                                                        💰 Tiết kiệm
+                                                        💰 Tiết kiệm*
                                                     </div>
                                                 </div>
                                             </Col>
@@ -887,7 +1319,8 @@ const QuitPlanPage = () => {
                                         )}
                                     </Card>
                                 </List.Item>
-                            )}
+                                );
+                            }}
                         />
                     ) : (
                         <div className="text-center py-8">
@@ -900,6 +1333,26 @@ const QuitPlanPage = () => {
                             </Text>
                         </div>
                     )}
+                    
+                    {/* Explanation note about calculation source */}
+                    <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        backgroundColor: '#f8f9ff',
+                        borderRadius: '8px',
+                        border: '1px solid #d6e4ff'
+                    }}>
+                        <Text style={{ fontSize: '12px', color: '#1890ff', fontStyle: 'italic' }}>
+                            💡 <strong>Thông tin tính toán:</strong> 
+                            <br />
+                            💰 Số tiền tiết kiệm được tính dựa trên kết quả khảo sát nghiện nicotine của bạn (nếu có), 
+                            hoặc dữ liệu từ thông tin hút thuốc, hoặc giá trị chuẩn thị trường (1.500 VNĐ/điếu).
+                            <br />
+                            🏆 Tỉ lệ thành công tích lũy được tính dựa trên: Giảm thuốc lá (40%) + Kiểm soát thèm (30%) + Nhất quán (20%) + Xu hướng (10%).
+                            <br />
+                            📈 Mũi tên hiển thị xu hướng thay đổi so với ngày trước: ↗ tăng, ↘ giảm, → ổn định.
+                        </Text>
+                    </div>
                 </Card>
             </div>
         );
@@ -1325,11 +1778,11 @@ const QuitPlanPage = () => {
                                             </Row>
                                         </Col>
 
-                                        {/* Show active plan at top if exists */}
-                                        {existingPlans.length > 0 && existingPlans.some(plan => plan.Status === 'active') && (
+                                        {/* Show active plan at top if exists (including pending_cancellation) */}
+                                        {existingPlans.length > 0 && existingPlans.some(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation') && (
                                             <Col span={24}>
                                                 {(() => {
-                                                    const activePlan = existingPlans.find(plan => plan.Status === 'active');
+                                                    const activePlan = existingPlans.find(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation');
                                                     const daysToTarget = calculateDaysToTarget(activePlan.TargetDate);
                                                     const totalDays = dayjs(activePlan.TargetDate).diff(dayjs(activePlan.StartDate), 'day');
                                                     const passedDays = dayjs().diff(dayjs(activePlan.StartDate), 'day');
@@ -1635,14 +2088,14 @@ const QuitPlanPage = () => {
                                                             color: '#1d4ed8',
                                                             fontWeight: 600
                                                         }}>
-                                                            {existingPlans.some(plan => plan.Status === 'active') ? 
+                                                            {existingPlans.some(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation') ? 
                                                                 'Kế hoạch cai thuốc chi tiết' : 
                                                                 'Lịch sử kế hoạch cai thuốc'
                                                             }
                                                         </Title>
                                                     </div>
                                                     <Text style={{ color: '#1e40af', fontSize: '14px' }}>
-                                                        {existingPlans.some(plan => plan.Status === 'active') ? 
+                                                        {existingPlans.some(plan => plan.Status === 'active' || plan.Status === 'pending_cancellation') ? 
                                                             'Chi tiết kế hoạch cai thuốc hiện tại và lịch sử của bạn.' :
                                                             'Đây là những kế hoạch cai thuốc mà bạn đã tạo trước đây. Bạn có thể xem chi tiết và tạo kế hoạch mới.'
                                                         }
@@ -1654,7 +2107,7 @@ const QuitPlanPage = () => {
                                                     data-plan-details
                                                     renderItem={(plan) => {
                                                         const daysToTarget = calculateDaysToTarget(plan.TargetDate);
-                                                        const isActive = plan.Status === 'active';
+                                                        const isActive = plan.Status === 'active' || plan.Status === 'pending_cancellation';
                                                         return (
                                                             <List.Item style={{ padding: 0, marginBottom: '16px' }}>
                                                                 <Card

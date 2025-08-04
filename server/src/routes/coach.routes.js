@@ -693,7 +693,7 @@ router.get('/members', protect, authorize('coach'), async (req, res) => {
                         AND qp.Status = 'active'
                 ) qp_latest ON u.UserID = qp_latest.UserID AND qp_latest.rn = 1
                 LEFT JOIN UserMemberships um ON u.UserID = um.UserID 
-                    AND um.Status = 'active' 
+                    AND um.Status IN ('active', 'pending_cancellation') 
                     AND um.EndDate > GETDATE()
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 LEFT JOIN (
@@ -828,7 +828,7 @@ router.get('/stats', protect, authorize('coach'), async (req, res) => {
                 WHERE u.Role IN ('guest', 'member')
                     AND qp.CoachID = @CoachID
                     AND qp.Status = 'active'
-                    AND um.Status = 'active'
+                    AND um.Status IN ('active', 'pending_cancellation')
                     AND um.EndDate > GETDATE()
                     AND u.IsActive = 1
             `);
@@ -952,7 +952,7 @@ router.get('/members/:id/details', protect, authorize('coach'), async (req, res)
                     DATEDIFF(day, GETDATE(), um.EndDate) as DaysRemaining
                 FROM Users u
                 LEFT JOIN UserMemberships um ON u.UserID = um.UserID 
-                    AND um.Status = 'active' 
+                    AND um.Status IN ('active', 'pending_cancellation') 
                     AND um.EndDate > GETDATE()
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE u.UserID = @UserID AND u.Role IN ('guest', 'member')
@@ -1189,7 +1189,7 @@ router.get('/members/:id/progress', protect, authorize('coach'), async (req, res
                     mp.Name as PlanName
                 FROM Users u
                 LEFT JOIN UserMemberships um ON u.UserID = um.UserID 
-                    AND um.Status = 'active' 
+                    AND um.Status IN ('active', 'pending_cancellation') 
                     AND um.EndDate > GETDATE()
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE u.UserID = @UserID
@@ -1381,7 +1381,7 @@ router.get('/test-member-details/:id?', protect, authorize('coach'), async (req,
                     mp.Name as PlanName, mp.Price as PlanPrice, mp.Features,
                     qp.StartDate as QuitPlanStart, qp.TargetDate as QuitPlanTarget, qp.Reason
                 FROM Users u
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID  
                 LEFT JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.Status = 'active'
                 WHERE u.UserID = @UserID
@@ -1781,7 +1781,7 @@ router.post('/schedule', protect, authorize('coach'), async (req, res) => {
                        um.Status as MembershipStatus, um.EndDate as MembershipEndDate,
                        mp.Name as PlanName
                 FROM Users u
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE u.UserID = @MemberID AND u.Role IN ('member', 'guest')
             `);
@@ -1955,7 +1955,7 @@ router.get('/appointments', protect, authorize('coach'), async (req, res) => {
                 mp.Name as MembershipPlan
             FROM ConsultationAppointments ca
             INNER JOIN Users u ON ca.MemberID = u.UserID
-            LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+            LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
             LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
             WHERE ca.CoachID = @CoachID
         `;
@@ -2848,7 +2848,7 @@ router.get('/member-surveys', protect, authorize('coach'), async (req, res) => {
                     COUNT(usa.QuestionID) as TotalAnswers
                 FROM Users u
                 INNER JOIN QuitPlans qp ON u.UserID = qp.UserID AND qp.CoachID = @coachId AND qp.Status = 'active'
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN UserSurveyAnswers usa ON u.UserID = usa.UserID
                 WHERE u.Role IN ('member', 'guest')
                 ${searchCondition}
@@ -2933,7 +2933,7 @@ router.get('/member-surveys/:memberId', protect, authorize('coach'), async (req,
                     um.EndDate as MembershipEndDate
                 FROM Users u
                 INNER JOIN QuitPlans qp ON u.UserID = qp.UserID
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 WHERE u.UserID = @memberId 
                 AND u.Role IN ('member', 'guest')
                 AND qp.CoachID = @coachId

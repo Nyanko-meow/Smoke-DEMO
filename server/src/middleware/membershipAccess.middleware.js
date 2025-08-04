@@ -16,7 +16,7 @@ const checkMembershipAccess = async (req, res, next) => {
             return next();
         }
 
-        // Kiểm tra user có active membership không
+        // Kiểm tra user có active membership không (bao gồm pending_cancellation)
         const membershipResult = await pool.request()
             .input('UserID', userId)
             .query(`
@@ -32,7 +32,7 @@ const checkMembershipAccess = async (req, res, next) => {
                 FROM UserMemberships um
                 INNER JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE um.UserID = @UserID 
-                AND um.Status = 'active' 
+                AND um.Status IN ('active', 'pending_cancellation')
                 AND um.EndDate > GETDATE()
                 ORDER BY um.EndDate DESC
             `);
@@ -52,7 +52,7 @@ const checkMembershipAccess = async (req, res, next) => {
         }
 
         const currentMembership = membershipResult.recordset[0];
-        console.log('✅ User has active membership:', currentMembership.PlanName);
+        console.log('✅ User has active membership:', currentMembership.PlanName, 'Status:', currentMembership.Status);
 
         // Gắn thông tin membership vào request để sử dụng ở các route
         req.currentMembership = currentMembership;
@@ -158,14 +158,14 @@ const filterByCurrentMembership = async (req, res, next) => {
             return next();
         }
 
-        // Lấy current active membership
+        // Lấy current active membership (bao gồm pending_cancellation)
         const membershipResult = await pool.request()
             .input('UserID', userId)
             .query(`
                 SELECT MembershipID
                 FROM UserMemberships
                 WHERE UserID = @UserID 
-                AND Status = 'active' 
+                AND Status IN ('active', 'pending_cancellation')
                 AND EndDate > GETDATE()
                 ORDER BY EndDate DESC
             `);

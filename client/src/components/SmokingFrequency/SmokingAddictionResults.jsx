@@ -322,7 +322,7 @@ const SmokingAddictionResults = () => {
                                     <Text strong>Số điếu/ngày:</Text> {surveyData.cigarettesPerDay} điếu
                                 </div>
                                 <div>
-                                    <Text strong>Số năm hút thuốc:</Text> {surveyData.yearsSmoked} năm
+                                    <Text strong>Số năm hút thuốc:</Text> {Math.floor(surveyData.yearsSmoked || 0)} năm
                                 </div>
                                 <div>
                                     <Text strong>Loại thuốc:</Text> {surveyData.packageName}

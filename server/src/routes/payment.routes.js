@@ -210,7 +210,7 @@ router.get('/membership', protect, async (req, res) => {
         FROM UserMemberships um
         JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
         WHERE um.UserID = @UserID
-        AND um.Status = 'active'
+        AND um.Status IN ('active', 'pending_cancellation')
         AND um.EndDate > GETDATE()
       `);
 

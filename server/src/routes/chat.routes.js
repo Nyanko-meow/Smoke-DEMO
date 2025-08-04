@@ -1604,7 +1604,7 @@ router.post('/appointment', authenticateToken, async (req, res) => {
                     FROM UserMemberships um
                     JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                     WHERE um.UserID = @memberId 
-                        AND um.Status = 'active'
+                        AND um.Status IN ('active', 'pending_cancellation')
                         AND um.EndDate > GETDATE()
                 `);
 
@@ -1751,7 +1751,7 @@ router.get('/appointments', authenticateToken, async (req, res) => {
                     mp.Name as MembershipPlan
                 FROM ConsultationAppointments ca
                 INNER JOIN Users u ON ca.MemberID = u.UserID
-                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status = 'active'
+                LEFT JOIN UserMemberships um ON u.UserID = um.UserID AND um.Status IN ('active', 'pending_cancellation')
                 LEFT JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 WHERE ca.CoachID = @userId
             `;

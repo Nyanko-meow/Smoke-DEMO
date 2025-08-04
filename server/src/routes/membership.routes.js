@@ -50,7 +50,7 @@ router.get('/current', protect, async (req, res) => {
                 FROM UserMemberships um
                 JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
                 LEFT JOIN Payments p ON um.UserID = p.UserID AND um.PlanID = p.PlanID
-                WHERE um.UserID = @UserID AND um.Status = 'active'
+                WHERE um.UserID = @UserID AND um.Status IN ('active', 'pending_cancellation')
                 AND um.EndDate > GETDATE()
                 AND (p.Status IS NULL OR p.Status != 'cancelled')
                 ORDER BY um.EndDate DESC
@@ -402,7 +402,7 @@ async function confirmPayment(paymentId, confirmedByUserId) {
                     SET Status = 'completed', 
                         DetailedPlan = ISNULL(DetailedPlan, '') + ' [Archived - New membership started]',
                         MembershipID = NULL
-                    WHERE UserID = @UserID AND Status = 'active'
+                    WHERE UserID = @UserID AND Status IN ('active', 'pending_cancellation')
                 `);
             console.log('✅ Archived existing quit plans');
 
@@ -1327,7 +1327,7 @@ router.post('/request-cancellation', protect, async (req, res) => {
                 .query(`
                     SELECT TOP 1 MembershipID 
                     FROM UserMemberships 
-                    WHERE UserID = @UserID AND Status = 'active'
+                    WHERE UserID = @UserID AND Status IN ('active', 'pending_cancellation')
                     ORDER BY CreatedAt DESC
                 `);
 
@@ -1652,7 +1652,7 @@ router.post('/confirm-refund-received/:cancellationId', protect, async (req, res
                 .query(`
                     SELECT COUNT(*) as ActiveCount
                     FROM UserMemberships
-                    WHERE UserID = @UserID AND Status = 'active'
+                    WHERE UserID = @UserID AND Status IN ('active', 'pending_cancellation')
                 `);
 
             const hasOtherActiveMemberships = otherMembershipsResult.recordset[0].ActiveCount > 0;
@@ -2092,7 +2092,7 @@ router.post('/simple-cancel', protect, async (req, res) => {
                     mp.Price as PlanPrice
                 FROM UserMemberships um
                 JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-                WHERE um.UserID = @UserID AND um.Status = 'active'
+                WHERE um.UserID = @UserID AND um.Status IN ('active', 'pending_cancellation')
                 ORDER BY um.CreatedAt DESC
             `);
 
@@ -2450,7 +2450,7 @@ router.post('/request-cancel', protect, async (req, res) => {
                     mp.Price as PlanPrice
                 FROM UserMemberships um
                 JOIN MembershipPlans mp ON um.PlanID = mp.PlanID
-                WHERE um.UserID = @UserID AND um.Status = 'active'
+                WHERE um.UserID = @UserID AND um.Status IN ('active', 'pending_cancellation')
                 ORDER BY um.CreatedAt DESC
             `);
 
@@ -2773,7 +2773,7 @@ router.post('/confirm-refund-received/:cancellationId', protect, async (req, res
                 .query(`
                     SELECT COUNT(*) as ActiveCount
                     FROM UserMemberships
-                    WHERE UserID = @UserID AND Status = 'active'
+                    WHERE UserID = @UserID AND Status IN ('active', 'pending_cancellation')
                 `);
 
             const hasOtherActiveMemberships = otherMembershipsResult.recordset[0].ActiveCount > 0;

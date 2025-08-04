@@ -223,7 +223,7 @@ router.get('/current', auth, async (req, res) => {
                 JOIN MembershipPlans p ON m.PlanID = p.PlanID
                 LEFT JOIN Payments py ON m.UserID = py.UserID AND m.PlanID = py.PlanID
                 LEFT JOIN PaymentConfirmations pc ON py.PaymentID = pc.PaymentID
-                WHERE m.UserID = @UserID AND m.Status = 'active' AND m.EndDate > GETDATE()
+                WHERE m.UserID = @UserID AND m.Status IN ('active', 'pending_cancellation') AND m.EndDate > GETDATE()
                 ORDER BY m.EndDate DESC
             `);
 

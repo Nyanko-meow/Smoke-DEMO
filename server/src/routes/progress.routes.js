@@ -816,4 +816,81 @@ router.get('/savings', protect, filterByCurrentMembership, async (req, res) => {
     }
 });
 
+// Get success rate analysis for user (SIMPLIFIED FOR TESTING)
+router.get('/success-rate', protect, async (req, res) => {
+    try {
+        console.log('📊 Success rate endpoint called');
+        console.log('📊 User from auth:', req.user);
+        
+        const userId = req.user.UserID || req.user.id;
+        console.log('📊 Getting success rate for user:', userId);
+        
+        if (!userId) {
+            console.error('❌ No UserID found in request');
+            return res.status(400).json({
+                success: false,
+                message: 'User ID not found'
+            });
+        }
+
+        // Return simple mock data for now to test the endpoint
+        console.log('📊 Returning simple mock data');
+        return res.json({
+            success: true,
+            data: {
+                successRate: 75,
+                daysTracked: 10,
+                smokeFreedays: 7,
+                factors: {
+                    smokeFree: {
+                        label: "Ngày không hút thuốc",
+                        value: "7/10 ngày",
+                        percentage: 70,
+                        status: 'good'
+                    },
+                    emotion: {
+                        label: "Tâm trạng trung bình",
+                        value: "7.5/10",
+                        percentage: 75,
+                        status: 'excellent'
+                    },
+                    craving: {
+                        label: "Mức độ thèm thuốc",
+                        value: "3.2/10",
+                        percentage: 68,
+                        status: 'excellent'
+                    },
+                    sleep: {
+                        label: "Chất lượng giấc ngủ",
+                        value: "8.0/10",
+                        percentage: 80,
+                        status: 'excellent'
+                    }
+                },
+                insights: [
+                    "Xuất sắc! Bạn đã duy trì được nhiều ngày không hút thuốc.",
+                    "Tâm trạng của bạn rất tích cực!",
+                    "Tuyệt vời! Mức độ thèm thuốc của bạn đang ở mức thấp."
+                ],
+                recommendations: [
+                    "Hãy cố gắng tăng số ngày không hút thuốc lên 80% để cải thiện tỷ lệ thành công.",
+                    "Tiếp tục duy trì lối sống tích cực và healthy habits."
+                ],
+                summary: {
+                    totalExerciseMinutes: 150,
+                    averageStressLevel: "4.2"
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error in success rate endpoint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 module.exports = router; 

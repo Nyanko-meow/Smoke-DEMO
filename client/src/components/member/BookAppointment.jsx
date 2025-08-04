@@ -62,7 +62,7 @@ const BookAppointment = () => {
             if (response.data.success && response.data.data) {
                 const membership = response.data.data;
 
-                const isActive = membership.Status === 'active' &&
+                const isActive = (membership.Status === 'active' || membership.Status === 'pending_cancellation') &&
                     new Date(membership.EndDate) > new Date();
 
                 setMembershipStatus({

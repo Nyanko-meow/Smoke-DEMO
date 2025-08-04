@@ -166,6 +166,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Add extensive request/response logging for debugging
+const requestLogger = require('./middleware/requestLogger');
+app.use(requestLogger);
+
 // Disable caching for all API routes to ensure fresh responses
 app.use('/api', (req, res, next) => {
     res.set({

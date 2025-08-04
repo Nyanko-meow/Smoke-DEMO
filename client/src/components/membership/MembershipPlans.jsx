@@ -675,8 +675,7 @@ const MembershipPlans = () => {
                                   payment.Status !== 'cancelled' && 
                                   payment.PaymentStatus !== 'rejected' && 
                                   payment.Status !== 'rejected' &&
-                                  payment.MembershipStatus !== 'cancelled' &&
-                                  payment.MembershipStatus !== 'pending_cancellation';
+                                  payment.MembershipStatus !== 'cancelled';
             
             return isActiveStatus && isNotCancelled;
         });
@@ -1766,7 +1765,7 @@ const MembershipPlans = () => {
 
             // NEW: Check if user has existing progress to show reset notification
             const hasExistingMembership = currentMembership &&
-                (currentMembership.Status === 'active' || currentMembership.Status === 'expired');
+                (currentMembership.Status === 'active' || currentMembership.Status === 'expired' || currentMembership.Status === 'pending_cancellation');
 
             if (hasExistingMembership || user?.Role === 'member') {
                 // User has existing progress, show reset notification
@@ -2297,7 +2296,7 @@ const MembershipPlans = () => {
             key: 'action',
             render: (_, record) => {
                 const isCurrent = currentMembership && currentMembership.PlanID === record.PlanID;
-                const isCurrentActive = isCurrent && currentMembership?.Status === 'active';
+                const isCurrentActive = isCurrent && (currentMembership?.Status === 'active' || currentMembership?.Status === 'pending_cancellation');
 
                 // If we have an active currentMembership for this plan, prioritize it
                 if (isCurrentActive) {
@@ -2740,7 +2739,7 @@ const MembershipPlans = () => {
                                      currentMembership.PlanID === plan.PlanID);
                                 
                                 const isCurrentActive = currentMembership && 
-                                    currentMembership.Status === 'active' && 
+                                    (currentMembership.Status === 'active' || currentMembership.Status === 'pending_cancellation') && 
                                     isCurrent;
 
                                 // Check for active payments for this plan
@@ -2772,7 +2771,7 @@ const MembershipPlans = () => {
                                     (p.PaymentStatus === 'confirmed' || p.Status === 'confirmed') &&
                                     p.PaymentStatus !== 'cancelled' && p.Status !== 'cancelled' &&
                                     p.PaymentStatus !== 'rejected' && p.Status !== 'rejected' &&
-                                    p.MembershipStatus !== 'cancelled' && p.MembershipStatus !== 'pending_cancellation'
+                                    p.MembershipStatus !== 'cancelled'
                                 );
 
                                 const isPurchasable = user &&
