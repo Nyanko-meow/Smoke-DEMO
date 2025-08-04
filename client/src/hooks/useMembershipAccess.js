@@ -37,12 +37,12 @@ export const useMembershipAccess = () => {
                     if (response.data && response.data.success) {
                         const paymentHistory = response.data.data || [];
 
-                        // Filter out cancelled and pending_cancellation payments
+                        // Filter out cancelled payments only
+                        // ✅ THAY ĐỔI: Không loại trừ pending_cancellation vì user vẫn có thể sử dụng gói
                         const activePayments = paymentHistory.filter(payment => {
                             if (payment.MembershipStatus === 'cancelled' ||
                                 payment.PaymentStatus === 'cancelled' ||
-                                payment.Status === 'cancelled' ||
-                                payment.MembershipStatus === 'pending_cancellation') {
+                                payment.Status === 'cancelled') {
                                 return false;
                             }
                             return true;

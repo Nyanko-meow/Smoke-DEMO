@@ -1006,10 +1006,56 @@ app.use('/api/user-survey', require('./routes/userSurvey.routes'));
 app.use('/api/membership', require('./routes/membership.routes'));
 app.use('/api/memberships', require('./routes/membership.routes')); // Add alias for client compatibility
 app.use('/api/survey-questions', require('./routes/surveyQuestions.routes'));
+app.use('/api/survey-reset', require('./routes/surveyReset.routes'));
+app.use('/api/smoking-addiction-survey', require('./routes/smokingAddictionSurvey.routes'));
 app.use('/api/quit-plan', require('./routes/quitPlan.routes'));
 app.use('/api/chat', require('./routes/chat.routes')); // Chat routes with file attachment
 app.use('/api/upload', require('./routes/upload.routes')); // File upload routes
 app.use('/api/images', require('./routes/imageRoutes')); // Image serving routes
+
+// TESTING ENDPOINT - DELETE ALL SURVEY DATA (Development only)
+app.delete('/api/reset-all-surveys', async (req, res) => {
+    try {
+        console.log('🧪 Resetting ALL survey data via testing endpoint');
+        
+        const { pool } = require('./config/database');
+        const transaction = pool.transaction();
+        await transaction.begin();
+
+        try {
+            // Delete ALL survey data from all possible tables
+            await transaction.request().query(`
+                DELETE FROM SmokingAddictionSurveyAnswers;
+                DELETE FROM SmokingAddictionSurveyResults; 
+                DELETE FROM UserSurveyAnswers;
+                DELETE FROM NicotineAddictionScores;
+                DELETE FROM NicotineSurveyAnswers;
+                DELETE FROM NicotineSurveyResults;
+            `);
+
+            await transaction.commit();
+            console.log('✅ ALL survey data deleted successfully');
+
+            res.json({
+                success: true,
+                message: 'ALL survey data deleted successfully',
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+
+    } catch (error) {
+        console.error('❌ Error deleting survey data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting survey data',
+            error: error.message
+        });
+    }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

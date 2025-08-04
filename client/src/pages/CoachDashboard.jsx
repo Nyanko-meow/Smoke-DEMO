@@ -68,6 +68,7 @@ import CoachChatSimple from '../components/chat/CoachChatSimple';
 import AppointmentCalendar from '../components/coach/AppointmentCalendar';
 import CoachFeedbackView from '../components/coach/CoachFeedbackView';
 import CoachSurveyView from '../components/coach/CoachSurveyView';
+import MemberAddictionSurveys from '../components/coach/MemberAddictionSurveys';
 import '../components/coach/CoachDashboard.css';
 
 const { Header, Content, Sider } = Layout;
@@ -506,6 +507,11 @@ const CoachDashboard = () => {
             key: 'survey',
             icon: <FileTextOutlined />,
             label: 'Khảo sát',
+        },
+        {
+            key: 'addiction-survey',
+            icon: <FormOutlined />,
+            label: 'Khảo sát nghiện thuốc',
         },
         {
             type: 'divider',
@@ -1253,6 +1259,8 @@ const CoachDashboard = () => {
                 return <CoachFeedbackView />;
             case 'survey':
                 return <CoachSurveyView />;
+            case 'addiction-survey':
+                return <MemberAddictionSurveys />;
             default:
                 return renderDashboard();
         }
@@ -1276,6 +1284,8 @@ const CoachDashboard = () => {
                 return 'Đánh giá từ thành viên';
             case 'survey':
                 return 'Khảo sát';
+            case 'addiction-survey':
+                return 'Khảo sát nghiện thuốc lá';
             default:
                 return 'Dashboard';
         }
@@ -1299,6 +1309,8 @@ const CoachDashboard = () => {
                 return 'Xem và quản lý tất cả đánh giá từ các thành viên đã tư vấn. Theo dõi thống kê và cải thiện chất lượng dịch vụ.';
             case 'survey':
                 return 'Xem và quản lý tất cả khảo sát đã thực hiện. Theo dõi thống kê và cải thiện chất lượng dịch vụ.';
+            case 'addiction-survey':
+                return 'Theo dõi và quản lý thông tin khảo sát mức độ nghiện thuốc lá của các thành viên. Xem xác suất thành công và đưa ra khuyến nghị tư vấn.';
             default:
                 return `Chào mừng bạn trở lại, ${getCoachDisplayName()}! Đây là trang quản lý dành cho huấn luyện viên.`;
         }

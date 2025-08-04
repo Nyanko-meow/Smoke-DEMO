@@ -20,7 +20,11 @@ import PrivateRoute from './components/routing/PrivateRoute';
 import RoleBasedRoute from './components/routing/RoleBasedRoute';
 import MembershipPage from './pages/MembershipPage';
 import RefundRequestsPage from './pages/RefundRequestsPage';
-import SurveyPage from './pages/SurveyPage';
+import SmokingSurveyPage from './pages/SmokingSurveyPage';
+import SurveyResultsPage from './pages/SurveyResultsPage';
+import SmokingAddictionSurveyPage from './pages/SmokingAddictionSurveyPage';
+import SmokingAddictionResultsPage from './pages/SmokingAddictionResultsPage';
+import EnhancedProgressPage from './pages/EnhancedProgressPage';
 import QuitPlanPage from './pages/QuitPlanPage';
 import TemplateDetailPage from './pages/TemplateDetailPage';
 import QuitPlanFormPage from './pages/QuitPlanFormPage';
@@ -177,7 +181,47 @@ function App() {
                             element={
                                 <PrivateRoute>
                                     <RoleBasedRoute allowedRoles={['member', 'guest']}>
-                                        <SurveyPage />
+                                        <SmokingSurveyPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/smoking-survey/results"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <SurveyResultsPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/member/smoking-survey"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <SmokingAddictionSurveyPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/member/smoking-results"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <SmokingAddictionResultsPage />
+                                    </RoleBasedRoute>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/member/enhanced-progress"
+                            element={
+                                <PrivateRoute>
+                                    <RoleBasedRoute allowedRoles={['member', 'guest']}>
+                                        <EnhancedProgressPage />
                                     </RoleBasedRoute>
                                 </PrivateRoute>
                             }

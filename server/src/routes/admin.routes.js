@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const { pool, sql } = require('../config/database');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // Admin login endpoint - only for role 'admin'
@@ -946,7 +946,7 @@ router.get('/members', protect, authorize('admin'), async (req, res) => {
     }
 });
 
-// Assign member to coach
+// Assign member to coach (without creating a new QuitPlan)
 router.post('/assign-coach', protect, authorize('admin'), async (req, res) => {
     try {
         const { memberID, coachID, reason } = req.body;
@@ -997,55 +997,54 @@ router.post('/assign-coach', protect, authorize('admin'), async (req, res) => {
         console.log('✅ Member found:', member);
         console.log('✅ Coach found:', coach);
 
-        // Begin transaction to ensure data consistency
+        // Begin transaction
         const transaction = pool.transaction();
         await transaction.begin();
 
         try {
-            // First, deactivate any existing active quit plans for this member
-            const deactivateResult = await transaction.request()
+            // Cập nhật CoachID vào kế hoạch đang active của member (nếu có)
+            const updatePlanResult = await transaction.request()
                 .input('UserID', memberID)
+                .input('CoachID', coachID)
                 .query(`
-                    UPDATE QuitPlans 
-                    SET Status = 'cancelled'
-                    OUTPUT DELETED.PlanID, DELETED.CoachID
+                    UPDATE QuitPlans
+                    SET CoachID = @CoachID, UpdatedAt = GETDATE()
                     WHERE UserID = @UserID AND Status = 'active'
                 `);
 
-            console.log('🔄 Deactivated old plans:', deactivateResult.recordset);
+            console.log('✅ Đã cập nhật CoachID cho kế hoạch hiện tại:', updatePlanResult.rowsAffected);
 
-            // Create new quit plan with coach assignment
-            const createPlanResult = await transaction.request()
+            if (updatePlanResult.rowsAffected[0] === 0) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: 'Không có kế hoạch active để gán coach. Hãy tạo plan trước.'
+                });
+            }
+
+            // Truy vấn kế hoạch vừa cập nhật
+            const verifyPlan = await transaction.request()
                 .input('UserID', memberID)
                 .input('CoachID', coachID)
-                .input('StartDate', new Date())
-                .input('TargetDate', new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)) // 90 days later
-                .input('Reason', reason || 'Phân công bởi admin')
-                .input('DetailedPlan', 'Kế hoạch cai thuốc được tạo bởi admin')
                 .query(`
-                    INSERT INTO QuitPlans (UserID, CoachID, StartDate, TargetDate, Reason, DetailedPlan, Status, MotivationLevel)
-                    OUTPUT INSERTED.PlanID, INSERTED.UserID, INSERTED.CoachID, INSERTED.Status
-                    VALUES (@UserID, @CoachID, @StartDate, @TargetDate, @Reason, @DetailedPlan, 'active', 7)
-                `);
-
-            const newPlan = createPlanResult.recordset[0];
-            console.log('✅ Created new quit plan:', newPlan);
-
-            // Verify the plan was created correctly
-            const verifyPlan = await transaction.request()
-                .input('PlanID', newPlan.PlanID)
-                .query(`
-                    SELECT qp.*, u.FirstName + ' ' + u.LastName as MemberName, 
-                           c.FirstName + ' ' + c.LastName as CoachName
+                    SELECT TOP 1 
+                        qp.*, 
+                        u.FirstName + ' ' + u.LastName as MemberName, 
+                        c.FirstName + ' ' + c.LastName as CoachName
                     FROM QuitPlans qp
                     INNER JOIN Users u ON qp.UserID = u.UserID
                     INNER JOIN Users c ON qp.CoachID = c.UserID
-                    WHERE qp.PlanID = @PlanID
+                    WHERE qp.UserID = @UserID 
+                      AND qp.CoachID = @CoachID
+                      AND qp.Status = 'active'
+                    ORDER BY qp.UpdatedAt DESC
                 `);
 
-            console.log('✅ Plan verification:', verifyPlan.recordset[0]);
+            const verifiedPlan = verifyPlan.recordset[0];
 
-            // Create or update conversation between coach and member
+            console.log('✅ Plan verification:', verifiedPlan);
+
+            // Create or update conversation
             const conversationCheck = await transaction.request()
                 .input('CoachID', coachID)
                 .input('MemberID', memberID)
@@ -1065,7 +1064,6 @@ router.post('/assign-coach', protect, authorize('admin'), async (req, res) => {
                     `);
                 console.log('✅ Created new conversation:', conversationResult.recordset[0]);
             } else {
-                // Reactivate existing conversation
                 await transaction.request()
                     .input('CoachID', coachID)
                     .input('MemberID', memberID)
@@ -1081,37 +1079,15 @@ router.post('/assign-coach', protect, authorize('admin'), async (req, res) => {
             await transaction.commit();
             console.log('✅ Transaction committed successfully');
 
-            // Final verification - test assigned coach query
-            const finalCheck = await pool.request()
-                .input('UserID', memberID)
-                .query(`
-                    SELECT 
-                        c.UserID as CoachID,
-                        c.Email as CoachEmail,
-                        c.FirstName as CoachFirstName,
-                        c.LastName as CoachLastName,
-                        qp.PlanID as QuitPlanID,
-                        qp.Status as QuitPlanStatus
-                    FROM QuitPlans qp
-                    INNER JOIN Users c ON qp.CoachID = c.UserID
-                    WHERE qp.UserID = @UserID 
-                        AND qp.Status = 'active'
-                        AND qp.CoachID IS NOT NULL
-                        AND c.Role = 'coach'
-                        AND c.IsActive = 1
-                `);
-
-            console.log('🔍 Final assignment verification:', finalCheck.recordset);
-
             res.json({
                 success: true,
                 data: {
-                    planID: newPlan.PlanID,
+                    planID: verifiedPlan?.PlanID || null,
                     memberID: memberID,
                     coachID: coachID,
-                    memberName: `${member.FirstName} ${member.LastName}`,
-                    coachName: `${coach.FirstName} ${coach.LastName}`,
-                    assignmentVerified: finalCheck.recordset.length > 0
+                    memberName: verifiedPlan?.MemberName || `${member.FirstName} ${member.LastName}`,
+                    coachName: verifiedPlan?.CoachName || `${coach.FirstName} ${coach.LastName}`,
+                    assignmentVerified: true
                 },
                 message: `Đã phân công ${member.FirstName} ${member.LastName} cho coach ${coach.FirstName} ${coach.LastName}`
             });
@@ -1131,6 +1107,7 @@ router.post('/assign-coach', protect, authorize('admin'), async (req, res) => {
         });
     }
 });
+
 
 // Remove coach assignment
 router.delete('/assign-coach/:memberID', protect, authorize('admin'), async (req, res) => {
@@ -2382,7 +2359,7 @@ router.post('/approve-cancellation/:cancellationId', protect, authorize('admin')
 });
 
 // Reject cancellation request (using PaymentConfirmations)
-router.post('/reject-cancellation/:cancellationId', protect, authorize('admin'), async (req, res) => {
+router.post('/reject-cancellation-legacy/:cancellationId', protect, authorize('admin'), async (req, res) => {
     try {
         const { cancellationId } = req.params;
         const { adminNotes } = req.body;
@@ -4877,21 +4854,20 @@ router.post('/approve-cancellation/:requestId', protect, authorize('admin'), asy
 });
 
 // Reject a cancellation request - Updated to use CancellationRequests
-router.post('/reject-cancellation/:requestId', protect, authorize('admin'), async (req, res) => {
+router.post('/reject-cancellation/:cancellationId', protect, authorize('admin'), async (req, res) => {
     try {
-        const { requestId } = req.params;
+        const { cancellationId } = req.params;
         const { adminNotes } = req.body;
 
-        console.log('🔍 Admin rejecting cancellation request:', requestId);
+        console.log('🔍 Admin rejecting cancellation request:', cancellationId);
 
         const transaction = pool.transaction();
         await transaction.begin();
 
         try {
             // Check if cancellation request exists and is pending
-            const checkResult = await transa
-            ction.request()
-                .input('RequestId', requestId)
+            const checkResult = await transaction.request()
+                .input('RequestId', sql.Int, parseInt(cancellationId))
                 .query(`
                     SELECT cr.*, um.UserID, um.MembershipID, mp.Name as PlanName
                     FROM CancellationRequests cr
@@ -4912,9 +4888,9 @@ router.post('/reject-cancellation/:requestId', protect, authorize('admin'), asyn
 
             // Update cancellation request status to rejected
             await transaction.request()
-                .input('RequestId', requestId)
-                .input('AdminNotes', adminNotes || '')
-                .input('ProcessedByUserID', req.user.UserID || req.user.id)
+                .input('RequestId', sql.Int, parseInt(cancellationId))
+                .input('AdminNotes', sql.NVarChar, adminNotes || '')
+                .input('ProcessedByUserID', sql.Int, parseInt(req.user.UserID || req.user.id))
                 .query(`
                     UPDATE CancellationRequests 
                     SET Status = 'rejected',
@@ -4926,7 +4902,7 @@ router.post('/reject-cancellation/:requestId', protect, authorize('admin'), asyn
 
             // Restore membership status to active (user can continue using the service)
             await transaction.request()
-                .input('MembershipID', cancellation.MembershipID)
+                .input('MembershipID', sql.Int, parseInt(cancellation.MembershipID))
                 .query(`
                     UPDATE UserMemberships 
                     SET Status = 'active'
@@ -4935,7 +4911,7 @@ router.post('/reject-cancellation/:requestId', protect, authorize('admin'), asyn
 
             // Ensure user role is member (in case it was changed)
             await transaction.request()
-                .input('UserID', cancellation.UserID)
+                .input('UserID', sql.Int, parseInt(cancellation.UserID))
                 .query(`
                     UPDATE Users 
                     SET Role = 'member'
@@ -4944,11 +4920,11 @@ router.post('/reject-cancellation/:requestId', protect, authorize('admin'), asyn
 
             // Create notification for user about rejection
             await transaction.request()
-                .input('UserID', cancellation.UserID)
-                .input('Title', 'Yêu cầu hủy gói bị từ chối')
-                .input('Message', `Yêu cầu hủy gói ${cancellation.PlanName} của bạn đã bị từ chối. Lý do: ${adminNotes || 'Không có lý do cụ thể'}. Gói dịch vụ của bạn sẽ tiếp tục hoạt động bình thường.`)
-                .input('Type', 'cancellation_rejected')
-                .input('RelatedID', requestId)
+                .input('UserID', sql.Int, parseInt(cancellation.UserID))
+                .input('Title', sql.NVarChar, 'Yêu cầu hủy gói bị từ chối')
+                .input('Message', sql.NVarChar, `Yêu cầu hủy gói ${cancellation.PlanName} của bạn đã bị từ chối. Lý do: ${adminNotes || 'Không có lý do cụ thể'}. Gói dịch vụ của bạn sẽ tiếp tục hoạt động bình thường.`)
+                .input('Type', sql.NVarChar, 'cancellation_rejected')
+                .input('RelatedID', sql.Int, parseInt(cancellationId))
                 .query(`
                     INSERT INTO Notifications (UserID, Title, Message, Type, RelatedID)
                     VALUES (@UserID, @Title, @Message, @Type, @RelatedID)
@@ -4965,41 +4941,6 @@ router.post('/reject-cancellation/:requestId', protect, authorize('admin'), asyn
             await transaction.rollback();
             throw error;
         }
-
-    } catch (error) {
-        console.error('❌ Error rejecting cancellation:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi khi từ chối yêu cầu hủy gói'
-        });
-    }
-});
-
-// Reject a cancellation request
-router.post('/reject-cancellation/:requestId', protect, authorize('admin'), async (req, res) => {
-    try {
-        const { requestId } = req.params;
-        const { adminNotes } = req.body;
-
-        console.log('🔍 Admin rejecting cancellation request:', requestId);
-
-        await pool.request()
-            .input('RequestId', requestId)
-            .input('AdminNotes', adminNotes || '')
-            .input('ProcessedByUserID', req.user.UserID || req.user.id)
-            .query(`
-                UPDATE CancellationRequests 
-                SET Status = 'rejected',
-                    AdminNotes = @AdminNotes,
-                    ProcessedByUserID = @ProcessedByUserID,
-                    ProcessedAt = GETDATE()
-                WHERE CancellationRequestID = @RequestId
-            `);
-
-        res.json({
-            success: true,
-            message: 'Đã từ chối yêu cầu hủy gói'
-        });
 
     } catch (error) {
         console.error('❌ Error rejecting cancellation:', error);
