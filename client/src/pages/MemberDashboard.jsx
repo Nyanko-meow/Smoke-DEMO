@@ -20,6 +20,7 @@ import axios from 'axios';
 import Appointments from '../components/member/Appointments';
 import AccessGuard from '../components/common/AccessGuard';
 import SavingsDisplay from '../components/common/SavingsDisplay';
+import SmokingAddictionNavigation from '../components/member/SmokingAddictionNavigation';
 
 const { Content, Sider } = Layout;
 const { Text } = Typography;
@@ -150,7 +151,12 @@ const MemberDashboard = () => {
     ];
 
     const renderContent = () => {
-        return <Appointments />;
+        return (
+            <div style={{ padding: '24px' }}>
+                <SmokingAddictionNavigation />
+                <Appointments />
+            </div>
+        );
     };
 
     if (loading) {

@@ -14,7 +14,7 @@ const CoachLogin = () => {
     const handleLogin = async (values) => {
         setLoading(true);
         try {
-            const response = await axios.post('https://smokeking.wibu.me:4000/api/coaches/login', {
+            const response = await axios.post('http://localhost:4000/api/coaches/login', {
                 email: values.email,
                 password: values.password
             }, {

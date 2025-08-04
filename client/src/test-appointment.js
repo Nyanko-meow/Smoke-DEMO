@@ -6,7 +6,7 @@ const testAppointment = async () => {
         // Thay đổi token này bằng token thực tế của bạn
         const token = 'YOUR_TOKEN_HERE';
 
-        const response = await axios.post('https://smokeking.wibu.me:4000/api/chat/appointment', {
+        const response = await axios.post('http://localhost:4000/api/chat/appointment', {
             receiverId: 3, // ID của coach
             appointmentDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Ngày mai
             duration: 30,

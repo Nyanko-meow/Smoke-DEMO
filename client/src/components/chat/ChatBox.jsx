@@ -225,10 +225,10 @@ const ChatBox = ({
             let apiUrl;
             if (conversationId) {
                 // Use conversation-based API for coach
-                apiUrl = `/api/chat/conversation/${conversationId}/messages`;
+                apiUrl = `http://localhost:4000/api/chat/conversation/${conversationId}/messages`;
             } else {
                 // Use member messages API for member
-                apiUrl = '/api/chat/member/messages';
+                apiUrl = 'http://localhost:4000/api/chat/member/messages';
             }
 
             console.log('🔄 Loading messages from:', apiUrl, 'User:', userData);
@@ -320,10 +320,10 @@ const ChatBox = ({
 
             if (conversationId) {
                 // Use conversation-based API for coaches with specific conversations
-                apiUrl = `/api/chat/conversation/${conversationId}/send`;
+                apiUrl = `http://localhost:4000/api/chat/conversation/${conversationId}/send`;
             } else {
                 // Use the general chat API for members or coaches without specific conversation
-                apiUrl = '/api/chat/coach/chat/send';
+                apiUrl = 'http://localhost:4000/api/chat/coach/chat/send';
                 // If receiverId is provided (for coach), add it to request data
                 if (receiverId) {
                     requestData.memberId = receiverId;

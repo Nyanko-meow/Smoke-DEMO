@@ -5,10 +5,14 @@
     "main": "src/index.js",
     "scripts": {
         "start": "node src/index.js",
+        "start-safe": "node start-server.js",
         "dev": "nodemon src/index.js",
+        "test-connection": "node test-connection.js",
+        "fix-issues": "node fix-common-issues.js",
         "setup-db": "node src/database/insertPlans.js",
         "setup-templates": "node setup-templates.js",
         "test": "echo \"Error: no test specified\" && exit 1",
+    "setup-survey": "node setup-survey-procedures.js",
         "migrate": "node src/database/migrate.js",
         "update-address": "node src/database/run-update.js"
     },

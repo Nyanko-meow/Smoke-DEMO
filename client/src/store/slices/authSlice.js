@@ -86,9 +86,11 @@ export const register = createAsyncThunk(
         } catch (error) {
             console.error('Registration error:', error);
             return rejectWithValue(
-                error.response && error.response.data.message
+                error.response && error.response.data && error.response.data.message
                     ? error.response.data.message
-                    : 'Cannot connect to server. Please try again later.'
+                    : (error.response && typeof error.response.data === 'object'
+                        ? JSON.stringify(error.response.data)
+                        : 'Cannot connect to server. Please try again later.')
             );
         }
     }

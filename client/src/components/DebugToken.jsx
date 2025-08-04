@@ -50,7 +50,7 @@ const DebugToken = () => {
             console.log('Testing with token:', token.substring(0, 30) + '...');
 
             // Test simple endpoint first
-            const response = await fetch('https://smokeking.wibu.me:4000/api/coach/feedback', {
+            const response = await fetch('http://localhost:4000/api/coach/feedback', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ const DebugToken = () => {
     const generateNewToken = async () => {
         try {
             // Try to get a new token using test login endpoint
-            const response = await fetch('https://smokeking.wibu.me:4000/api/test-login', {
+            const response = await fetch('http://localhost:4000/api/test-login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

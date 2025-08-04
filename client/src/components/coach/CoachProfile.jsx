@@ -64,7 +64,7 @@ const CoachProfile = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('coachToken');
-            const response = await axios.get('https://smokeking.wibu.me:4000/api/coach/profile', {
+            const response = await axios.get('http://localhost:4000/api/coach/profile', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

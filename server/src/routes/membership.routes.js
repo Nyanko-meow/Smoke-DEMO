@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth.middleware');
-const { pool } = require('../config/database');
+const { pool, sql } = require('../config/database');
 
 // Get all membership plans
 router.get('/plans', async (req, res) => {
@@ -420,16 +420,41 @@ async function confirmPayment(paymentId, confirmedByUserId) {
                 `);
             console.log('✅ Archived recent progress tracking data by unlinking from memberships');
 
-            // 3. Clear user survey answers (archive old answers)
+            // 3. DELETE all survey data for clean start (as requested by user)
+            console.log('🗑️ Deleting all survey data for clean start...');
+            
+            // Delete UserSurveyAnswers
             await transaction.request()
                 .input('UserID', payment.UserID)
                 .query(`
-                    UPDATE UserSurveyAnswers 
-                    SET Answer = Answer + ' [Archived - New membership started]'
-                    WHERE UserID = @UserID 
-                    AND SubmittedAt >= DATEADD(day, -90, GETDATE())
+                    DELETE FROM UserSurveyAnswers 
+                    WHERE UserID = @UserID
                 `);
-            console.log('✅ Archived recent survey answers');
+            console.log('✅ Deleted UserSurveyAnswers');
+            
+            // Delete NicotineAddictionScores
+            await transaction.request()
+                .input('UserID', payment.UserID)
+                .query(`
+                    DELETE FROM NicotineAddictionScores 
+                    WHERE UserID = @UserID
+                `);
+            console.log('✅ Deleted NicotineAddictionScores');
+            
+            // Delete NicotineSurveyResults and related answers
+            await transaction.request()
+                .input('UserID', payment.UserID)
+                .query(`
+                    DELETE FROM NicotineSurveyAnswers 
+                    WHERE ResultID IN (
+                        SELECT ResultID FROM NicotineSurveyResults 
+                        WHERE UserID = @UserID
+                    );
+                    
+                    DELETE FROM NicotineSurveyResults 
+                    WHERE UserID = @UserID;
+                `);
+            console.log('✅ Deleted NicotineSurveyResults and answers');
 
             // 4. Cancel/complete pending appointments for fresh start
             await transaction.request()
@@ -751,6 +776,41 @@ router.post('/cancel', protect, async (req, res) => {
 
             console.log('✅ Cancelled QuitPlans linked to cancelled memberships');
 
+            // 2. DELETE all survey data for clean start (user requested cancellation)
+            console.log('🗑️ Deleting all survey data due to membership cancellation...');
+            
+            // Delete UserSurveyAnswers
+            await transaction.request()
+                .input('UserID', userId)
+                .query(`
+                    DELETE FROM UserSurveyAnswers 
+                    WHERE UserID = @UserID
+                `);
+            console.log('✅ Deleted UserSurveyAnswers');
+            
+            // Delete NicotineAddictionScores
+            await transaction.request()
+                .input('UserID', userId)
+                .query(`
+                    DELETE FROM NicotineAddictionScores 
+                    WHERE UserID = @UserID
+                `);
+            console.log('✅ Deleted NicotineAddictionScores');
+            
+            // Delete NicotineSurveyResults and related answers
+            await transaction.request()
+                .input('UserID', userId)
+                .query(`
+                    DELETE FROM NicotineSurveyAnswers 
+                    WHERE ResultID IN (
+                        SELECT ResultID FROM NicotineSurveyResults 
+                        WHERE UserID = @UserID
+                    );
+                    
+                    DELETE FROM NicotineSurveyResults 
+                    WHERE UserID = @UserID;
+                `);
+            console.log('✅ Deleted NicotineSurveyResults and answers');
 
             // 3. Get MembershipID for the refund record
             const membershipResult = await transaction.request()
@@ -2492,6 +2552,42 @@ router.post('/request-cancel', protect, async (req, res) => {
 
          console.log('✅ Cancelled QuitPlans linked to membership:', membership.MembershipID);
             
+            // DELETE all survey data for clean start (user requested cancellation via request-cancel)
+            console.log('🗑️ Deleting all survey data due to membership cancellation request...');
+            
+            // Delete UserSurveyAnswers
+            await transaction.request()
+                .input('UserID', req.user.id)
+                .query(`
+                    DELETE FROM UserSurveyAnswers 
+                    WHERE UserID = @UserID
+                `);
+            console.log('✅ Deleted UserSurveyAnswers');
+            
+            // Delete NicotineAddictionScores
+            await transaction.request()
+                .input('UserID', req.user.id)
+                .query(`
+                    DELETE FROM NicotineAddictionScores 
+                    WHERE UserID = @UserID
+                `);
+            console.log('✅ Deleted NicotineAddictionScores');
+            
+            // Delete NicotineSurveyResults and related answers
+            await transaction.request()
+                .input('UserID', req.user.id)
+                .query(`
+                    DELETE FROM NicotineSurveyAnswers 
+                    WHERE ResultID IN (
+                        SELECT ResultID FROM NicotineSurveyResults 
+                        WHERE UserID = @UserID
+                    );
+                    
+                    DELETE FROM NicotineSurveyResults 
+                    WHERE UserID = @UserID;
+                `);
+            console.log('✅ Deleted NicotineSurveyResults and answers');
+            
             // Create notification for user
             await transaction.request()
                 .input('UserID', req.user.id)
@@ -2718,6 +2814,136 @@ router.post('/confirm-refund-received/:cancellationId', protect, async (req, res
         res.status(500).json({
             success: false,
             message: 'Lỗi khi xác nhận nhận tiền hoàn trả'
+        });
+    }
+});
+
+// Cancel cancellation request endpoint
+router.post('/cancel-cancellation-request', protect, async (req, res) => {
+    try {
+        console.log('🔄 User requesting to cancel cancellation request:', req.user.id);
+
+        // Start transaction
+        const transaction = pool.transaction();
+        await transaction.begin();
+
+        try {
+                    // Find the pending cancellation request for this user (check both CancellationRequests and RefundRequests tables)
+        let cancellationResult = await transaction.request()
+            .input('UserID', req.user.id)
+            .query(`
+                SELECT cr.*, um.MembershipID, um.Status as MembershipStatus, 'CancellationRequests' as SourceTable
+                FROM CancellationRequests cr
+                JOIN UserMemberships um ON cr.MembershipID = um.MembershipID
+                WHERE cr.UserID = @UserID 
+                AND cr.Status = 'pending'
+                AND um.Status = 'pending_cancellation'
+            `);
+
+        // If not found in CancellationRequests, check RefundRequests table
+        if (cancellationResult.recordset.length === 0) {
+            console.log('🔍 Checking RefundRequests table for pending cancellation...');
+            cancellationResult = await transaction.request()
+                .input('UserID', req.user.id)
+                .query(`
+                    SELECT 
+                        rr.RequestID as CancellationRequestID,
+                        rr.UserID,
+                        rr.MembershipID,
+                        rr.PaymentID,
+                        rr.RefundReason as CancellationReason,
+                        rr.RefundAmount as RequestedRefundAmount,
+                        rr.BankAccountNumber,
+                        rr.BankName,
+                        rr.AccountHolderName,
+                        rr.Status,
+                        rr.RequestedAt,
+                        rr.ProcessedAt,
+                        rr.ProcessedByUserID,
+                        rr.AdminNotes,
+                        rr.RefundApproved,
+                        rr.RefundAmount,
+                        rr.TransferConfirmed,
+                        rr.TransferDate,
+                        rr.RefundReceived,
+                        rr.ReceivedDate,
+                        um.Status as MembershipStatus,
+                        'RefundRequests' as SourceTable
+                    FROM RefundRequests rr
+                    JOIN UserMemberships um ON rr.MembershipID = um.MembershipID
+                    WHERE rr.UserID = @UserID 
+                    AND rr.Status = 'pending'
+                    AND um.Status = 'pending_cancellation'
+                `);
+            console.log('🔍 Found in RefundRequests:', cancellationResult.recordset.length, 'records');
+        }
+
+            if (cancellationResult.recordset.length === 0) {
+                await transaction.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy yêu cầu hủy gói đang chờ duyệt'
+                });
+            }
+
+            const cancellationRequest = cancellationResult.recordset[0];
+            const sourceTable = cancellationRequest.SourceTable;
+
+            // Update cancellation request status to cancelled based on source table
+            if (sourceTable === 'CancellationRequests') {
+                await transaction.request()
+                    .input('CancellationRequestID', sql.Int, parseInt(cancellationRequest.CancellationRequestID))
+                    .input('UserID', sql.Int, parseInt(req.user.id))
+                    .query(`
+                        UPDATE CancellationRequests
+                        SET Status = 'rejected',
+                            ProcessedAt = GETDATE(),
+                            ProcessedByUserID = @UserID
+                        WHERE CancellationRequestID = @CancellationRequestID
+                    `);
+            } else if (sourceTable === 'RefundRequests') {
+                await transaction.request()
+                    .input('RequestID', sql.Int, parseInt(cancellationRequest.CancellationRequestID))
+                    .query(`
+                        UPDATE RefundRequests
+                        SET Status = 'cancelled'
+                        WHERE RequestID = @RequestID
+                    `);
+            }
+
+            // Update membership status back to active
+            await transaction.request()
+                .input('MembershipID', sql.Int, parseInt(cancellationRequest.MembershipID))
+                .query(`
+                    UPDATE UserMemberships
+                    SET Status = 'active'
+                    WHERE MembershipID = @MembershipID
+                `);
+
+            console.log('✅ Cancellation request cancelled and membership reactivated');
+
+            await transaction.commit();
+
+            res.json({
+                success: true,
+                message: 'Đã hủy yêu cầu hủy gói dịch vụ thành công. Gói dịch vụ sẽ tiếp tục hoạt động bình thường.',
+                data: {
+                    cancellationRequestId: cancellationRequest.CancellationRequestID,
+                    membershipId: cancellationRequest.MembershipID,
+                    status: 'rejected'
+                }
+            });
+
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    } catch (error) {
+        console.error('❌ Error cancelling cancellation request:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi hủy yêu cầu hủy gói dịch vụ',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });

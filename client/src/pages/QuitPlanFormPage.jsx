@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Form,
     Input,
@@ -35,7 +35,7 @@ const { TextArea } = Input;
 
 // Create axios instance with defaults
 const api = axios.create({
-    baseURL: '', // Use relative path for proxy
+    baseURL: 'http://localhost:4000',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -66,8 +66,22 @@ const QuitPlanFormPage = () => {
     const [submitting, setSubmitting] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [membershipInfo, setMembershipInfo] = useState(null);
-    const [membershipLoading, setMembershipLoading] = useState(true);
     const [selectedPhases, setSelectedPhases] = useState([]);
+
+    // Bọc updateDetailedPlan với useCallback để tránh re-render vô hạn
+    const updateDetailedPlan = useCallback((phases) => {
+        const selectedPhasesOnly = phases.filter(phase => phase.selected);
+        
+        // Add template ID for backend processing
+        const templateText = `[TEMPLATE_ID:${selectedTemplate?.id}]\n\n` +
+            selectedPhasesOnly.map((phase, index) =>
+                `${phase.phaseName}:\n${phase.phaseDescription}\n`
+            ).join('\n');
+
+        form.setFieldsValue({
+            detailedPlan: templateText
+        });
+    }, [selectedTemplate, form]);
 
     useEffect(() => {
         // Get selected template from navigation state
@@ -92,11 +106,10 @@ const QuitPlanFormPage = () => {
 
         // Load membership info
         loadMembershipInfo();
-    }, [location.state, form, navigate]);
+    }, [location.state, form, navigate, updateDetailedPlan]); // Thêm updateDetailedPlan vào dependencies
 
     const loadMembershipInfo = async () => {
         try {
-            setMembershipLoading(true);
             const token = localStorage.getItem('token');
 
             const response = await api.get('/api/user/status', {
@@ -109,7 +122,6 @@ const QuitPlanFormPage = () => {
         } catch (error) {
             console.error('Error loading membership info:', error);
         } finally {
-            setMembershipLoading(false);
         }
     };
 
@@ -156,12 +168,19 @@ const QuitPlanFormPage = () => {
                 return dayjs(dateValue).format('YYYY-MM-DD');
             };
 
+            // Ensure detailedPlan is updated with selected phases
+            const selectedPhasesOnly = selectedPhases.filter(phase => phase.selected);
+            const finalDetailedPlan = `[TEMPLATE_ID:${selectedTemplate.id}]\n\n` +
+                selectedPhasesOnly.map((phase, index) =>
+                    `${phase.phaseName}:\n${phase.phaseDescription}\n`
+                ).join('\n');
+
             const submitData = {
                 startDate: formatDate(values.startDate),
                 targetDate: formatDate(values.targetDate),
                 reason: values.reason || '',
                 motivationLevel: values.motivationLevel || 5,
-                detailedPlan: values.detailedPlan || '',
+                detailedPlan: finalDetailedPlan, // Use the filtered plan
                 templateId: selectedTemplate.id
             };
 
@@ -176,6 +195,13 @@ const QuitPlanFormPage = () => {
                 if (!submitData.motivationLevel) missingFields.push('mức độ động lực');
 
                 message.error(`Vui lòng điền: ${missingFields.join(', ')}`);
+                setSubmitting(false);
+                return;
+            }
+
+            // Additional validation for selected phases
+            if (selectedPhasesOnly.length === 0) {
+                message.error('Vui lòng chọn ít nhất một giai đoạn trong kế hoạch');
                 setSubmitting(false);
                 return;
             }
@@ -210,18 +236,6 @@ const QuitPlanFormPage = () => {
         } finally {
             setSubmitting(false);
         }
-    };
-
-    // Update detailed plan based on selected phases
-    const updateDetailedPlan = (phases) => {
-        const selectedPhasesOnly = phases.filter(phase => phase.selected);
-        const templateText = selectedPhasesOnly.map((phase, index) =>
-            `${phase.phaseName}:\n${phase.phaseDescription}\n`
-        ).join('\n');
-
-        form.setFieldsValue({
-            detailedPlan: templateText
-        });
     };
 
     // Toggle phase selection

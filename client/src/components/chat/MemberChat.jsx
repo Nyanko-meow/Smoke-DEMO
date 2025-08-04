@@ -49,7 +49,7 @@ const MemberChat = ({ style, height = 400 }) => {
 
             // Test server connection first
             try {
-                const serverResponse = await axios.get('https://smokeking.wibu.me:4000/api/test', { timeout: 5000 });
+                const serverResponse = await axios.get('http://localhost:4000/api/test', { timeout: 5000 });
                 console.log('✅ Server connection OK:', serverResponse.data);
             } catch (serverError) {
                 console.error('❌ Server connection failed:', serverError);
@@ -67,7 +67,7 @@ const MemberChat = ({ style, height = 400 }) => {
             // Get debug info
             try {
                 const debugResponse = await axios.get(
-                    'https://smokeking.wibu.me:4000/api/chat/debug-user',
+                    'http://localhost:4000/api/chat/debug-user',
                     {
                         headers: { 'Authorization': `Bearer ${token}` },
                         timeout: 10000
@@ -80,7 +80,7 @@ const MemberChat = ({ style, height = 400 }) => {
 
             // Load conversation
             const response = await axios.get(
-                'https://smokeking.wibu.me:4000/api/chat/member/conversation',
+                'http://localhost:4000/api/chat/member/conversation',
                 {
                     headers: { 'Authorization': `Bearer ${token}` },
                     timeout: 10000

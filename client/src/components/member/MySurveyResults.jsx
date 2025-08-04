@@ -44,7 +44,7 @@ const MySurveyResults = () => {
                 return;
             }
 
-            const response = await axios.get('http://localhost:4000/api/survey-questions/my-survey-details', {
+            const response = await axios.get('/api/smoking-addiction-survey/my-survey-details', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 

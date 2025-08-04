@@ -33,7 +33,7 @@ const SavingsDisplay = ({
             }
 
             // Fetch real progress data from API
-            const response = await axios.get('https://smokeking.wibu.me:4000/api/progress/summary', {
+            const response = await axios.get('http://localhost:4000/api/progress/summary', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

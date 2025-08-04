@@ -620,7 +620,9 @@ router.post('/payos/create', protect, async (req, res) => {
             data: {
                 payment: paymentResult.recordset[0],
                 paymentLink: paymentLink,
-                checkoutUrl: paymentLink.checkoutUrl
+                checkoutUrl: paymentLink.checkoutUrl,
+                orderCode: orderCode,
+                timeoutMinutes: 5
             },
             message: 'Payment link created successfully'
         });
@@ -709,6 +711,73 @@ router.get('/payos/cancel', async (req, res) => {
     } catch (error) {
         console.error('PayOS cancel handler error:', error);
         res.redirect(`${process.env.CLIENT_URL}/payment/error`);
+    }
+});
+
+// PayOS timeout cancellation endpoint
+router.post('/payos/cancel-timeout', protect, async (req, res) => {
+    try {
+        const { orderCode } = req.body;
+        
+        console.log('⏰ Cancelling payment due to timeout for orderCode:', orderCode);
+        
+        // First check if payment exists and get details
+        const checkResult = await pool.request()
+            .input('OrderCode', orderCode)
+            .input('UserID', req.user.id)
+            .query(`
+                SELECT PaymentID, Status, TransactionID, PlanID 
+                FROM Payments 
+                WHERE TransactionID = @OrderCode 
+                AND UserID = @UserID 
+                AND Status = 'pending'
+            `);
+
+        if (checkResult.recordset.length > 0) {
+            const payment = checkResult.recordset[0];
+            
+            // Delete related UserMemberships first (link by UserID and PlanID)
+            await pool.request()
+                .input('UserID', req.user.id)
+                .input('PlanID', payment.PlanID || null)
+                .query(`
+                    DELETE FROM UserMemberships 
+                    WHERE UserID = @UserID 
+                    AND (@PlanID IS NULL OR PlanID = @PlanID)
+                    AND Status = 'pending'
+                `);
+            
+            // Delete the payment
+            await pool.request()
+                .input('OrderCode', orderCode)
+                .input('UserID', req.user.id)
+                .query(`
+                    DELETE FROM Payments 
+                    WHERE TransactionID = @OrderCode 
+                    AND UserID = @UserID 
+                    AND Status = 'pending'
+                `);
+            
+            console.log('✅ Payment deleted due to timeout:', orderCode);
+            
+            res.json({
+                success: true,
+                message: 'Payment cancelled due to timeout'
+            });
+        } else {
+            console.log('⚠️ No pending payment found for orderCode:', orderCode);
+            res.json({
+                success: true,
+                message: 'No pending payment found to cancel'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cancelling payment timeout:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error cancelling payment timeout'
+        });
     }
 });
 

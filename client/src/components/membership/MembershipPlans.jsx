@@ -908,7 +908,9 @@ const MembershipPlans = () => {
                 if (!isNaN(purchaseDate.getTime())) {
                     const currentDate = new Date();
                     daysSincePurchase = Math.floor((currentDate - purchaseDate) / (1000 * 60 * 60 * 24));
-                    canCancel = correctedStatus === 'confirmed' && daysSincePurchase <= 7;
+                    canCancel = correctedStatus === 'confirmed' && 
+                               daysSincePurchase <= 7 && 
+                               latestPayment.MembershipStatus !== 'pending_cancellation';
                 }
             }
 
@@ -1364,6 +1366,92 @@ const MembershipPlans = () => {
                                         </div>
                                     </div>
                                 ) : null}
+                            </div>
+                        )}
+
+                        {/* Pending Cancellation Section - Show cancel request button */}
+                        {latestPayment.MembershipStatus === 'pending_cancellation' && (
+                            <div style={{
+                                background: 'linear-gradient(135deg, #fef3c7 0%, #fbbf24 25%, #f59e0b 75%, #d97706 100%)',
+                                border: '1px solid #f59e0b',
+                                borderRadius: '10px',
+                                padding: '16px',
+                                marginTop: '12px'
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    marginBottom: '12px'
+                                }}>
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '50%',
+                                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginRight: '10px'
+                                    }}>
+                                        <span style={{ fontSize: '16px' }}>⏳</span>
+                                    </div>
+                                    <div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            fontWeight: 700,
+                                            color: '#92400e',
+                                            marginBottom: '4px'
+                                        }}>
+                                            Yêu cầu hủy gói đang chờ duyệt
+                                        </div>
+                                        <div style={{ fontSize: '13px', color: '#a16207' }}>
+                                            Bạn vẫn có thể sử dụng gói dịch vụ bình thường
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Cancel Request Section */}
+                                <div style={{
+                                    background: 'rgba(255, 255, 255, 0.8)',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    marginBottom: '12px',
+                                    border: '1px solid rgba(245, 158, 11, 0.5)',
+                                    backdropFilter: 'blur(10px)'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between'
+                                    }}>
+                                        <div>
+                                            <div style={{
+                                                fontSize: '14px',
+                                                color: '#92400e',
+                                                fontWeight: 600,
+                                                marginBottom: '4px'
+                                            }}>
+                                                🔄 Muốn hủy yêu cầu hủy?
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: '#a16207' }}>
+                                                Bạn có thể hủy yêu cầu hủy và tiếp tục sử dụng gói
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="primary"
+                                            size="small"
+                                            onClick={() => handleCancelCancellationRequest()}
+                                            style={{
+                                                borderRadius: '8px',
+                                                fontWeight: 600,
+                                                background: '#10b981',
+                                                borderColor: '#10b981'
+                                            }}
+                                        >
+                                            Hủy yêu cầu hủy
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -2061,6 +2149,73 @@ const MembershipPlans = () => {
                 message: 'Lỗi hủy gói dịch vụ',
                 description: errorMessage,
                 duration: 8
+            });
+        }
+    };
+
+    const handleCancelCancellationRequest = async () => {
+        try {
+            console.log("🔄 Starting cancel cancellation request process...");
+
+            // Show confirmation dialog
+            Modal.confirm({
+                title: 'Xác nhận hủy yêu cầu hủy',
+                content: 'Bạn có chắc chắn muốn hủy yêu cầu hủy gói dịch vụ? Gói dịch vụ sẽ tiếp tục hoạt động bình thường.',
+                okText: 'Xác nhận',
+                cancelText: 'Hủy',
+                onOk: async () => {
+                    try {
+                        // Call API to cancel cancellation request
+                        const response = await axiosInstance.post('/membership/cancel-cancellation-request');
+                        
+                        if (response.data.success) {
+                            notification.success({
+                                message: 'Thành công',
+                                description: 'Đã hủy yêu cầu hủy gói dịch vụ. Gói dịch vụ sẽ tiếp tục hoạt động bình thường.',
+                                duration: 6
+                            });
+
+                            // Refresh data
+                            setTimeout(async () => {
+                                console.log('🔄 Refreshing data after canceling cancellation request...');
+                                
+                                // Refresh payment history
+                                await fetchPaymentHistory();
+                                
+                                // Refresh current membership
+                                dispatch(getCurrentMembership());
+                                
+                                // Refresh current user to update role
+                                dispatch(getCurrentUser());
+                            }, 1000);
+                        } else {
+                            throw new Error(response.data.message || 'Không thể hủy yêu cầu hủy');
+                        }
+                    } catch (error) {
+                        console.error('❌ Cancel cancellation request error:', error);
+                        
+                        let errorMessage = 'Lỗi không xác định';
+                        if (error.response?.data?.message) {
+                            errorMessage = error.response.data.message;
+                        } else if (error.message) {
+                            errorMessage = error.message;
+                        }
+
+                        notification.error({
+                            message: 'Lỗi hủy yêu cầu hủy',
+                            description: errorMessage,
+                            duration: 8
+                        });
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Unexpected error in handleCancelCancellationRequest:', error);
+            notification.error({
+                message: 'Lỗi hệ thống',
+                description: 'Đã có lỗi không mong muốn. Vui lòng thử lại.',
+                duration: 4
             });
         }
     };

@@ -2960,8 +2960,8 @@ router.get('/member-surveys/:memberId', protect, authorize('coach'), async (req,
                 SELECT 
                     sq.QuestionID,
                     sq.QuestionText,
-                    sq.QuestionType,
-                    sq.Category,
+                    'text' as QuestionType,
+                    'General' as Category,
                     usa.Answer as AnswerText,
                     usa.SubmittedAt
                 FROM SurveyQuestions sq
@@ -3091,6 +3091,289 @@ router.get('/survey-overview', protect, authorize('coach'), async (req, res) => 
     } catch (error) {
         console.error('Error getting survey overview:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// ==================== SMOKING ADDICTION SURVEY APIS ====================
+
+// Get addiction overview statistics for coach dashboard
+router.get('/addiction-overview', protect, authorize('coach'), async (req, res) => {
+    try {
+        const coachId = req.user.UserID;
+
+        // Get total members with surveys
+        const totalMembersResult = await pool.request()
+            .query(`
+                SELECT COUNT(DISTINCT sasr.UserID) as TotalMembers
+                FROM SmokingAddictionSurveyResults sasr
+                INNER JOIN Users u ON sasr.UserID = u.UserID
+                WHERE u.Role IN ('guest', 'member') AND u.IsActive = 1
+            `);
+
+        // Get members who completed surveys
+        const completedSurveysResult = await pool.request()
+            .query(`
+                SELECT COUNT(DISTINCT sasr.UserID) as CompletedSurveys
+                FROM SmokingAddictionSurveyResults sasr
+                INNER JOIN Users u ON sasr.UserID = u.UserID
+                WHERE u.Role IN ('guest', 'member') 
+                AND u.IsActive = 1
+                AND sasr.FTNDScore IS NOT NULL
+            `);
+
+        // Calculate average success rate
+        const averageSuccessRateResult = await pool.request()
+            .query(`
+                SELECT AVG(CAST(sasr.SuccessProbability AS FLOAT)) as AverageSuccessRate
+                FROM SmokingAddictionSurveyResults sasr
+                INNER JOIN Users u ON sasr.UserID = u.UserID
+                WHERE u.Role IN ('guest', 'member') 
+                AND u.IsActive = 1
+                AND sasr.SuccessProbability IS NOT NULL
+            `);
+
+        // Calculate total money saved potential
+        const totalMoneySavedResult = await pool.request()
+            .query(`
+                SELECT SUM(CAST(sasr.MonthlySavings AS FLOAT)) as TotalMoneySaved
+                FROM SmokingAddictionSurveyResults sasr
+                INNER JOIN Users u ON sasr.UserID = u.UserID
+                WHERE u.Role IN ('guest', 'member') 
+                AND u.IsActive = 1
+                AND sasr.MonthlySavings IS NOT NULL
+            `);
+
+        const statistics = {
+            totalMembers: totalMembersResult.recordset[0]?.TotalMembers || 0,
+            completedSurveys: completedSurveysResult.recordset[0]?.CompletedSurveys || 0,
+            averageSuccessRate: Math.round(averageSuccessRateResult.recordset[0]?.AverageSuccessRate || 0),
+            totalMoneySaved: Math.round(totalMoneySavedResult.recordset[0]?.TotalMoneySaved || 0)
+        };
+
+        res.json({
+            success: true,
+            data: statistics,
+            message: 'Đã lấy thống kê tổng quan thành công'
+        });
+
+    } catch (error) {
+        console.error('Error getting addiction overview:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy thống kê tổng quan',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get members with addiction survey data
+router.get('/member-addiction-surveys', protect, authorize('coach'), async (req, res) => {
+    try {
+        const { page = 1, limit = 10, search = '' } = req.query;
+        const offset = (page - 1) * limit;
+
+        let query = `
+            SELECT 
+                u.UserID,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.Avatar,
+                u.CreatedAt,
+                sasr.FTNDScore,
+                sasr.AddictionLevel,
+                sasr.SuccessProbability,
+                sasr.MonthlySavings,
+                sasr.DailySavings,
+                sasr.YearlySavings,
+                sasr.PackYear,
+                sasr.CigarettesPerDay,
+                sasr.PackageName,
+                sasr.PackagePrice,
+                sasr.PriceRange,
+                sasr.Age,
+                sasr.YearsSmoked,
+                sasr.Motivation,
+                sasr.AddictionSeverity,
+                sasr.SubmittedAt,
+                0 as smokeFreeDays,
+                0 as actualMoneySaved,
+                sasr.SubmittedAt as lastUpdated
+            FROM Users u
+            INNER JOIN SmokingAddictionSurveyResults sasr ON u.UserID = sasr.UserID
+            WHERE u.Role IN ('guest', 'member') 
+            AND u.IsActive = 1
+        `;
+
+        const request = pool.request()
+            .input('Limit', parseInt(limit))
+            .input('Offset', offset);
+
+        // Add search filter
+        if (search) {
+            query += ` AND (u.FirstName LIKE @Search OR u.LastName LIKE @Search OR u.Email LIKE @Search)`;
+            request.input('Search', `%${search}%`);
+        }
+
+        query += ` ORDER BY sasr.SubmittedAt DESC OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY`;
+
+        const result = await request.query(query);
+
+        // Get total count for pagination
+        let countQuery = `
+            SELECT COUNT(DISTINCT u.UserID) as Total
+            FROM Users u
+            INNER JOIN SmokingAddictionSurveyResults sasr ON u.UserID = sasr.UserID
+            WHERE u.Role IN ('guest', 'member') 
+            AND u.IsActive = 1
+        `;
+
+        const countRequest = pool.request();
+        if (search) {
+            countQuery += ` AND (u.FirstName LIKE @Search OR u.LastName LIKE @Search OR u.Email LIKE @Search)`;
+            countRequest.input('Search', `%${search}%`);
+        }
+
+        const countResult = await countRequest.query(countQuery);
+        const total = countResult.recordset[0]?.Total || 0;
+
+        // Format the response
+        const members = result.recordset.map(member => ({
+            UserID: member.UserID,
+            Email: member.Email,
+            FirstName: member.FirstName,
+            LastName: member.LastName,
+            FullName: `${member.FirstName} ${member.LastName}`,
+            Avatar: member.Avatar,
+            CreatedAt: member.CreatedAt,
+            FTNDScore: member.FTNDScore,
+            AddictionLevel: member.AddictionLevel,
+            SuccessProbability: member.SuccessProbability,
+            MonthlySavings: member.MonthlySavings,
+            DailySavings: member.DailySavings,
+            YearlySavings: member.YearlySavings,
+            PackYear: member.PackYear,
+            CigarettesPerDay: member.CigarettesPerDay,
+            PackageName: member.PackageName,
+            PackagePrice: member.PackagePrice,
+            PriceRange: member.PriceRange,
+            Age: member.Age,
+            YearsSmoked: member.YearsSmoked,
+            Motivation: member.Motivation,
+            AddictionSeverity: member.AddictionSeverity,
+            smokeFreeDays: member.smokeFreeDays,
+            actualMoneySaved: member.actualMoneySaved,
+            lastUpdated: member.lastUpdated
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                members,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            },
+            message: `Đã lấy danh sách ${members.length} members thành công`
+        });
+
+    } catch (error) {
+        console.error('Error getting member addiction surveys:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy danh sách khảo sát nghiện thuốc',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get detailed survey data for a specific member
+router.get('/member-survey/:memberId', protect, authorize('coach'), async (req, res) => {
+    try {
+        const { memberId } = req.params;
+
+        // Get survey results
+        const surveyResult = await pool.request()
+            .input('UserID', memberId)
+            .query(`
+                SELECT TOP 1
+                    sasr.ResultID,
+                    sasr.UserID,
+                    sasr.FTNDScore,
+                    sasr.CigarettesPerDay,
+                    sasr.PackYear,
+                    sasr.AddictionLevel,
+                    sasr.AddictionSeverity,
+                    sasr.SuccessProbability,
+                    sasr.PackageName,
+                    sasr.PackagePrice,
+                    sasr.PriceRange,
+                    sasr.DailySavings,
+                    sasr.MonthlySavings,
+                    sasr.YearlySavings,
+                    sasr.Age,
+                    sasr.YearsSmoked,
+                    sasr.Motivation,
+                    sasr.SubmittedAt
+                FROM SmokingAddictionSurveyResults sasr
+                WHERE sasr.UserID = @UserID
+                ORDER BY sasr.SubmittedAt DESC
+            `);
+
+        if (surveyResult.recordset.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy dữ liệu khảo sát cho member này'
+            });
+        }
+
+        const surveyData = surveyResult.recordset[0];
+
+        res.json({
+            success: true,
+            data: surveyData,
+            message: 'Đã lấy dữ liệu khảo sát thành công'
+        });
+
+    } catch (error) {
+        console.error('Error getting member survey data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy dữ liệu khảo sát',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get member progress data
+router.get('/member-progress/:memberId', protect, authorize('coach'), async (req, res) => {
+    try {
+        const { memberId } = req.params;
+
+        // Get basic progress data (for now, return mock data since ProgressTracking might not have data)
+        const progressData = {
+            smokeFreeDays: 0,
+            actualMoneySaved: 0,
+            lastUpdate: new Date(),
+            progressHistory: []
+        };
+
+        res.json({
+            success: true,
+            data: progressData,
+            message: 'Đã lấy dữ liệu tiến trình thành công'
+        });
+
+    } catch (error) {
+        console.error('Error getting member progress:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy dữ liệu tiến trình',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 

@@ -56,7 +56,7 @@ const { Step } = Steps;
 
 // Create axios instance with defaults
 const api = axios.create({
-    baseURL: '', // Use relative path for proxy
+    baseURL: 'http://localhost:4000',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -113,6 +113,10 @@ const QuitPlanPage = () => {
     // New states for improved workflow
     const [currentStep, setCurrentStep] = useState(0);
     const [selectedTemplate, setSelectedTemplate] = useState(null);
+    
+    // Survey completion check states
+    const [surveyCompleted, setSurveyCompleted] = useState(false);
+    const [surveyLoading, setSurveyLoading] = useState(true);
 
     // All template options
     const allTemplateOptions = [
@@ -340,6 +344,51 @@ const QuitPlanPage = () => {
             }, 10000);
         }
     }, [location.state]);
+
+    // Check survey completion status
+    useEffect(() => {
+        const checkSurveyCompletion = async () => {
+            try {
+                setSurveyLoading(true);
+                
+                // Get the token from localStorage
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.log('No token found, user not logged in');
+                    setSurveyLoading(false);
+                    return;
+                }
+
+                // Check user's survey answers
+                const answersResponse = await axios.get('/api/smoking-addiction-survey/my-answers', {                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (answersResponse.data && Array.isArray(answersResponse.data)) {
+                    // If user has 10 or more answers, consider survey completed
+                    if (answersResponse.data.length >= 10) {
+                        setSurveyCompleted(true);
+                        console.log('Survey completed, user can access quit plans');
+                    } else {
+                        setSurveyCompleted(false);
+                        console.log('Survey not completed, user needs to complete survey first');
+                    }
+                } else {
+                    setSurveyCompleted(false);
+                }
+
+                setSurveyLoading(false);
+            } catch (error) {
+                console.error('Error checking survey completion:', error);
+                setSurveyCompleted(false);
+                setSurveyLoading(false);
+            }
+        };
+
+        checkSurveyCompletion();
+    }, []);
 
     // Load data
     useEffect(() => {
@@ -901,7 +950,55 @@ const QuitPlanPage = () => {
         }
     };
 
-    if (loading) {
+    // Thêm function để parse DetailedPlan và lấy ra các phases đã chọn
+    const parseDetailedPlan = (detailedPlan) => {
+        if (!detailedPlan) return { templateId: null, selectedPhases: [] };
+        
+        // Extract template ID
+        const templateIdMatch = detailedPlan.match(/\[TEMPLATE_ID:([^\]]+)\]/);
+        const templateId = templateIdMatch ? templateIdMatch[1] : null;
+        
+        // Extract selected phases from the plan
+        const selectedPhases = [];
+        const lines = detailedPlan.split('\n');
+        let currentPhase = null;
+        
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            
+            // Skip empty lines and template ID line
+            if (!trimmedLine || trimmedLine.startsWith('[TEMPLATE_ID:')) {
+                continue;
+            }
+            
+            // Check if this is a phase header (ends with ':')
+            if (trimmedLine.endsWith(':')) {
+                // Save previous phase if exists
+                if (currentPhase) {
+                    selectedPhases.push(currentPhase);
+                }
+                
+                // Start new phase
+                currentPhase = {
+                    phaseName: trimmedLine.slice(0, -1), // Remove the ':'
+                    phaseDescription: '',
+                    durationDays: 0
+                };
+            } else if (currentPhase && trimmedLine.startsWith('•')) {
+                // This is a bullet point in the current phase
+                currentPhase.phaseDescription += (currentPhase.phaseDescription ? '\n' : '') + trimmedLine;
+            }
+        }
+        
+        // Don't forget the last phase
+        if (currentPhase) {
+            selectedPhases.push(currentPhase);
+        }
+        
+        return { templateId, selectedPhases };
+    };
+
+    if (loading || surveyLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
                 <div className="text-center">
@@ -909,6 +1006,89 @@ const QuitPlanPage = () => {
                     <p className="mt-4 text-gray-600">Đang tải dữ liệu...</p>
                 </div>
             </div>
+        );
+    }
+
+    // Show survey completion requirement if not completed
+    if (!surveyCompleted) {
+        return (
+            <AccessGuard>
+                <div style={{
+                    minHeight: '100vh',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div style={{ maxWidth: '600px', width: '100%' }}>
+                        <Card
+                            className="shadow-lg rounded-lg"
+                            bodyStyle={{ padding: '48px', textAlign: 'center' }}
+                        >
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 24px',
+                                boxShadow: '0 8px 24px rgba(255, 107, 107, 0.3)'
+                            }}>
+                                <FormOutlined style={{ fontSize: '32px', color: 'white' }} />
+                            </div>
+
+                            <Title level={2} style={{
+                                margin: '0 0 16px 0',
+                                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                fontWeight: 700
+                            }}>
+                                Hoàn Thành Khảo Sát Trước
+                            </Title>
+
+                            <Text style={{
+                                color: '#6b7280',
+                                fontSize: '16px',
+                                lineHeight: '1.6',
+                                marginBottom: '24px',
+                                display: 'block'
+                            }}>
+                                Để có thể chọn kế hoạch cai thuốc phù hợp nhất, bạn cần hoàn thành khảo sát đánh giá mức độ nghiện nicotine trước.
+                            </Text>
+
+                            <Alert
+                                message="Tại sao cần khảo sát?"
+                                description="Khảo sát giúp chúng tôi hiểu rõ mức độ nghiện nicotine của bạn, từ đó đề xuất kế hoạch cai thuốc phù hợp và hiệu quả nhất."
+                                type="info"
+                                showIcon
+                                style={{ marginBottom: '24px', borderRadius: '8px' }}
+                            />
+
+                            <Button
+                                type="primary"
+                                size="large"
+                                onClick={() => navigate('/smoking-survey')}
+                                style={{
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    height: '48px',
+                                    paddingInline: '32px',
+                                    fontSize: '16px',
+                                    fontWeight: 600
+                                }}
+                            >
+                                Bắt Đầu Khảo Sát
+                            </Button>
+                        </Card>
+                    </div>
+                </div>
+            </AccessGuard>
         );
     }
 
@@ -1741,63 +1921,41 @@ const QuitPlanPage = () => {
                                                                                         }
                                                                                     })()
                                                                                 ) : (
-                                                                                    /* Hiển thị template gốc dựa vào nội dung DetailedPlan */
+                                                                                    /* Hiển thị chỉ những phases đã được chọn */
                                                                                     (() => {
-                                                                                        // Xác định template nào đã được sử dụng dựa vào nội dung
-                                                                                        let matchedTemplate = null;
-
-                                                                                        // Kiểm tra xem có TEMPLATE_ID trong DetailedPlan không
-                                                                                        const templateIdMatch = plan.DetailedPlan.match(/\[TEMPLATE_ID:([^\]]+)\]/);
-                                                                                        if (templateIdMatch) {
-                                                                                            const templateId = templateIdMatch[1];
-                                                                                            matchedTemplate = allTemplateOptions.find(t => t.id === templateId);
-                                                                                        }
-
-                                                                                        // Nếu không tìm thấy TEMPLATE_ID, thử match bằng phase names (logic cũ)
-                                                                                        if (!matchedTemplate) {
-                                                                                            for (const template of allTemplateOptions) {
-                                                                                                if (template.phases && template.phases.length > 0) {
-                                                                                                    // Kiểm tra xem có phase nào match không
-                                                                                                    const hasMatchingPhases = template.phases.some(phase =>
-                                                                                                        plan.DetailedPlan.includes(phase.phaseName) ||
-                                                                                                        plan.DetailedPlan.includes(phase.phaseName.split(':')[0])
-                                                                                                    );
-
-                                                                                                    if (hasMatchingPhases) {
-                                                                                                        matchedTemplate = template;
-                                                                                                        break;
-                                                                                                    }
-                                                                                                }
-                                                                                            }
-                                                                                        }
-
-                                                                                        if (matchedTemplate && matchedTemplate.phases.length > 0) {
-                                                                                            // Hiển thị template gốc
+                                                                                        const { templateId, selectedPhases } = parseDetailedPlan(plan.DetailedPlan);
+                                                                                        
+                                                                                        // Tìm template tương ứng
+                                                                                        const matchedTemplate = templateId ? allTemplateOptions.find(t => t.id === templateId) : null;
+                                                                                        
+                                                                                        if (selectedPhases.length > 0) {
                                                                                             return (
                                                                                                 <div style={{ marginLeft: '24px' }}>
                                                                                                     {/* Template info */}
-                                                                                                    <div style={{
-                                                                                                        marginBottom: '16px',
-                                                                                                        padding: '12px',
-                                                                                                        background: `${matchedTemplate.color}10`,
-                                                                                                        borderRadius: '8px',
-                                                                                                        border: `1px solid ${matchedTemplate.color}30`
-                                                                                                    }}>
-                                                                                                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                                                                                                            <span style={{ fontSize: '20px', marginRight: '8px' }}>
-                                                                                                                {matchedTemplate.icon}
-                                                                                                            </span>
-                                                                                                            <Text strong style={{ color: matchedTemplate.color }}>
-                                                                                                                {matchedTemplate.name}
+                                                                                                    {matchedTemplate && (
+                                                                                                        <div style={{
+                                                                                                            marginBottom: '16px',
+                                                                                                            padding: '12px',
+                                                                                                            background: `${matchedTemplate.color}10`,
+                                                                                                            borderRadius: '8px',
+                                                                                                            border: `1px solid ${matchedTemplate.color}30`
+                                                                                                        }}>
+                                                                                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                                                                                                                <span style={{ fontSize: '20px', marginRight: '8px' }}>
+                                                                                                                    {matchedTemplate.icon}
+                                                                                                                </span>
+                                                                                                                <Text strong style={{ color: matchedTemplate.color }}>
+                                                                                                                    {matchedTemplate.name}
+                                                                                                                </Text>
+                                                                                                            </div>
+                                                                                                            <Text style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                                                                                {matchedTemplate.description}
                                                                                                             </Text>
                                                                                                         </div>
-                                                                                                        <Text style={{ fontSize: '12px', color: '#6b7280' }}>
-                                                                                                            {matchedTemplate.description}
-                                                                                                        </Text>
-                                                                                                    </div>
+                                                                                                    )}
 
-                                                                                                    {/* Các phases của template */}
-                                                                                                    {matchedTemplate.phases.map((phase, index) => (
+                                                                                                    {/* Chỉ hiển thị những phases đã được chọn */}
+                                                                                                    {selectedPhases.map((phase, index) => (
                                                                                                         <div key={index} style={{
                                                                                                             marginBottom: '16px',
                                                                                                             padding: '12px',
@@ -1816,7 +1974,7 @@ const QuitPlanPage = () => {
                                                                                                                     style={{ marginRight: '8px', marginTop: '2px' }}
                                                                                                                 />
                                                                                                                 <Text strong style={{
-                                                                                                                    color: matchedTemplate.color,
+                                                                                                                    color: matchedTemplate ? matchedTemplate.color : '#6366f1',
                                                                                                                     fontSize: '14px'
                                                                                                                 }}>
                                                                                                                     {phase.phaseName}
@@ -1828,8 +1986,8 @@ const QuitPlanPage = () => {
                                                                                                                 lineHeight: '1.6',
                                                                                                                 color: '#4b5563'
                                                                                                             }}>
-                                                                                                                {phase.phaseDescription.split('•').map((item, idx) => {
-                                                                                                                    if (idx === 0 && item.trim() === '') return null;
+                                                                                                                {phase.phaseDescription.split('\n').map((item, idx) => {
+                                                                                                                    if (!item.trim()) return null;
                                                                                                                     return (
                                                                                                                         <div key={idx} style={{
                                                                                                                             marginBottom: '4px',
@@ -1847,30 +2005,38 @@ const QuitPlanPage = () => {
                                                                                                                 })}
                                                                                                             </div>
 
-                                                                                                            {/* Duration badge */}
-                                                                                                            <div style={{
-                                                                                                                marginTop: '8px',
-                                                                                                                marginLeft: '28px',
-                                                                                                                display: 'flex',
-                                                                                                                justifyContent: 'flex-end'
-                                                                                                            }}>
-                                                                                                                <Tag
-                                                                                                                    color="blue"
-                                                                                                                    style={{
-                                                                                                                        fontSize: '11px',
-                                                                                                                        padding: '2px 8px',
-                                                                                                                        borderRadius: '12px'
-                                                                                                                    }}
-                                                                                                                >
-                                                                                                                    📅 {phase.durationDays} ngày
-                                                                                                                </Tag>
-                                                                                                            </div>
+                                                                                                            {/* Duration badge - ước tính dựa vào template gốc */}
+                                                                                                            {matchedTemplate && (
+                                                                                                                <div style={{
+                                                                                                                    marginTop: '8px',
+                                                                                                                    marginLeft: '28px',
+                                                                                                                    display: 'flex',
+                                                                                                                    justifyContent: 'flex-end'
+                                                                                                                }}>
+                                                                                                                    <Tag
+                                                                                                                        color="blue"
+                                                                                                                        style={{
+                                                                                                                            fontSize: '11px',
+                                                                                                                            padding: '2px 8px',
+                                                                                                                            borderRadius: '12px'
+                                                                                                                        }}
+                                                                                                                    >
+                                                                                                                        📅 {(() => {
+                                                                                                                            // Tìm phase tương ứng trong template gốc để lấy duration
+                                                                                                                            const originalPhase = matchedTemplate.phases.find(p => 
+                                                                                                                                p.phaseName === phase.phaseName
+                                                                                                                            );
+                                                                                                                            return originalPhase ? originalPhase.durationDays : 'N/A';
+                                                                                                                        })()} ngày
+                                                                                                                    </Tag>
+                                                                                                                </div>
+                                                                                                            )}
                                                                                                         </div>
                                                                                                     ))}
                                                                                                 </div>
                                                                                             );
                                                                                         } else {
-                                                                                            // Fallback: hiển thị text thô nếu không match được template
+                                                                                            // Fallback: hiển thị text thô nếu không parse được
                                                                                             return (
                                                                                                 <Paragraph
                                                                                                     style={{

@@ -19,7 +19,6 @@
         "dayjs": "^1.11.13",
         "file-saver": "^2.0.5",
         "formik": "^2.2.9",
-        "http-proxy-middleware": "^3.0.5",
         "jwt-decode": "^3.1.2",
         "moment": "^2.30.1",
         "postcss": "^8.5.3",
@@ -40,7 +39,6 @@
     },
     "scripts": {
         "start": "react-scripts start",
-        "start:ssl": "node custom-https-server.js",
         "build": "react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject"

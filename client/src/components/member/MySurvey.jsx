@@ -51,12 +51,12 @@ const MySurvey = () => {
             const token = localStorage.getItem('token');
 
             // Fetch questions
-            const questionsResponse = await axios.get('/api/survey-questions', {
+            const questionsResponse = await axios.get('/api/smoking-addiction-survey/questions', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
             // Fetch user's answers
-            const answersResponse = await axios.get('/api/survey-questions/my-answers', {
+            const answersResponse = await axios.get('/api/smoking-addiction-survey/my-answers', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -97,7 +97,7 @@ const MySurvey = () => {
                 answerText: answerText?.toString() || ''
             }));
 
-            await axios.post('/api/survey-questions/answers', {
+            await axios.post('/api/smoking-addiction-survey/answers', {
                 answers: answers
             }, {
                 headers: { Authorization: `Bearer ${token}` }
