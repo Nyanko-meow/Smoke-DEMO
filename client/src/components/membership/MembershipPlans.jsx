@@ -316,7 +316,8 @@ const MembershipPlans = () => {
             });
 
             // If user is not guest but has no active memberships, check for downgrade
-            if (user.role !== 'guest' && paymentHistory !== null) {
+            // Skip this check for coaches and admins
+            if (user.role !== 'guest' && user.role !== 'coach' && user.role !== 'admin' && paymentHistory !== null) {
                 const hasActive = hasActiveMembership();
                 if (!hasActive) {
                     console.log('⚠️ Role inconsistency detected - user is not guest but has no active membership');
@@ -590,7 +591,7 @@ const MembershipPlans = () => {
             membershipStatus: latestPayment.MembershipStatus
         });
 
-        if (currentDate > endDate && user.role !== 'guest') {
+        if (currentDate > endDate && user.role !== 'guest' && user.role !== 'coach' && user.role !== 'admin') {
             console.log('⚠️ Membership expired, downgrading to guest...');
             
             try {

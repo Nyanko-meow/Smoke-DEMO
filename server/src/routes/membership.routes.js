@@ -1833,7 +1833,8 @@ router.post('/downgrade-to-guest', protect, async (req, res) => {
             });
 
             // Always downgrade to guest if no active payments (simplified logic)
-            if (!hasActivePayments) {
+            // BUT: Never downgrade coaches or admins
+            if (!hasActivePayments && req.user.role !== 'coach' && req.user.role !== 'admin') {
                 // Update user role to guest
                 await pool.request()
                     .input('UserID', req.user.id)
@@ -1841,6 +1842,7 @@ router.post('/downgrade-to-guest', protect, async (req, res) => {
                         UPDATE Users
                         SET Role = 'guest'
                         WHERE UserID = @UserID
+                        AND Role NOT IN ('coach', 'admin')
                     `);
 
                 console.log('✅ User downgraded to guest successfully');
@@ -1851,6 +1853,17 @@ router.post('/downgrade-to-guest', protect, async (req, res) => {
                     data: {
                         previousRole: req.user.role,
                         newRole: 'guest'
+                    }
+                });
+            } else if (req.user.role === 'coach' || req.user.role === 'admin') {
+                console.log('⚠️ Coach/Admin role preserved - not downgrading');
+                
+                res.json({
+                    success: false,
+                    message: 'Coach và Admin không bị downgrade khi hết membership',
+                    data: {
+                        currentRole: req.user.role,
+                        preserved: true
                     }
                 });
             } else {
